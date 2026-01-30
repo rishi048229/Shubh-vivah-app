@@ -1,10 +1,7 @@
 import { Tabs } from "expo-router";
 import React from "react";
-import { Platform } from "react-native";
 
-import { FloatingBottomNav } from "@/components/FloatingBottomNav";
-import { HapticTab } from "@/components/haptic-tab";
-import { Colors } from "@/constants/Colors";
+import { CustomBottomNav } from "@/components/CustomBottomNav";
 import { useColorScheme } from "@/hooks/use-color-scheme";
 
 export default function TabLayout() {
@@ -12,66 +9,64 @@ export default function TabLayout() {
 
   return (
     <Tabs
-      tabBar={(props) => <FloatingBottomNav {...props} />}
+      tabBar={(props) => <CustomBottomNav {...props} />}
       screenOptions={{
-        tabBarActiveTintColor: Colors[colorScheme ?? "light"].tint,
         headerShown: false,
-        tabBarButton: HapticTab,
-        tabBarBackground: () => null, // Remove default background
-        tabBarStyle: Platform.select({
-          ios: {
-            position: "absolute", // Transparent background on iOS
-          },
-          default: {},
-        }),
+        tabBarBackground: () => null,
       }}
     >
       <Tabs.Screen
         name="index"
         options={{
           title: "Home",
-          // @ts-ignore: Custom option for FloatingBottomNav
+          // @ts-ignore
           tabBarIconName: "home",
         }}
       />
       <Tabs.Screen
-        name="services"
+        name="chat"
         options={{
-          title: "Services",
-          // @ts-ignore: Custom option for FloatingBottomNav
-          tabBarIconName: "grid",
+          title: "Chat",
+          // @ts-ignore
+          tabBarIconName: "chatbubbles",
         }}
       />
       <Tabs.Screen
-        name="offers"
+        name="connections"
         options={{
-          title: "Offers",
-          // @ts-ignore: Custom option for FloatingBottomNav
-          tabBarIconName: "gift",
-        }}
-      />
-      <Tabs.Screen
-        name="events"
-        options={{
-          title: "Events",
-          // @ts-ignore: Custom option for FloatingBottomNav
-          tabBarIconName: "calendar",
+          title: "Connection",
+          // @ts-ignore
+          tabBarIconName: "people",
         }}
       />
       <Tabs.Screen
         name="profile"
         options={{
           title: "Profile",
-          // @ts-ignore: Custom option for FloatingBottomNav
+          // @ts-ignore
           tabBarIconName: "person",
         }}
       />
-      {/* <Tabs.Screen
-        name="explore"
+
+      {/* Hide other screens */}
+      <Tabs.Screen
+        name="services"
         options={{
-          href: null, // Hide from tab bar
+          href: null,
         }}
-      /> */}
+      />
+      <Tabs.Screen
+        name="offers"
+        options={{
+          href: null,
+        }}
+      />
+      <Tabs.Screen
+        name="events"
+        options={{
+          href: null,
+        }}
+      />
     </Tabs>
   );
 }

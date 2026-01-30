@@ -1,3 +1,4 @@
+import RiveDemo from "@/components/ui/RiveDemo";
 import { Colors } from "@/constants/Colors";
 import { StyleSheet, Text, View } from "react-native";
 
@@ -5,6 +6,7 @@ export default function ServicesScreen() {
   return (
     <View style={styles.container}>
       <Text style={styles.text}>Services Screen</Text>
+      <RiveDemo />
     </View>
   );
 }

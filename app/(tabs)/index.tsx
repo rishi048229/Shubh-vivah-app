@@ -7,7 +7,7 @@ import { ProfileCompletionHero } from "@/components/dashboard/ProfileCompletionH
 import { ProfileHealthWidget } from "@/components/dashboard/ProfileHealthWidget";
 import { ShortlistStrip } from "@/components/dashboard/ShortlistStrip";
 import { PreviousEvents } from "@/components/PreviousEvents";
-import { RadialMenu } from "@/components/RadialMenu";
+import { SideDrawer } from "@/components/SideDrawer";
 import { TopNavBar } from "@/components/TopNavBar";
 import { WeddingJourneyServices } from "@/components/WeddingJourneyServices";
 import { Colors } from "@/constants/Colors";
@@ -34,7 +34,7 @@ export default function DashboardScreen() {
         onProfilePress={() => console.log("Profile Pressed")}
       />
 
-      <RadialMenu isOpen={isMenuOpen} onClose={() => setIsMenuOpen(false)} />
+      <SideDrawer isOpen={isMenuOpen} onClose={() => setIsMenuOpen(false)} />
 
       <ScrollView
         contentContainerStyle={styles.scrollContent}

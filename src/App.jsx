@@ -3,6 +3,12 @@ import { NavigationContainer } from '@react-navigation/native';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { useFonts, Cinzel_400Regular, Cinzel_600SemiBold } from '@expo-google-fonts/cinzel';
+import {
+    Outfit_400Regular,
+    Outfit_500Medium,
+    Outfit_600SemiBold,
+    Outfit_700Bold
+} from '@expo-google-fonts/outfit';
 import AppRoutes from './routes/AppRoutes';
 import { View, ActivityIndicator } from 'react-native';
 
@@ -10,6 +16,10 @@ export default function App() {
     let [fontsLoaded] = useFonts({
         Cinzel_400Regular,
         Cinzel_600SemiBold,
+        Outfit_400Regular,
+        Outfit_500Medium,
+        Outfit_600SemiBold,
+        Outfit_700Bold,
     });
 
     if (!fontsLoaded) {

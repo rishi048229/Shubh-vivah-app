@@ -1,4 +1,3 @@
-import RiveDemo from "@/components/ui/RiveDemo";
 import { Colors } from "@/constants/Colors";
 import { StyleSheet, Text, View } from "react-native";
 
@@ -6,7 +5,6 @@ export default function OffersScreen() {
   return (
     <View style={styles.container}>
       <Text style={styles.text}>Offers Screen</Text>
-      <RiveDemo />
     </View>
   );
 }

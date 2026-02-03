@@ -1,14 +1,91 @@
 import { Colors } from "@/constants/Colors";
 import { Ionicons } from "@expo/vector-icons";
 import { BottomTabBarProps } from "@react-navigation/bottom-tabs";
-import React from "react";
+import React, { useEffect } from "react";
 import { StyleSheet, TouchableOpacity, View } from "react-native";
 import Animated, {
-  FadeIn,
-  FadeOut,
-  LinearTransition,
+    useAnimatedStyle,
+    useSharedValue,
+    withSequence,
+    withSpring,
+    withTiming,
+    ZoomIn,
 } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+
+// Animated Icon Component
+const AnimatedIcon = ({
+  name,
+  isFocused,
+}: {
+  name: any;
+  isFocused: boolean;
+}) => {
+  // Shared values for different animations
+  const scale = useSharedValue(1);
+  const rotation = useSharedValue(0);
+  const translateY = useSharedValue(0);
+  const translateX = useSharedValue(0);
+
+  useEffect(() => {
+    if (isFocused) {
+      // Trigger specific animations based on icon name
+      if (name === "home") {
+        // "Gate Opening" -> Scale up and down
+        scale.value = withSequence(withTiming(1.2), withTiming(1));
+      } else if (name === "person") {
+        // "Head Shake" -> Rotate left right
+        rotation.value = withSequence(
+          withTiming(-15, { duration: 100 }),
+          withTiming(15, { duration: 100 }),
+          withTiming(-15, { duration: 100 }),
+          withTiming(0, { duration: 100 }),
+        );
+      } else if (name === "people") {
+        // "Handshake" -> Horizontal shake / scale
+        scale.value = withSequence(withTiming(1.2), withTiming(1));
+        translateX.value = withSequence(
+          withTiming(2),
+          withTiming(-2),
+          withTiming(0),
+        );
+      } else if (name === "chatbubbles") {
+        // "Bounce" -> Jump up and down
+        translateY.value = withSequence(
+          withTiming(-5, { duration: 150 }),
+          withSpring(0),
+        );
+      }
+    } else {
+      // Reset
+      scale.value = withTiming(1);
+      rotation.value = withTiming(0);
+      translateY.value = withTiming(0);
+      translateX.value = withTiming(0);
+    }
+  }, [isFocused, name]);
+
+  const animatedStyle = useAnimatedStyle(() => {
+    return {
+      transform: [
+        { scale: scale.value },
+        { rotate: `${rotation.value}deg` },
+        { translateY: translateY.value },
+        { translateX: translateX.value },
+      ],
+    };
+  });
+
+  return (
+    <Animated.View style={animatedStyle}>
+      <Ionicons
+        name={name}
+        size={24}
+        color={isFocused ? Colors.light.gold : "#C08081"} // Gold on Active (Maroon BG), Muted Maroon on Inactive
+      />
+    </Animated.View>
+  );
+};
 
 export const CustomBottomNav = ({
   state,
@@ -18,7 +95,7 @@ export const CustomBottomNav = ({
   const insets = useSafeAreaInsets();
 
   return (
-    <View style={[styles.container, { paddingBottom: insets.bottom + 10 }]}>
+    <View style={[styles.container, { paddingBottom: insets.bottom + 20 }]}>
       <View style={styles.pillContainer}>
         {state.routes.map((route, index) => {
           const { options } = descriptors[route.key];
@@ -28,8 +105,6 @@ export const CustomBottomNav = ({
             return null;
           }
 
-          const label =
-            options.title !== undefined ? options.title : route.name;
           const isFocused = state.index === index;
 
           const onPress = () => {
@@ -52,31 +127,22 @@ export const CustomBottomNav = ({
               accessibilityLabel={options.tabBarAccessibilityLabel}
               testID={(options as any).tabBarTestID}
               onPress={onPress}
-              style={[styles.tabButton, { flex: isFocused ? 2.5 : 1 }]}
+              style={styles.tabButton}
             >
-              <Animated.View
-                layout={LinearTransition.duration(200)} // Smooth linear transition, no bounce
-                style={[
-                  styles.tabContent,
-                  isFocused && styles.activeTabContent,
-                ]}
-              >
-                <Ionicons
-                  name={(options as any).tabBarIconName}
-                  size={24}
-                  color={isFocused ? Colors.light.maroon : Colors.light.ivory}
+              {/* Active Background Circle */}
+              {isFocused && (
+                <Animated.View
+                  entering={ZoomIn.duration(200)}
+                  style={styles.activeCircle}
                 />
-                {isFocused && (
-                  <Animated.Text
-                    entering={FadeIn.duration(200)}
-                    exiting={FadeOut.duration(200)}
-                    style={styles.label}
-                    numberOfLines={1}
-                  >
-                    {label}
-                  </Animated.Text>
-                )}
-              </Animated.View>
+              )}
+
+              <View style={styles.iconContainer}>
+                <AnimatedIcon
+                  name={(options as any).tabBarIconName}
+                  isFocused={isFocused}
+                />
+              </View>
             </TouchableOpacity>
           );
         })}
@@ -96,43 +162,45 @@ const styles = StyleSheet.create({
   },
   pillContainer: {
     flexDirection: "row",
-    backgroundColor: Colors.light.gold,
-    borderRadius: 40,
-    paddingHorizontal: 10,
+    backgroundColor: Colors.light.ivory, // Theme Ivory
+    borderRadius: 50,
+    paddingHorizontal: 20,
     paddingVertical: 10,
-    shadowColor: "#000",
+    shadowColor: Colors.light.maroon, // Maroon shadow
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.15,
     shadowRadius: 10,
-    elevation: 8,
+    elevation: 10,
     alignItems: "center",
     justifyContent: "space-between",
-    width: "90%",
-    maxWidth: 400,
-    height: 80, // Fixed height for consistency
+    width: "85%",
+    maxWidth: 350,
+    height: 70,
+    borderWidth: 1,
+    borderColor: "rgba(128, 0, 0, 0.05)", // Subtle maroon border
   },
   tabButton: {
     alignItems: "center",
     justifyContent: "center",
-    height: "100%",
+    width: 50,
+    height: 50,
   },
-  tabContent: {
-    flexDirection: "row",
+  activeCircle: {
+    position: "absolute",
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    backgroundColor: Colors.light.maroon, // Theme Maroon for Active
+    // Add subtle glow
+    shadowColor: Colors.light.maroon,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+    elevation: 5,
+  },
+  iconContainer: {
     alignItems: "center",
     justifyContent: "center",
-    padding: 10,
-    borderRadius: 30,
-    overflow: "hidden",
-  },
-  activeTabContent: {
-    backgroundColor: "#FFFFFF",
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-  },
-  label: {
-    marginLeft: 8,
-    fontSize: 14,
-    fontWeight: "bold",
-    color: Colors.light.maroon,
+    zIndex: 1,
   },
 });

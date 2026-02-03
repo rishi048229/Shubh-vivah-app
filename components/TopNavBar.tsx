@@ -1,12 +1,15 @@
 import { Colors } from "@/constants/Colors";
+import {
+    GreatVibes_400Regular,
+    useFonts,
+} from "@expo-google-fonts/great-vibes";
 import { Ionicons } from "@expo/vector-icons";
 import React from "react";
 import {
     Image,
-    Platform,
     StyleSheet,
     TouchableOpacity,
-    View,
+    View
 } from "react-native";
 import Animated, { FadeInRight } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -22,6 +25,10 @@ export const TopNavBar: React.FC<TopNavBarProps> = ({
 }) => {
   const insets = useSafeAreaInsets();
 
+  let [fontsLoaded] = useFonts({
+    GreatVibes_400Regular,
+  });
+
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
       <View style={styles.content}>
@@ -29,16 +36,20 @@ export const TopNavBar: React.FC<TopNavBarProps> = ({
           <Ionicons name="menu" size={28} color={Colors.light.maroon} />
         </TouchableOpacity>
 
-        <Animated.Text
-          entering={FadeInRight.duration(1000).springify()}
-          style={styles.title}
-        >
-          Shubh Vivah
-        </Animated.Text>
+        {fontsLoaded && (
+          <Animated.Text
+            entering={FadeInRight.duration(1000).springify()}
+            style={[styles.title, { fontFamily: "GreatVibes_400Regular" }]}
+          >
+            Shubh Vivah
+          </Animated.Text>
+        )}
 
         <TouchableOpacity onPress={onProfilePress} style={styles.profileButton}>
           <Image
-            source={{ uri: "https://i.pravatar.cc/150?img=5" }} // Placeholder image
+            source={{
+              uri: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?q=80&w=1888&auto=format&fit=crop",
+            }} // Better placeholder
             style={styles.profileImage}
           />
         </TouchableOpacity>
@@ -49,7 +60,7 @@ export const TopNavBar: React.FC<TopNavBarProps> = ({
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: "transparent",
+    backgroundColor: "transparent", // Or semi-transparent for overlay effect
     zIndex: 100,
   },
   content: {
@@ -62,9 +73,9 @@ const styles = StyleSheet.create({
   iconButton: {
     padding: 8,
     borderRadius: 20,
-    backgroundColor: Colors.light.glassBackground,
+    backgroundColor: Colors.light.glassBackground, // Ensure this exists or fallback
     borderWidth: 1,
-    borderColor: Colors.light.glassBorder,
+    borderColor: "rgba(255,255,255,0.5)",
     shadowColor: Colors.light.shadow,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
@@ -72,11 +83,10 @@ const styles = StyleSheet.create({
     elevation: 3,
   },
   title: {
-    fontSize: 28, // Larger for cursive look
-    fontWeight: "bold",
+    fontSize: 42, // Increased for Great Vibes
     color: Colors.light.maroon,
-    fontFamily: Platform.select({ ios: "Snell Roundhand", android: "serif" }), // Cursive-like on iOS, serif on Android
-    fontStyle: "italic", // Simulate cursive
+    includeFontPadding: false,
+    paddingBottom: 5, // Visual fix for cursive descenders
   },
   profileButton: {
     padding: 2,

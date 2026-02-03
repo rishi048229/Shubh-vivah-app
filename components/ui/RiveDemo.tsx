@@ -1,7 +1,6 @@
 import { Asset } from "expo-asset";
 import React from "react";
 import { StyleSheet, Text, View } from "react-native";
-import Rive from "rive-react-native";
 
 const riveFile = Asset.fromModule(require("@/assets/rive/demo.riv"));
 
@@ -9,7 +8,21 @@ export default function RiveDemo() {
   return (
     <View style={styles.container}>
       <Text style={styles.text}>Rive Animation Demo</Text>
-      <Rive url={riveFile.uri} style={styles.rive} autoplay={true} />
+      {/* <Rive url={riveFile.uri} style={styles.rive} autoplay={true} /> */}
+      <View
+        style={[
+          styles.rive,
+          {
+            backgroundColor: "#ddd",
+            alignItems: "center",
+            justifyContent: "center",
+          },
+        ]}
+      >
+        <Text style={{ textAlign: "center", padding: 10 }}>
+          Rive requires Native Build.{"\n"}Run: npx expo run:android
+        </Text>
+      </View>
     </View>
   );
 }

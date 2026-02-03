@@ -33,6 +33,8 @@ export default function ConnectionsScreen() {
       <ScrollView
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
+        bounces={false}
+        overScrollMode="never"
       >
         {/* <BestMatchHero /> */}
         <SwipeDeck />

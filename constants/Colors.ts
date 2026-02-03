@@ -11,6 +11,7 @@ export const Colors = {
     maroon: "#800000",
     gold: "#FFD700",
     ivory: "#FFFFF0",
+    saffron: "#FF9933", // Added Saffron
     glassBackground: "rgba(255, 255, 255, 0.8)",
     glassBorder: "rgba(255, 255, 255, 0.2)",
     shadow: "#000",
@@ -25,6 +26,7 @@ export const Colors = {
     maroon: "#800000",
     gold: "#FFD700",
     ivory: "#FFFFF0",
+    saffron: "#FF9933", // Added Saffron
     glassBackground: "rgba(0, 0, 0, 0.8)",
     glassBorder: "rgba(255, 255, 255, 0.1)",
     shadow: "#fff",

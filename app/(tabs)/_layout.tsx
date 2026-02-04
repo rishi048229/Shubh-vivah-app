@@ -40,6 +40,14 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
+        name="discover"
+        options={{
+          title: "Discover",
+          // @ts-ignore
+          tabBarIconName: "compass", // or similar, using valid ionicon name
+        }}
+      />
+      <Tabs.Screen
         name="profile"
         options={{
           title: "Profile",
@@ -52,7 +60,9 @@ export default function TabLayout() {
       <Tabs.Screen
         name="services"
         options={{
-          href: null,
+          title: "Services",
+          // @ts-ignore
+          tabBarIconName: "briefcase", // Example icon
         }}
       />
       <Tabs.Screen

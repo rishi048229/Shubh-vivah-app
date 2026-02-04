@@ -1,40 +1,65 @@
 import { Colors } from "@/constants/Colors";
 import { Ionicons } from "@expo/vector-icons";
 import { BlurView } from "expo-blur";
-import { Image } from "expo-image";
+
 import { LinearGradient } from "expo-linear-gradient";
 import React from "react";
-import { Dimensions, StyleSheet, Text, View } from "react-native";
+import {
+  Dimensions,
+  Image,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
 import { Profile } from "./types";
 
 const { width, height } = Dimensions.get("window");
-const CARD_WIDTH = width * 0.9;
-const CARD_HEIGHT = height * 0.65;
+const CARD_WIDTH = width;
+const CARD_HEIGHT = height * 0.85; // More immersive height
 
 interface ProfileCardProps {
   profile: Profile;
+  onLike?: () => void;
+  onPass?: () => void;
+  onSuperLike?: () => void;
+  onCardPress?: () => void; // New Prop
 }
 
-export default function ProfileCard({ profile }: ProfileCardProps) {
+export default function ProfileCard({
+  profile,
+  onLike,
+  onPass,
+  onSuperLike,
+  onCardPress,
+}: ProfileCardProps) {
   return (
     <View style={styles.cardContainer}>
-      {/* Background Image */}
-      <Image
-        source={{ uri: profile.image }}
-        style={styles.image}
-        contentFit="cover"
-        transition={500}
-      />
+      {/* Main Content Area - Tapping here goes to Profile */}
+      <TouchableOpacity
+        style={styles.contentClickArea}
+        onPress={onCardPress}
+        activeOpacity={0.9}
+      >
+        {/* Background Image */}
+        <Image
+          source={
+            typeof profile.image === "number"
+              ? profile.image
+              : { uri: profile.image }
+          }
+          style={styles.image}
+          resizeMode="cover"
+        />
 
-      {/* Overlay Gradient for Text Readability */}
-      <LinearGradient
-        colors={["transparent", "rgba(0,0,0,0.8)"]}
-        style={styles.gradient}
-      />
+        {/* Overlay Gradient for Text Readability */}
+        <LinearGradient
+          colors={["transparent", "rgba(0,0,0,0.8)"]}
+          style={styles.gradient}
+        />
 
-      {/* Glassmorphism Content Overlay */}
-      <View style={styles.infoContainer}>
-        <BlurView intensity={80} tint="dark" style={styles.glassContainer}>
+        {/* Glassmorphism Content Overlay */}
+        <View style={styles.infoContainer}>
           <View style={styles.headerRow}>
             <View>
               <Text style={styles.name}>
@@ -69,7 +94,40 @@ export default function ProfileCard({ profile }: ProfileCardProps) {
               </View>
             )}
           </View>
-        </BlurView>
+        </View>
+      </TouchableOpacity>
+
+      {/* Floating Action Buttons (Glassmorphism) - OUTSIDE the content click area */}
+      <View style={styles.actionsContainer}>
+        <TouchableOpacity
+          style={styles.actionBtnWrapper}
+          onPress={onSuperLike}
+          activeOpacity={0.7}
+        >
+          <BlurView intensity={40} tint="light" style={styles.actionBtn}>
+            <Ionicons name="star" size={24} color="#3B82F6" />
+          </BlurView>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.actionBtnWrapper}
+          onPress={onPass}
+          activeOpacity={0.7}
+        >
+          <BlurView intensity={40} tint="light" style={styles.actionBtn}>
+            <Ionicons name="close" size={30} color="#FF4D4D" />
+          </BlurView>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.actionBtnWrapper}
+          onPress={onLike}
+          activeOpacity={0.7}
+        >
+          <BlurView intensity={40} tint="light" style={styles.actionBtn}>
+            <Ionicons name="heart" size={30} color="#4CAF50" />
+          </BlurView>
+        </TouchableOpacity>
       </View>
 
       {/* Premium Glow Border (Optional illustration of premium status) */}
@@ -84,7 +142,7 @@ const styles = StyleSheet.create({
   cardContainer: {
     width: CARD_WIDTH,
     height: CARD_HEIGHT,
-    borderRadius: 24,
+    borderRadius: 0, // Full screen feel
     overflow: "hidden",
     backgroundColor: "#fff",
     elevation: 8,
@@ -92,6 +150,9 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
+  },
+  contentClickArea: {
+    flex: 1,
   },
   image: {
     width: "100%",
@@ -181,5 +242,32 @@ const styles = StyleSheet.create({
     borderRadius: 24,
     borderWidth: 2,
     borderColor: Colors.light.gold,
+  },
+  actionsContainer: {
+    position: "absolute",
+    right: 16,
+    bottom: 140, // Positioned above info container
+    alignItems: "center",
+    gap: 16,
+    zIndex: 20,
+  },
+  actionBtnWrapper: {
+    borderRadius: 30,
+    overflow: "hidden",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 5,
+    elevation: 6,
+  },
+  actionBtn: {
+    width: 56,
+    height: 56,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "rgba(255, 255, 255, 0.1)", // Base translucency
+    borderWidth: 1,
+    borderColor: "rgba(255, 255, 255, 0.2)",
+    borderRadius: 28,
   },
 });

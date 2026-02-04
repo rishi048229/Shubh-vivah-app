@@ -5,7 +5,7 @@ export interface Profile {
   location: string;
   profession: string;
   matchPercentage: number;
-  image: string;
+  image: any; // Allow number (require) or string (URI)
   isPremium: boolean;
   isKundaliMatched: boolean;
   bio?: string;

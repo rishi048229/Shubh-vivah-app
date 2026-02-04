@@ -1,27 +1,28 @@
 import { Colors } from "@/constants/Colors";
 import { Ionicons } from "@expo/vector-icons";
+import { useRouter } from "expo-router";
 import React, { useEffect } from "react";
 import {
-    Dimensions,
-    Image,
-    Modal,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  Dimensions,
+  Image,
+  Modal,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from "react-native";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import Animated, {
-    interpolate,
-    runOnJS,
-    useAnimatedStyle,
-    useSharedValue,
-    withTiming,
+  interpolate,
+  runOnJS,
+  useAnimatedStyle,
+  useSharedValue,
+  withTiming,
 } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-const { width, height } = Dimensions.get("window");
-const DRAWER_WIDTH = width * 0.85; // Covers most of the screen
+const { width } = Dimensions.get("window");
+const DRAWER_WIDTH = width * 0.8;
 
 interface SideDrawerProps {
   isOpen: boolean;
@@ -30,25 +31,22 @@ interface SideDrawerProps {
 
 const MENU_ITEMS = [
   { icon: "person-outline", label: "My Profile" },
-  { icon: "star-outline", label: "My Reviews" },
-  { icon: "shield-checkmark-outline", label: "Safety" },
+  { icon: "heart-circle-outline", label: "My Matches" },
+  { icon: "star-outline", label: "Shortlisted" },
+  { icon: "chatbubbles-outline", label: "Chats" },
+  { icon: "settings-outline", label: "Settings" },
   { icon: "help-circle-outline", label: "Help & Support" },
   { icon: "lock-closed-outline", label: "Privacy Policy" },
-  { icon: "settings-outline", label: "Setting" },
-  { icon: "document-text-outline", label: "Terms & Condition" },
-  { icon: "log-out-outline", label: "Leave Application" }, // Icon for leave?
-  { icon: "gavel", label: "Legal" }, // Icon for legal
 ];
 
 export const SideDrawer: React.FC<SideDrawerProps> = ({ isOpen, onClose }) => {
+  const router = useRouter(); // Initialize router
   const insets = useSafeAreaInsets();
-  const translateX = useSharedValue(-width); // Start off-screen to the left
+  const translateX = useSharedValue(-width);
 
   useEffect(() => {
     if (isOpen) {
-      translateX.value = withTiming(0, {
-        duration: 300,
-      });
+      translateX.value = withTiming(0, { duration: 300 });
     } else {
       translateX.value = withTiming(-width, { duration: 300 });
     }
@@ -68,11 +66,9 @@ export const SideDrawer: React.FC<SideDrawerProps> = ({ isOpen, onClose }) => {
       }
     });
 
-  const drawerStyle = useAnimatedStyle(() => {
-    return {
-      transform: [{ translateX: translateX.value }],
-    };
-  });
+  const drawerStyle = useAnimatedStyle(() => ({
+    transform: [{ translateX: translateX.value }],
+  }));
 
   const backdropStyle = useAnimatedStyle(() => {
     const opacity = interpolate(
@@ -83,7 +79,7 @@ export const SideDrawer: React.FC<SideDrawerProps> = ({ isOpen, onClose }) => {
     );
     return {
       opacity,
-      display: opacity === 0 ? "none" : "flex", // Hide when fully closed
+      display: opacity === 0 ? "none" : "flex",
     };
   });
 
@@ -109,44 +105,89 @@ export const SideDrawer: React.FC<SideDrawerProps> = ({ isOpen, onClose }) => {
           <Animated.View
             style={[styles.drawer, drawerStyle, { paddingTop: insets.top }]}
           >
-            {/* Close Button */}
-            <TouchableOpacity style={styles.closeButton} onPress={onClose}>
-              <Ionicons name="close" size={28} color={Colors.light.maroon} />
-            </TouchableOpacity>
-
-            {/* Profile Header */}
-            <View style={styles.header}>
-              <Image
-                source={{ uri: "https://i.pravatar.cc/150?img=12" }} // Placeholder
-                style={styles.avatar}
-              />
-              <View style={styles.headerText}>
-                <Text style={styles.name}>Vatsal Kantariya</Text>
-                <Text style={styles.phone}>9601430331</Text>
-              </View>
+            {/* Close / Header */}
+            <View style={styles.headerRow}>
+              <TouchableOpacity onPress={onClose}>
+                <Ionicons name="close" size={28} color={Colors.light.maroon} />
+              </TouchableOpacity>
             </View>
+
+            {/* Profile Info */}
+            <TouchableOpacity
+              style={styles.profileSection}
+              onPress={() => {
+                onClose();
+                router.push("/(tabs)/profile"); // Navigate to profile tab
+              }}
+            >
+              <View style={styles.avatarContainer}>
+                <Image
+                  source={require("@/assets/images/irina_dhruv.jpg")}
+                  style={styles.avatar}
+                />
+                <View style={styles.verifiedBadge}>
+                  <Ionicons name="checkmark" size={12} color="#fff" />
+                </View>
+              </View>
+              <Text style={styles.name}>Rishi</Text>
+              <Text style={styles.membership}>Premium Member</Text>
+            </TouchableOpacity>
 
             {/* Menu Items */}
             <View style={styles.menuList}>
               {MENU_ITEMS.map((item, index) => (
-                <TouchableOpacity key={index} style={styles.menuItem}>
-                  <Ionicons
-                    name={item.icon as any}
-                    size={24}
-                    color={Colors.light.maroon}
-                  />
+                <TouchableOpacity
+                  key={index}
+                  style={styles.menuItem}
+                  onPress={() => {
+                    onClose();
+                    if (item.label === "My Profile")
+                      router.push("/(tabs)/profile");
+                    else if (item.label === "My Matches")
+                      router.push("/(tabs)/connections");
+                    else if (item.label === "Chats")
+                      router.push("/(tabs)/chat");
+                    // Add other routes as needed
+                  }}
+                >
+                  <View style={styles.iconBox}>
+                    <Ionicons
+                      name={item.icon as any}
+                      size={22}
+                      color={Colors.light.gold}
+                    />
+                  </View>
                   <Text style={styles.menuLabel}>{item.label}</Text>
+                  <Ionicons
+                    name="chevron-forward"
+                    size={16}
+                    color="#ccc"
+                    style={{ marginLeft: "auto" }}
+                  />
                 </TouchableOpacity>
               ))}
             </View>
 
             {/* Footer */}
-            <TouchableOpacity style={styles.logoutButton}>
-              <Ionicons
-                name="log-out-outline"
-                size={24}
-                color={Colors.light.maroon}
-              />
+            <TouchableOpacity
+              style={styles.logoutButton}
+              onPress={() => {
+                onClose();
+                router.replace("/login"); // Logout logic
+              }}
+            >
+              <View
+                style={[
+                  styles.iconBox,
+                  { backgroundColor: "rgba(255,0,0,0.1)" },
+                ]}
+              >
+                <Ionicons
+                  name="log-out-outline"
+                  size={22}
+                  color={Colors.light.maroon}
+                />
+              </View>
               <Text style={styles.logoutText}>Logout</Text>
             </TouchableOpacity>
           </Animated.View>
@@ -159,6 +200,7 @@ export const SideDrawer: React.FC<SideDrawerProps> = ({ isOpen, onClose }) => {
 const styles = StyleSheet.create({
   container: {
     ...StyleSheet.absoluteFillObject,
+    zIndex: 1000,
   },
   backdrop: {
     ...StyleSheet.absoluteFillObject,
@@ -170,47 +212,55 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     width: DRAWER_WIDTH,
-    backgroundColor: Colors.light.gold, // Yellow background
+    backgroundColor: Colors.light.ivory, // Ivory BG
     borderTopRightRadius: 30,
     borderBottomRightRadius: 30,
-    paddingHorizontal: 20,
-    paddingBottom: 20,
-    shadowColor: "#000",
-    shadowOffset: { width: 5, height: 0 },
-    shadowOpacity: 0.2,
-    shadowRadius: 10,
-    elevation: 10,
+    paddingHorizontal: 25,
+    paddingBottom: 30,
   },
-  closeButton: {
-    alignSelf: "flex-end",
-    padding: 10,
+  headerRow: {
+    alignItems: "flex-end",
+    marginBottom: 10,
   },
-  header: {
-    flexDirection: "row",
+  profileSection: {
     alignItems: "center",
-    marginBottom: 30,
-    marginTop: 10,
+    marginBottom: 40,
+  },
+  avatarContainer: {
+    position: "relative",
+    marginBottom: 15,
   },
   avatar: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    marginRight: 15,
-    borderWidth: 2,
-    borderColor: Colors.light.maroon,
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    borderWidth: 3,
+    borderColor: Colors.light.gold,
   },
-  headerText: {
+  verifiedBadge: {
+    position: "absolute",
+    bottom: 0,
+    right: 0,
+    backgroundColor: Colors.light.maroon,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    alignItems: "center",
     justifyContent: "center",
+    borderWidth: 2,
+    borderColor: "#fff",
   },
   name: {
-    fontSize: 18,
+    fontSize: 22,
     fontWeight: "bold",
     color: Colors.light.maroon,
+    marginBottom: 4,
   },
-  phone: {
+  membership: {
     fontSize: 14,
-    color: Colors.light.maroon,
-    opacity: 0.8,
+    color: Colors.light.gold,
+    fontWeight: "600",
+    letterSpacing: 0.5,
   },
   menuList: {
     flex: 1,
@@ -218,25 +268,31 @@ const styles = StyleSheet.create({
   menuItem: {
     flexDirection: "row",
     alignItems: "center",
-    paddingVertical: 15,
+    marginBottom: 25,
+  },
+  iconBox: {
+    width: 36,
+    height: 36,
+    borderRadius: 12,
+    backgroundColor: Colors.light.maroon,
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: 15,
   },
   menuLabel: {
     fontSize: 16,
-    color: Colors.light.maroon,
-    marginLeft: 15,
+    color: "#333",
     fontWeight: "500",
   },
   logoutButton: {
     flexDirection: "row",
     alignItems: "center",
-    paddingVertical: 15,
-    borderTopWidth: 1,
-    borderTopColor: "rgba(0,0,0,0.1)",
+    marginTop: 20,
   },
   logoutText: {
     fontSize: 16,
     color: Colors.light.maroon,
+    fontWeight: "bold",
     marginLeft: 15,
-    fontWeight: "600",
   },
 });

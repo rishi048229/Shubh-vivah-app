@@ -8,19 +8,19 @@ const EVENTS = [
     id: 1,
     title: "Royal Wedding in Jaipur",
     date: "Dec 2023",
-    image: require("@/assets/images/Irina and Dhruv, Jaipur.jpg"),
+    image: require("@/assets/images/irina_dhruv.jpg"),
   },
   {
     id: 2,
     title: "Destination Wedding in Goa",
     date: "Nov 2023",
-    image: require("@/assets/images/download (19).jpg"),
+    image: require("@/assets/images/architect_profile.jpg"),
   },
   {
     id: 3,
     title: "Traditional Ceremony in Varanasi",
     date: "Oct 2023",
-    image: require("@/assets/images/download (8).jpg"),
+    image: require("@/assets/images/doctor_profile.jpg"),
   },
 ];
 

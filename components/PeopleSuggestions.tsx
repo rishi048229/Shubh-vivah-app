@@ -52,6 +52,7 @@ const MOCK_PEOPLE = [
 ];
 
 export const PeopleSuggestions: React.FC = () => {
+  const router = useRouter();
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const filterHeight = useSharedValue(0);
 
@@ -110,16 +111,29 @@ export const PeopleSuggestions: React.FC = () => {
             entering={FadeInRight.delay(index * 100).duration(500)}
             style={styles.card}
           >
-            <Image source={{ uri: person.image }} style={styles.profileImage} />
-            <View style={styles.cardContent}>
-              <Text style={styles.name}>
-                {person.name}, {person.age}
-              </Text>
-              <Text style={styles.location}>{person.location}</Text>
-              <View style={styles.matchBadge}>
-                <Text style={styles.matchText}>{person.match}% Match</Text>
+            <TouchableOpacity
+              activeOpacity={0.8}
+              onPress={() =>
+                router.push({
+                  pathname: "/profile-details/[id]",
+                  params: { id: person.id },
+                })
+              }
+            >
+              <Image
+                source={{ uri: person.image }}
+                style={styles.profileImage}
+              />
+              <View style={styles.cardContent}>
+                <Text style={styles.name}>
+                  {person.name}, {person.age}
+                </Text>
+                <Text style={styles.location}>{person.location}</Text>
+                <View style={styles.matchBadge}>
+                  <Text style={styles.matchText}>{person.match}% Match</Text>
+                </View>
               </View>
-            </View>
+            </TouchableOpacity>
           </Animated.View>
         ))}
       </ScrollView>

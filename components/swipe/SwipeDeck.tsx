@@ -1,12 +1,7 @@
-import { Ionicons } from "@expo/vector-icons";
+import { MOCK_PROFILES } from "@/constants/MockData";
+import { useRouter } from "expo-router";
 import React, { useCallback, useState } from "react";
-import {
-    Dimensions,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
-} from "react-native";
+import { Dimensions, StyleSheet, Text, View } from "react-native";
 import {
     Gesture,
     GestureDetector,
@@ -19,7 +14,6 @@ import Animated, {
     useSharedValue,
     withSpring,
 } from "react-native-reanimated";
-import { MOCK_PROFILES } from "./mockData";
 import ProfileCard from "./ProfileCard";
 
 const { width, height } = Dimensions.get("window");
@@ -28,7 +22,25 @@ const SWIPE_THRESHOLD = width * 0.3;
 
 export default function SwipeDeck() {
   const [currentIndex, setCurrentIndex] = useState(0);
-  const profiles = MOCK_PROFILES;
+  const profiles = React.useMemo(
+    () =>
+      MOCK_PROFILES.map((p) => ({
+        ...p,
+        profession: p.job,
+        matchPercentage: p.compatibility,
+        isPremium: false,
+        isKundaliMatched: p.kundaliMatch !== "Not Matched",
+        // Ensure image is treated as string if the component expects URI string,
+        // BUT MOCK_PROFILES uses require().
+        // ProfileCard uses <Image source={{ uri: profile.image }} /> which implies it expects a URL string.
+        // However, the mock data provides `require(...)` (number).
+        // The Image component in ProfileCard uses `expo-image`.
+        // We should fix ProfileCard to handle both or Ensure types align.
+        // Logic below assumes we fix ProfileCard or data.
+        // For now, let's keep 'image' as is, but cast it to any if needed or fix the Type.
+      })),
+    [],
+  );
 
   // Shared values for the ACTIVE card
   const translateX = useSharedValue(0);
@@ -44,6 +56,25 @@ export default function SwipeDeck() {
   }, [profiles.length, translateX, translateY, scale]);
 
   // Gesture definitions
+  // Define handlers to be passed to cards
+  const triggerSwipeRight = useCallback(() => {
+    translateX.value = withSpring(width * 1.5, {}, () => {
+      runOnJS(handleNext)();
+    });
+  }, [handleNext, translateX]);
+
+  const triggerSwipeLeft = useCallback(() => {
+    translateX.value = withSpring(-width * 1.5, {}, () => {
+      runOnJS(handleNext)();
+    });
+  }, [handleNext, translateX]);
+
+  const triggerSwipeUp = useCallback(() => {
+    translateY.value = withSpring(-height, {}, () => {
+      runOnJS(handleNext)();
+    });
+  }, [handleNext, translateY]);
+
   const panGesture = Gesture.Pan()
     .onUpdate((e) => {
       translateX.value = e.translationX;
@@ -117,6 +148,14 @@ export default function SwipeDeck() {
   const nextIndex = (currentIndex + 1) % profiles.length;
   const nextProfile = profiles[nextIndex];
 
+  const router = useRouter();
+  const handleCardPress = () => {
+    router.push({
+      pathname: "/profile-details/[id]",
+      params: { id: currentProfile.id },
+    });
+  };
+
   return (
     <GestureHandlerRootView style={styles.container}>
       <View style={styles.deckContainer}>
@@ -134,47 +173,17 @@ export default function SwipeDeck() {
           <Animated.View
             style={[styles.cardWrapper, topCardStyle, { zIndex: 10 }]}
           >
-            <ProfileCard profile={currentProfile} />
+            <ProfileCard
+              profile={currentProfile}
+              onLike={() => runOnJS(triggerSwipeRight)()}
+              onPass={() => runOnJS(triggerSwipeLeft)()}
+              onSuperLike={() => runOnJS(triggerSwipeUp)()}
+              onCardPress={handleCardPress}
+            />
 
             {/* Visual Feedback Overlays could go here */}
           </Animated.View>
         </GestureDetector>
-      </View>
-
-      {/* Action Buttons */}
-      <View style={styles.actionsContainer}>
-        <TouchableOpacity
-          style={[styles.actionButton, styles.rejectButton]}
-          onPress={() => {
-            translateX.value = withSpring(-width * 1.5, {}, () =>
-              runOnJS(handleNext)(),
-            );
-          }}
-        >
-          <Ionicons name="close" size={32} color="#FF4D4D" />
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={[styles.actionButton, styles.superLikeButton]}
-          onPress={() => {
-            translateY.value = withSpring(-height, {}, () =>
-              runOnJS(handleNext)(),
-            );
-          }}
-        >
-          <Ionicons name="star" size={24} color="#3B82F6" />
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={[styles.actionButton, styles.likeButton]}
-          onPress={() => {
-            translateX.value = withSpring(width * 1.5, {}, () =>
-              runOnJS(handleNext)(),
-            );
-          }}
-        >
-          <Ionicons name="heart" size={32} color="#4CAF50" />
-        </TouchableOpacity>
       </View>
 
       <Text style={styles.hintText}>Swipe Up for Details</Text>
@@ -186,20 +195,22 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     alignItems: "center",
-    justifyContent: "center",
+    justifyContent: "flex-start", // Changed from center to allow top alignment if needed
   },
   deckContainer: {
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
-    marginTop: 20,
+    marginTop: 0, // Removed margin for full screen effect
     width: width,
-    height: height * 0.7,
+    height: height, // Full height
   },
   cardWrapper: {
     position: "absolute",
     alignItems: "center",
     justifyContent: "center",
+    width: "100%",
+    height: "100%",
   },
   center: {
     flex: 1,

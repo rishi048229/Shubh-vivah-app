@@ -1,13 +1,14 @@
 import { Colors } from "@/constants/Colors";
 import { Ionicons } from "@expo/vector-icons";
+import { useRouter } from "expo-router";
 import React from "react";
 import {
-    Image,
-    Modal,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  Image,
+  Modal,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from "react-native";
 
 interface ProfilePreviewModalProps {
@@ -21,6 +22,7 @@ export const ProfilePreviewModal = ({
   onClose,
   person,
 }: ProfilePreviewModalProps) => {
+  const router = useRouter();
   if (!person) return null;
 
   return (
@@ -77,7 +79,16 @@ export const ProfilePreviewModal = ({
               </View>
             </View>
 
-            <TouchableOpacity style={styles.viewProfileBtn}>
+            <TouchableOpacity
+              style={styles.viewProfileBtn}
+              onPress={() => {
+                onClose();
+                router.push({
+                  pathname: "/profile-details/[id]",
+                  params: { id: person.id },
+                });
+              }}
+            >
               <Text style={styles.viewProfileText}>View Full Profile</Text>
             </TouchableOpacity>
           </View>

@@ -1,8 +1,9 @@
 import {
-  CustomModalDropdown,
-  RadioGroup,
+    CustomModalDropdown,
+    RadioGroup,
 } from "@/components/complete-profile/FormControls";
 import ProfileLayout from "@/components/complete-profile/ProfileLayout";
+import { useProfile } from "@/context/ProfileContext";
 import { useRouter } from "expo-router";
 import React, { useState } from "react";
 import { Alert } from "react-native";
@@ -80,6 +81,8 @@ const RASHIS = [
 
 const ReligiousDetails = () => {
   const router = useRouter();
+  const { updateProfileData } = useProfile(); // Moved to top level
+
   const [formData, setFormData] = useState({
     religion: "Hindu",
     community: "",
@@ -101,7 +104,7 @@ const ReligiousDetails = () => {
       nakshatra,
       rashi,
     } = formData;
-    const newErrors = {};
+    const newErrors: Record<string, string> = {};
 
     if (!religion) newErrors.religion = "Please select your religion";
     if (!community) newErrors.community = "Please select your community";
@@ -115,6 +118,17 @@ const ReligiousDetails = () => {
       return;
     }
 
+    // Sync with context
+    updateProfileData({
+      religion,
+      community,
+      caste,
+      manglikStatus,
+      gothra,
+      nakshatra,
+      rashi,
+    });
+
     setErrors({});
     router.push("/complete-profile/education-details");
   };
@@ -125,6 +139,7 @@ const ReligiousDetails = () => {
       stepTitle="Religious Information"
       currentStep={2}
       totalSteps={5}
+      onBack={() => router.back()}
       onContinue={handleNext}
     >
       <CustomModalDropdown
@@ -132,7 +147,7 @@ const ReligiousDetails = () => {
         value={formData.religion}
         placeholder="Hindu"
         options={RELIGIONS}
-        onSelect={(val) => {
+        onSelect={(val: string) => {
           setFormData({ ...formData, religion: val });
           if (errors.religion) setErrors({ ...errors, religion: "" });
         }}
@@ -144,7 +159,7 @@ const ReligiousDetails = () => {
         value={formData.community}
         placeholder="Select Community"
         options={COMMUNITIES}
-        onSelect={(val) => {
+        onSelect={(val: string) => {
           setFormData({ ...formData, community: val });
           if (errors.community) setErrors({ ...errors, community: "" });
         }}
@@ -156,7 +171,7 @@ const ReligiousDetails = () => {
         value={formData.caste}
         placeholder="Select Caste"
         options={CASTES}
-        onSelect={(val) => {
+        onSelect={(val: string) => {
           setFormData({ ...formData, caste: val });
           if (errors.caste) setErrors({ ...errors, caste: "" });
         }}
@@ -167,7 +182,7 @@ const ReligiousDetails = () => {
         label="Manglik Status"
         options={["Yes", "No"]}
         selectedOption={formData.manglikStatus}
-        onSelect={(opt) => {
+        onSelect={(opt: string) => {
           setFormData({ ...formData, manglikStatus: opt });
           if (errors.manglikStatus) setErrors({ ...errors, manglikStatus: "" });
         }}
@@ -179,7 +194,7 @@ const ReligiousDetails = () => {
         value={formData.gothra}
         placeholder="Select Gotra"
         options={GOTRAS}
-        onSelect={(val) => {
+        onSelect={(val: string) => {
           setFormData({ ...formData, gothra: val });
           if (errors.gothra) setErrors({ ...errors, gothra: "" });
         }}
@@ -191,7 +206,7 @@ const ReligiousDetails = () => {
         value={formData.nakshatra}
         placeholder="Select Nakshatra"
         options={NAKSHATRAS}
-        onSelect={(val) => {
+        onSelect={(val: string) => {
           setFormData({ ...formData, nakshatra: val });
           if (errors.nakshatra) setErrors({ ...errors, nakshatra: "" });
         }}
@@ -203,7 +218,7 @@ const ReligiousDetails = () => {
         value={formData.rashi}
         placeholder="Select Rashi"
         options={RASHIS}
-        onSelect={(val) => {
+        onSelect={(val: string) => {
           setFormData({ ...formData, rashi: val });
           if (errors.rashi) setErrors({ ...errors, rashi: "" });
         }}

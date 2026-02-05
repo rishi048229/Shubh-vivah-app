@@ -1,4 +1,5 @@
 import ProfileLayout from "@/components/complete-profile/ProfileLayout";
+import { useProfile } from "@/context/ProfileContext";
 import { useRouter } from "expo-router";
 import React, { useState } from "react";
 import {
@@ -35,6 +36,7 @@ interface OptionGroupProps {
 
 const LifestyleHabits = () => {
   const router = useRouter();
+  const { updateProfileData } = useProfile();
   const [formData, setFormData] = useState({
     eatingHabits: "",
     dietPreference: "",
@@ -58,6 +60,15 @@ const LifestyleHabits = () => {
       setErrors(newErrors);
       return;
     }
+
+    // Sync with context
+    updateProfileData({
+      eatingHabits: formData.eatingHabits,
+      dietPreference: formData.dietPreference,
+      drinking: formData.drinking === "Yes",
+      smoking: formData.smoking === "Yes",
+      healthNotes: formData.healthNotes,
+    });
 
     setErrors({});
     router.push("/complete-profile/profile-completed");

@@ -14,12 +14,30 @@ import {
 
 const { width } = Dimensions.get("window");
 
+import { useProfile } from "@/context/ProfileContext";
+import { profileService } from "@/services/profileService";
+import { useState } from "react";
+import { ActivityIndicator, Alert } from "react-native";
+
 const ProfileCompleted = () => {
   const router = useRouter();
+  const { profileData } = useProfile();
+  const [loading, setLoading] = useState(false);
 
-  const handleProceed = () => {
-    // Navigate to home or dashboard
-    router.push("/(tabs)");
+  const handleProceed = async () => {
+    setLoading(true);
+    try {
+      await profileService.saveOrUpdateProfile(profileData);
+      Alert.alert("Success", "Profile submitted successfully!", [
+        { text: "OK", onPress: () => router.push("/(tabs)") },
+      ]);
+    } catch (error: any) {
+      console.error("Profile Submit Error", error);
+      const msg = error.response?.data?.message || "Failed to save profile";
+      Alert.alert("Error", msg);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -51,8 +69,13 @@ const ProfileCompleted = () => {
             style={styles.button}
             onPress={handleProceed}
             activeOpacity={0.8}
+            disabled={loading}
           >
-            <Text style={styles.buttonText}>Proceed to KYC</Text>
+            {loading ? (
+              <ActivityIndicator color="#FFF" />
+            ) : (
+              <Text style={styles.buttonText}>Proceed to KYC</Text>
+            )}
           </TouchableOpacity>
         </View>
       </View>

@@ -1,7 +1,6 @@
 import {
-    CustomDateInput,
+    CustomDatePicker,
     CustomModalDropdown,
-    CustomPhoneInput,
     CustomTextInput,
 } from "@/components/complete-profile/FormControls";
 import ProfileLayout from "@/components/complete-profile/ProfileLayout";
@@ -39,38 +38,45 @@ const HEIGHT_OPTIONS = [
 
 const WEIGHT_OPTIONS = Array.from({ length: 61 }, (_, i) => `${40 + i} kg`);
 
+const CITY_OPTIONS = [
+  "Mumbai",
+  "Delhi",
+  "Bangalore",
+  "Chennai",
+  "Kolkata",
+  "Hyderabad",
+  "Pune",
+  "Ahmedabad",
+  "Jaipur",
+  "Lucknow",
+  "Other",
+];
+
+import { useProfile } from "@/context/ProfileContext";
 import { useLocalSearchParams } from "expo-router";
-// ...
 const BasicDetails = () => {
   const router = useRouter();
   const params = useLocalSearchParams();
   const initialGender = typeof params.gender === "string" ? params.gender : "";
 
+  const { updateProfileData } = useProfile();
+
   const [formData, setFormData] = useState({
     fullName: "",
-    email: "",
-    phone: "",
-    gender: initialGender, // Initialize from params
-    dob: "",
+    gender: initialGender,
+    dob: "", // Will store as YYYY-MM-DD
     height: "",
     weight: "",
+    city: "",
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   const handleNext = () => {
-    const { fullName, email, phone, gender, dob, height, weight } = formData;
+    const { fullName, gender, dob, height, weight, city } = formData;
     const newErrors: Record<string, string> = {};
 
-    if (
-      !fullName ||
-      !email ||
-      !phone ||
-      !gender ||
-      !dob ||
-      !height ||
-      !weight
-    ) {
+    if (!fullName || !gender || !dob || !height || !weight || !city) {
       Alert.alert(
         "Missing Details",
         "Please fill all the details to continue.",
@@ -78,15 +84,20 @@ const BasicDetails = () => {
       return;
     }
 
-    // Simple validation for demo
-    if (phone.length !== 10) {
-      newErrors.phone = "Please enter a valid 10-digit mobile number";
-    }
-
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors);
       return;
     }
+
+    // Sync with global context
+    updateProfileData({
+      fullName,
+      gender,
+      dateOfBirth: dob, // Already in YYYY-MM-DD format from date picker
+      height: parseFloat(height.replace("'", ".").replace('"', "")),
+      weight: parseFloat(weight.replace(" kg", "")),
+      city,
+    });
 
     setErrors({});
     router.push("/complete-profile/religious-details");
@@ -112,34 +123,11 @@ const BasicDetails = () => {
         error={errors.fullName}
       />
 
-      <CustomTextInput
-        label="Email Address"
-        value={formData.email}
-        onChangeText={(text: string) => {
-          setFormData({ ...formData, email: text });
-          if (errors.email) setErrors({ ...errors, email: "" });
-        }}
-        placeholder="Enter your email"
-        keyboardType="email-address"
-        error={errors.email}
-      />
-
-      <CustomPhoneInput
-        label="Phone Number"
-        value={formData.phone}
-        onChangeText={(text: string) => {
-          setFormData({ ...formData, phone: text });
-          if (errors.phone) setErrors({ ...errors, phone: "" });
-        }}
-        placeholder="Enter phone number"
-        error={errors.phone}
-      />
-
-      <CustomDateInput
+      <CustomDatePicker
         label="Date of Birth"
         value={formData.dob}
-        onChangeText={(text: string) => {
-          setFormData({ ...formData, dob: text });
+        onChange={(dateString: string) => {
+          setFormData({ ...formData, dob: dateString });
           if (errors.dob) setErrors({ ...errors, dob: "" });
         }}
         error={errors.dob}
@@ -167,6 +155,18 @@ const BasicDetails = () => {
           if (errors.weight) setErrors({ ...errors, weight: "" });
         }}
         error={errors.weight}
+      />
+
+      <CustomModalDropdown
+        label="City"
+        value={formData.city}
+        placeholder="Select City"
+        options={CITY_OPTIONS}
+        onSelect={(val: string) => {
+          setFormData({ ...formData, city: val });
+          if (errors.city) setErrors({ ...errors, city: "" });
+        }}
+        error={errors.city}
       />
     </ProfileLayout>
   );

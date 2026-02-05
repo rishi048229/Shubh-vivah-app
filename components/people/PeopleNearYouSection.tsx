@@ -1,54 +1,52 @@
 import { Colors } from "@/constants/Colors";
+import {
+    MatchmakingDto,
+    matchmakingService,
+} from "@/services/matchmakingService";
 import { Ionicons } from "@expo/vector-icons";
-import React, { useState } from "react";
-import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
-import Animated, { FadeIn } from "react-native-reanimated";
-import { PeopleCard } from "./PeopleCard";
-
-const MOCK_PEOPLE = [
-  {
-    id: 1,
-    name: "Riya Gupta",
-    age: 24,
-    distance: "2.5 km away",
-    matchScore: 88,
-    image: "https://i.pravatar.cc/150?img=9",
-  },
-  {
-    id: 2,
-    name: "Ananya Singh",
-    age: 25,
-    distance: "3.1 km away",
-    matchScore: 85,
-    image: "https://i.pravatar.cc/150?img=5",
-  },
-  {
-    id: 3,
-    name: "Meera Patel",
-    age: 23,
-    distance: "4.0 km away",
-    matchScore: 82,
-    image: "https://i.pravatar.cc/150?img=1",
-  },
-  {
-    id: 4,
-    name: "Sanya Malhotra",
-    age: 26,
-    distance: "5.2 km away",
-    matchScore: 79,
-    image: "https://i.pravatar.cc/150?img=3",
-  },
-];
-
 import { useRouter } from "expo-router";
+import React, { useEffect, useState } from "react";
+import {
+    ActivityIndicator,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
+} from "react-native";
+import Animated, { FadeIn } from "react-native-reanimated";
 import { ExploreOverlay } from "./ExploreOverlay";
 import { FullScreenMap } from "./FullScreenMap";
+import { PeopleCard } from "./PeopleCard";
 
 export const PeopleNearYouSection = () => {
   const router = useRouter();
   const [viewMode, setViewMode] = useState<"map" | "list">("list");
   const [isMapOpen, setIsMapOpen] = useState(false);
   const [isExploreOpen, setIsExploreOpen] = useState(false);
+
+  // API state
+  const [people, setPeople] = useState<MatchmakingDto[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  // Fetch matches on component mount
+  useEffect(() => {
+    const fetchMatches = async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        const matches = await matchmakingService.getMatches();
+        setPeople(matches);
+      } catch (err: any) {
+        console.error("Failed to fetch matches", err);
+        setError(err.response?.data?.message || "Failed to load matches");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchMatches();
+  }, []);
 
   const handleMapToggle = () => {
     setIsMapOpen(true);
@@ -104,12 +102,52 @@ export const PeopleNearYouSection = () => {
         onClose={() => setIsExploreOpen(false)}
       />
 
-      {/* List View (Always shown here, Map is a modal now) */}
-      <Animated.View entering={FadeIn} style={styles.listContainer}>
-        {MOCK_PEOPLE.map((person) => (
-          <PeopleCard key={person.id} {...person} />
-        ))}
-      </Animated.View>
+      {/* Content Area */}
+      {loading ? (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={Colors.light.maroon} />
+          <Text style={styles.loadingText}>Finding matches...</Text>
+        </View>
+      ) : error ? (
+        <View style={styles.errorContainer}>
+          <Ionicons name="alert-circle-outline" size={40} color="#ff6b6b" />
+          <Text style={styles.errorText}>{error}</Text>
+          <TouchableOpacity
+            style={styles.retryButton}
+            onPress={() => {
+              setLoading(true);
+              matchmakingService
+                .getMatches()
+                .then(setPeople)
+                .catch((err: Error) => setError(err.message))
+                .finally(() => setLoading(false));
+            }}
+          >
+            <Text style={styles.retryText}>Retry</Text>
+          </TouchableOpacity>
+        </View>
+      ) : people.length === 0 ? (
+        <View style={styles.emptyContainer}>
+          <Ionicons name="people-outline" size={40} color="#ccc" />
+          <Text style={styles.emptyText}>No matches found yet</Text>
+          <Text style={styles.emptySubtext}>
+            Complete your profile to get better matches
+          </Text>
+        </View>
+      ) : (
+        <Animated.View entering={FadeIn} style={styles.listContainer}>
+          {people.map((person) => (
+            <PeopleCard
+              key={person.userId}
+              name={person.fullName}
+              age={person.age}
+              distance={person.city || "Unknown"}
+              matchScore={Math.round(person.matchScore)}
+              image={`https://i.pravatar.cc/150?u=${person.userId}`}
+            />
+          ))}
+        </Animated.View>
+      )}
     </View>
   );
 };
@@ -193,5 +231,55 @@ const styles = StyleSheet.create({
   },
   listContainer: {
     gap: 4,
+  },
+  loadingContainer: {
+    paddingVertical: 60,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  loadingText: {
+    marginTop: 12,
+    color: "#888",
+    fontSize: 14,
+  },
+  errorContainer: {
+    paddingVertical: 40,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  errorText: {
+    marginTop: 10,
+    color: "#666",
+    fontSize: 14,
+    textAlign: "center",
+  },
+  retryButton: {
+    marginTop: 16,
+    backgroundColor: Colors.light.maroon,
+    paddingHorizontal: 24,
+    paddingVertical: 10,
+    borderRadius: 20,
+  },
+  retryText: {
+    color: "#fff",
+    fontWeight: "600",
+    fontSize: 14,
+  },
+  emptyContainer: {
+    paddingVertical: 40,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  emptyText: {
+    marginTop: 10,
+    color: "#888",
+    fontSize: 16,
+    fontWeight: "600",
+  },
+  emptySubtext: {
+    marginTop: 4,
+    color: "#aaa",
+    fontSize: 13,
+    textAlign: "center",
   },
 });

@@ -3,6 +3,7 @@ import {
     CustomModalDropdown,
 } from "@/components/complete-profile/FormControls";
 import ProfileLayout from "@/components/complete-profile/ProfileLayout";
+import { useProfile } from "@/context/ProfileContext";
 import { useRouter } from "expo-router";
 import React, { useState } from "react";
 
@@ -38,11 +39,15 @@ const FAMILY_VALUES = ["Traditional", "Modern", "Liberal"];
 
 const FamilyDetails = () => {
   const router = useRouter();
+  const { updateProfileData } = useProfile();
+
   const [formData, setFormData] = useState({
     fatherOccupation: "",
     motherOccupation: "",
     brothers: 0,
+    marriedBrothers: 0,
     sisters: 0,
+    marriedSisters: 0,
     familyType: "",
     familyStatus: "",
     familyValues: "",
@@ -57,16 +62,28 @@ const FamilyDetails = () => {
       familyStatus,
       familyValues,
     } = formData;
-    const newErrors = {};
+    const newErrors: Record<string, string> = {};
 
     if (!fatherOccupation)
       newErrors.fatherOccupation = "Please select your father's occupation";
-    // Other validations
 
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors);
       return;
     }
+
+    // Sync with context - all fields match backend ProfileDto
+    updateProfileData({
+      fatherOccupation,
+      motherOccupation,
+      brothers: formData.brothers,
+      marriedBrothers: formData.marriedBrothers,
+      sisters: formData.sisters,
+      marriedSisters: formData.marriedSisters,
+      familyType,
+      familyStatus,
+      familyValues,
+    });
 
     setErrors({});
     router.push("/complete-profile/lifestyle-habits");
@@ -90,6 +107,7 @@ const FamilyDetails = () => {
       stepTitle="Family Information"
       currentStep={4}
       totalSteps={5}
+      onBack={() => router.back()}
       onContinue={handleNext}
     >
       <CustomModalDropdown
@@ -97,7 +115,7 @@ const FamilyDetails = () => {
         value={formData.fatherOccupation}
         placeholder="Select Occupation"
         options={FATHER_OCCUPATIONS}
-        onSelect={(val) => {
+        onSelect={(val: string) => {
           setFormData({ ...formData, fatherOccupation: val });
           if (errors.fatherOccupation)
             setErrors({ ...errors, fatherOccupation: "" });
@@ -110,7 +128,7 @@ const FamilyDetails = () => {
         value={formData.motherOccupation}
         placeholder="Select Occupation"
         options={MOTHER_OCCUPATIONS}
-        onSelect={(val) => {
+        onSelect={(val: string) => {
           setFormData({ ...formData, motherOccupation: val });
           if (errors.motherOccupation)
             setErrors({ ...errors, motherOccupation: "" });
@@ -126,10 +144,24 @@ const FamilyDetails = () => {
       />
 
       <Counter
+        label="Married Brothers"
+        value={formData.marriedBrothers}
+        onIncrement={() => updateCounter("marriedBrothers", 1)}
+        onDecrement={() => updateCounter("marriedBrothers", -1)}
+      />
+
+      <Counter
         label="Sisters"
         value={formData.sisters}
         onIncrement={() => updateCounter("sisters", 1)}
         onDecrement={() => updateCounter("sisters", -1)}
+      />
+
+      <Counter
+        label="Married Sisters"
+        value={formData.marriedSisters}
+        onIncrement={() => updateCounter("marriedSisters", 1)}
+        onDecrement={() => updateCounter("marriedSisters", -1)}
       />
 
       <CustomModalDropdown
@@ -137,7 +169,7 @@ const FamilyDetails = () => {
         value={formData.familyType}
         placeholder="Select Type"
         options={FAMILY_TYPES}
-        onSelect={(val) => {
+        onSelect={(val: string) => {
           setFormData({ ...formData, familyType: val });
           if (errors.familyType) setErrors({ ...errors, familyType: "" });
         }}
@@ -149,7 +181,7 @@ const FamilyDetails = () => {
         value={formData.familyStatus}
         placeholder="Select Status"
         options={FAMILY_STATUS}
-        onSelect={(val) => {
+        onSelect={(val: string) => {
           setFormData({ ...formData, familyStatus: val });
           if (errors.familyStatus) setErrors({ ...errors, familyStatus: "" });
         }}
@@ -161,7 +193,7 @@ const FamilyDetails = () => {
         value={formData.familyValues}
         placeholder="Select Values"
         options={FAMILY_VALUES}
-        onSelect={(val) => {
+        onSelect={(val: string) => {
           setFormData({ ...formData, familyValues: val });
           if (errors.familyValues) setErrors({ ...errors, familyValues: "" });
         }}

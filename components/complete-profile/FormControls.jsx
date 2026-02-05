@@ -1,5 +1,6 @@
 import { COLORS } from "@/constants/profileConstants";
 import { Ionicons } from "@expo/vector-icons";
+import DateTimePicker from "@react-native-community/datetimepicker";
 import { useState } from "react";
 import {
     FlatList,
@@ -165,14 +166,86 @@ export const CustomModalDropdown = ({
   );
 };
 
+export const CustomDatePicker = ({ label, value, onChange, error }) => {
+  const [showPicker, setShowPicker] = useState(false);
+  const [date, setDate] = useState(value ? new Date(value) : new Date());
+
+  // Format date as YYYY-MM-DD for backend
+  const formatDate = (d) => {
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, "0");
+    const day = String(d.getDate()).padStart(2, "0");
+    return `${year}-${month}-${day}`;
+  };
+
+  // Format for display (DD/MM/YYYY)
+  const formatDisplayDate = (dateStr) => {
+    if (!dateStr) return "";
+    const [year, month, day] = dateStr.split("-");
+    return `${day}/${month}/${year}`;
+  };
+
+  const handleChange = (event, selectedDate) => {
+    setShowPicker(false);
+    if (selectedDate) {
+      setDate(selectedDate);
+      onChange(formatDate(selectedDate));
+    }
+  };
+
+  return (
+    <View style={styles.inputContainer}>
+      {label && <Text style={styles.label}>{label}</Text>}
+      <TouchableOpacity
+        activeOpacity={0.8}
+        onPress={() => setShowPicker(true)}
+        style={[
+          styles.inputWrapper,
+          value && { borderColor: COLORS.PRIMARY },
+          error && { borderColor: "#FF0000" },
+        ]}
+      >
+        <Text
+          style={[
+            styles.input,
+            value ? { color: COLORS.PRIMARY } : { color: COLORS.PLACEHOLDER },
+            error && { color: "#FF0000" },
+          ]}
+        >
+          {value ? formatDisplayDate(value) : "Select Date of Birth"}
+        </Text>
+        <Ionicons
+          name="calendar-outline"
+          size={20}
+          color={
+            error ? "#FF0000" : value ? COLORS.PRIMARY : COLORS.PLACEHOLDER
+          }
+        />
+      </TouchableOpacity>
+      {error && <Text style={styles.errorText}>{error}</Text>}
+
+      {showPicker && (
+        <DateTimePicker
+          value={date}
+          mode="date"
+          display="spinner"
+          onChange={handleChange}
+          maximumDate={new Date()} // Can't be born in the future
+          minimumDate={new Date(1940, 0, 1)} // Reasonable minimum
+        />
+      )}
+    </View>
+  );
+};
+
+// Keep old CustomDateInput for backward compatibility
 export const CustomDateInput = ({ label, value, onChangeText, error }) => {
-  // Simplified to text input for stability across platforms in this environment
   return (
     <CustomTextInput
       label={label}
       value={value}
       onChangeText={onChangeText}
-      placeholder="DD/MM/YYYY" // Manual entry for simplicity
+      placeholder="DD/MM/YYYY"
       error={error}
     />
   );

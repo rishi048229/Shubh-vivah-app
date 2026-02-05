@@ -1,7 +1,9 @@
+import { authService } from "@/services/authService";
 import { useRouter } from "expo-router";
 import { Lock, Mail } from "lucide-react-native";
 import React, { useState } from "react";
 import {
+    Alert,
     Dimensions,
     Image,
     KeyboardAvoidingView,
@@ -27,46 +29,32 @@ const LoginPage = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState({});
 
-  const handleLogin = () => {
-    let valid = true;
-    let newErrors = {};
-
-    if (!identifier) {
-      newErrors.identifier = "Mobile number or Email is required";
-      valid = false;
-    }
-    if (!password) {
-      newErrors.password = "Password is required";
-      valid = false;
+  const handleLogin = async () => {
+    if (!identifier || !password) {
+      setErrors({
+        identifier: !identifier
+          ? "Mobile number or Email is required"
+          : undefined,
+        password: !password ? "Password is required" : undefined,
+      });
+      return;
     }
 
-    setErrors(newErrors);
+    setErrors({});
+    setIsLoading(true);
 
-    if (valid) {
-      console.warn("DEBUG: Starting login process...");
-      setIsLoading(true);
-      // Simulate API call
-      setTimeout(() => {
-        setIsLoading(false);
-        // For development: always succeed and navigate
-        router.replace("/(tabs)");
-
-        // Original Logic (Commented out for UI dev):
-        /*
-                try {
-                    const isPhone = /^\d+$/.test(identifier);
-                    const payload = {
-                        password,
-                        ...(isPhone ? { mobile: identifier } : { email: identifier })
-                    };
-                    // await login(payload);
-                    // navigation.navigate('MatchList');
-                } catch (error) {
-                    console.error("Login failed", error);
-                    alert('Login failed. Please check your credentials.');
-                }
-                */
-      }, 1500);
+    try {
+      await authService.login(identifier, password);
+      // Determine navigation based on profile completion status via secure store or user object if available
+      // For now, assume if login works, we go to tabs
+      router.replace("/(tabs)");
+    } catch (error) {
+      console.error("Login failed", error);
+      const msg =
+        error.response?.data?.message || "Invalid credentials or server error";
+      Alert.alert("Login Failed", msg);
+    } finally {
+      setIsLoading(false);
     }
   };
 

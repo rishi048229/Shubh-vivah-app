@@ -1,7 +1,9 @@
+import { authService } from "@/services/authService";
 import { useNavigation } from "@react-navigation/native";
 import { Check, Lock, Mail } from "lucide-react-native";
 import React, { useRef, useState } from "react";
 import {
+    Alert,
     Dimensions,
     Image,
     KeyboardAvoidingView,
@@ -33,24 +35,44 @@ const ForgotPassword = () => {
 
   const otpInputs = useRef([]);
 
-  const handleSendOtp = () => {
-    if (!identifier) return;
+  const handleSendOtp = async () => {
+    if (!identifier) {
+      setErrors({ identifier: "Email or Mobile is required" });
+      return;
+    }
     setIsLoading(true);
-    setTimeout(() => {
-      setIsLoading(false);
+    try {
+      await authService.forgotPasswordOtp(identifier);
       setStep("verify");
-    }, 1500);
-  };
-
-  const handleVerifyOtp = () => {
-    setIsLoading(true);
-    setTimeout(() => {
+    } catch (error) {
+      console.error("Send forgot password OTP failed", error);
+      const msg = error.response?.data?.message || "Failed to send OTP";
+      Alert.alert("Error", msg);
+    } finally {
       setIsLoading(false);
-      setStep("verified_success");
-    }, 1500);
+    }
   };
 
-  const handleSetNewPassword = () => {
+  const handleVerifyOtp = async () => {
+    const otpCode = otp.join("");
+    if (otpCode.length !== 6) {
+      Alert.alert("Error", "Please enter a valid 6-digit OTP");
+      return;
+    }
+    setIsLoading(true);
+    try {
+      await authService.verifyForgotPasswordOtp(identifier, otpCode);
+      setStep("verified_success");
+    } catch (error) {
+      console.error("Verify OTP failed", error);
+      const msg = error.response?.data?.message || "Invalid OTP";
+      Alert.alert("Error", msg);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleSetNewPassword = async () => {
     const passwordError = getPasswordError(newPassword);
     if (passwordError) {
       setErrors({ password: passwordError });
@@ -62,10 +84,16 @@ const ForgotPassword = () => {
     }
 
     setIsLoading(true);
-    setTimeout(() => {
-      setIsLoading(false);
+    try {
+      await authService.resetPassword(identifier, newPassword);
       setStep("final_success");
-    }, 1500);
+    } catch (error) {
+      console.error("Reset password failed", error);
+      const msg = error.response?.data?.message || "Failed to reset password";
+      Alert.alert("Error", msg);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleOtpChange = (value, index) => {

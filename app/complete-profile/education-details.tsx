@@ -1,5 +1,6 @@
 import { CustomModalDropdown } from "@/components/complete-profile/FormControls";
 import ProfileLayout from "@/components/complete-profile/ProfileLayout";
+import { useProfile } from "@/context/ProfileContext";
 import { useRouter } from "expo-router";
 import React, { useState } from "react";
 
@@ -31,6 +32,8 @@ const INCOME_OPTIONS = [
 
 const EducationCareerDetails = () => {
   const router = useRouter();
+  const { updateProfileData } = useProfile(); // Moved to top level
+
   const [formData, setFormData] = useState({
     education: "",
     workDetails: "",
@@ -43,7 +46,7 @@ const EducationCareerDetails = () => {
   const handleNext = () => {
     const { education, workDetails, employmentType, occupation, annualIncome } =
       formData;
-    const newErrors = {};
+    const newErrors: Record<string, string> = {};
 
     if (!education) newErrors.education = "Please select your education";
     // Other validations...
@@ -52,6 +55,17 @@ const EducationCareerDetails = () => {
       setErrors(newErrors);
       return;
     }
+
+    // Sync with context
+    updateProfileData({
+      highestEducation: formData.education,
+      // workDetails, // Map if needed
+      employmentType,
+      occupation,
+      annualIncome: annualIncome
+        ? parseInt(annualIncome.replace(/\D/g, "")) * 100000
+        : 0, // loose parsing
+    });
 
     setErrors({});
     router.push("/complete-profile/family-details");
@@ -63,6 +77,7 @@ const EducationCareerDetails = () => {
       stepTitle="Educational Information"
       currentStep={3}
       totalSteps={5}
+      onBack={() => router.back()}
       onContinue={handleNext}
     >
       <CustomModalDropdown
@@ -70,7 +85,7 @@ const EducationCareerDetails = () => {
         value={formData.education}
         placeholder="Select Education"
         options={EDUCATION_OPTIONS}
-        onSelect={(val) => {
+        onSelect={(val: string) => {
           setFormData({ ...formData, education: val });
           if (errors.education) setErrors({ ...errors, education: "" });
         }}
@@ -82,7 +97,7 @@ const EducationCareerDetails = () => {
         value={formData.workDetails}
         placeholder="Select Work Details"
         options={WORK_OPTIONS}
-        onSelect={(val) => {
+        onSelect={(val: string) => {
           setFormData({ ...formData, workDetails: val });
           if (errors.workDetails) setErrors({ ...errors, workDetails: "" });
         }}
@@ -94,7 +109,7 @@ const EducationCareerDetails = () => {
         value={formData.employmentType}
         placeholder="Select Employment Type"
         options={EMPLOYMENT_TYPE}
-        onSelect={(val) => {
+        onSelect={(val: string) => {
           setFormData({ ...formData, employmentType: val });
           if (errors.employmentType)
             setErrors({ ...errors, employmentType: "" });
@@ -107,7 +122,7 @@ const EducationCareerDetails = () => {
         value={formData.occupation}
         placeholder="Select Occupation"
         options={OCCUPATIONS}
-        onSelect={(val) => {
+        onSelect={(val: string) => {
           setFormData({ ...formData, occupation: val });
           if (errors.occupation) setErrors({ ...errors, occupation: "" });
         }}
@@ -119,7 +134,7 @@ const EducationCareerDetails = () => {
         value={formData.annualIncome}
         placeholder="Select Income"
         options={INCOME_OPTIONS}
-        onSelect={(val) => {
+        onSelect={(val: string) => {
           setFormData({ ...formData, annualIncome: val });
           if (errors.annualIncome) setErrors({ ...errors, annualIncome: "" });
         }}

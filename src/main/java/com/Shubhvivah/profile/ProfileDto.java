@@ -11,6 +11,8 @@ import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.PositiveOrZero;
 import jakarta.validation.constraints.Size;
 
+import java.util.List;
+
 @Data
 public class ProfileDto {
 
@@ -31,6 +33,10 @@ public class ProfileDto {
     @NotNull(message = "Weight is required")
     @Positive(message = "Weight must be positive")
     private Double weight;
+
+    
+    private String profilePhotoUrl;   // DP
+    private List<String> additionalPhotos;
 
     // ✅ ADD THIS
     private String city;

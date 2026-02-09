@@ -1,6 +1,7 @@
 package com.Shubhvivah.matchmaking;
 
 import lombok.Data;
+import java.util.List;
 
 @Data
 public class MatchmakingDto {
@@ -13,4 +14,13 @@ public class MatchmakingDto {
     private String religion;
 
     private double matchScore;
+
+    private String profilePhotoUrl;
+    private List<String> photos;
+
+    // Raw distance in KM (for logic if needed)
+    private Double distanceKm;
+
+    // Formatted text for UI -> "5 km away"
+    private String distanceText;
 }

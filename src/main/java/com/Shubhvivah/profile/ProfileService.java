@@ -4,6 +4,13 @@ import com.Shubhvivah.auth.UserEntity;
 import com.Shubhvivah.auth.UserRepository;
 import org.springframework.stereotype.Service;
 import lombok.RequiredArgsConstructor;
+import org.springframework.web.multipart.MultipartFile;
+import java.util.List;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
+import com.Shubhvivah.common.ImageUploadService;
 
 @Service
 @RequiredArgsConstructor
@@ -11,6 +18,94 @@ public class ProfileService {
 
     private final ProfileRepository profileRepo;
     private final UserRepository userRepo;
+    private final ProfilePhotoRepository photoRepo;
+    private static final int MAX_ADDITIONAL_PHOTOS = 5;
+    private final ImageUploadService imageUploadService;
+
+    // =========================
+    // PROFILE PHOTO
+    // =========================
+
+    private String saveFile(Long userId, MultipartFile file) {
+        try {
+            String uploadDir = "uploads/profiles/" + userId;
+            Files.createDirectories(Paths.get(uploadDir));
+
+            String filename =
+                    System.currentTimeMillis() + "_" + file.getOriginalFilename();
+
+            Path path = Paths.get(uploadDir, filename);
+            Files.copy(file.getInputStream(), path, StandardCopyOption.REPLACE_EXISTING);
+
+            return "/uploads/profiles/" + userId + "/" + filename;
+
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to save file", e);
+        }
+    }
+
+    public void uploadProfilePhoto(Long userId, MultipartFile file) {
+        ProfileEntity profile = profileRepo.findByUser_UserId(userId)
+                .orElseThrow(() -> new IllegalStateException("Profile not found"));
+
+        String url = imageUploadService.uploadImage(file, "profiles/" + userId);
+
+        profile.setProfilePhotoUrl(url);
+        profileRepo.save(profile);
+    }
+
+    public void uploadAdditionalPhotos(Long userId, List<MultipartFile> files) {
+
+        ProfileEntity profile = profileRepo.findByUser_UserId(userId)
+                .orElseThrow(() -> new IllegalStateException("Profile not found"));
+
+        int existingCount = profile.getPhotos().size();
+
+        if (existingCount + files.size() > MAX_ADDITIONAL_PHOTOS) {
+            throw new IllegalStateException(
+                    "You can upload only " + MAX_ADDITIONAL_PHOTOS + " additional photos");
+        }
+
+        for (MultipartFile file : files) {
+
+            String cloudUrl =
+                    imageUploadService.uploadImage(file, "profiles/" + userId);
+
+            ProfilePhotoEntity photo = new ProfilePhotoEntity();
+            photo.setProfile(profile);
+            photo.setPhotoUrl(cloudUrl);
+
+            photoRepo.save(photo);
+        }
+    }
+
+    // =========================
+    // DELETE PHOTOS
+    // =========================
+
+    public void deleteAdditionalPhoto(Long userId, Long photoId) {
+
+        ProfileEntity profile = profileRepo.findByUser_UserId(userId)
+                .orElseThrow(() -> new IllegalStateException("Profile not found"));
+
+        ProfilePhotoEntity photo = photoRepo.findById(photoId)
+                .orElseThrow(() -> new IllegalStateException("Photo not found"));
+
+        if (!photo.getProfile().getProfileId().equals(profile.getProfileId())) {
+            throw new IllegalStateException("Unauthorized delete attempt");
+        }
+
+        photoRepo.delete(photo);
+    }
+
+    public void deleteProfilePhoto(Long userId) {
+
+        ProfileEntity profile = profileRepo.findByUser_UserId(userId)
+                .orElseThrow(() -> new IllegalStateException("Profile not found"));
+
+        profile.setProfilePhotoUrl(null);
+        profileRepo.save(profile);
+    }
 
     /*
      * =========================
@@ -33,7 +128,6 @@ public class ProfileService {
             throw new IllegalStateException("User not verified");
         }
 
-        // ✅ CORRECT lookup
         ProfileEntity profile = profileRepo.findByUser(user)
                 .orElseGet(() -> {
                     ProfileEntity p = new ProfileEntity();
@@ -67,6 +161,25 @@ public class ProfileService {
 
     /*
      * =======================
+     * LOCATION UPDATE (NEW)
+     * =======================
+     */
+    public void updateLocation(Long userId, Double lat, Double lng) {
+
+        UserEntity user = userRepo.findById(userId)
+                .orElseThrow(() -> new IllegalStateException("User not found"));
+
+        ProfileEntity profile = profileRepo.findByUser(user)
+                .orElseThrow(() -> new IllegalStateException("Profile not found"));
+
+        profile.setLatitude(lat);
+        profile.setLongitude(lng);
+
+        profileRepo.save(profile);
+    }
+
+    /*
+     * =======================
      * MAPPERS
      * =======================
      */
@@ -78,8 +191,6 @@ public class ProfileService {
         p.setDateOfBirth(d.getDateOfBirth());
         p.setHeight(d.getHeight());
         p.setWeight(d.getWeight());
-
-        // ✅ CITY FIX
         p.setCity(d.getCity());
 
         p.setReligion(d.getReligion());
@@ -122,10 +233,18 @@ public class ProfileService {
         d.setDateOfBirth(p.getDateOfBirth());
         d.setHeight(p.getHeight());
         d.setWeight(p.getWeight());
+        d.setProfilePhotoUrl(p.getProfilePhotoUrl());
 
-        // ✅ CITY FIX
+        if (p.getPhotos() != null) {
+            d.setAdditionalPhotos(
+                    p.getPhotos()
+                            .stream()
+                            .map(ProfilePhotoEntity::getPhotoUrl)
+                            .toList()
+            );
+        }
+
         d.setCity(p.getCity());
-
         d.setReligion(p.getReligion());
         d.setCommunity(p.getCommunity());
         d.setCaste(p.getCaste());

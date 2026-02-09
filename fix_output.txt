@@ -1,0 +1,29 @@
+STARTING FINAL RECOVERY...
+Resetting to the known good commit (fc3f246)...
+Updating files:  45% (99/218)Updating files:  46% (101/218)Updating files:  47% (103/218)Updating files:  48% (105/218)Updating files:  49% (107/218)Updating files:  50% (109/218)Updating files:  51% (112/218)Updating files:  52% (114/218)Updating files:  53% (116/218)Updating files:  54% (118/218)Updating files:  55% (120/218)Updating files:  56% (123/218)Updating files:  57% (125/218)Updating files:  58% (127/218)Updating files:  59% (129/218)Updating files:  60% (131/218)Updating files:  61% (133/218)Updating files:  62% (136/218)Updating files:  63% (138/218)Updating files:  64% (140/218)Updating files:  65% (142/218)Updating files:  66% (144/218)Updating files:  67% (147/218)Updating files:  68% (149/218)Updating files:  69% (151/218)Updating files:  70% (153/218)Updating files:  71% (155/218)Updating files:  72% (157/218)Updating files:  73% (160/218)Updating files:  74% (162/218)Updating files:  75% (164/218)Updating files:  76% (166/218)Updating files:  76% (167/218)Updating files:  77% (168/218)Updating files:  78% (171/218)Updating files:  79% (173/218)Updating files:  80% (175/218)Updating files:  81% (177/218)Updating files:  82% (179/218)Updating files:  83% (181/218)Updating files:  84% (184/218)Updating files:  85% (186/218)Updating files:  86% (188/218)Updating files:  87% (190/218)Updating files:  88% (192/218)Updating files:  89% (195/218)Updating files:  90% (197/218)Updating files:  91% (199/218)Updating files:  92% (201/218)Updating files:  93% (203/218)Updating files:  94% (205/218)Updating files:  95% (208/218)Updating files:  96% (210/218)Updating files:  97% (212/218)Updating files:  98% (214/218)Updating files:  99% (216/218)Updating files: 100% (218/218)Updating files: 100% (218/218), done.
+HEAD is now at fc3f246 Backend code push
+Cleaning up...
+warning: failed to remove app/(tabs): Permission denied
+warning: failed to remove assets/images: Permission denied
+warning: failed to remove assets/rive: Permission denied
+warning: failed to remove components/dashboard: Permission denied
+warning: failed to remove components/people: Permission denied
+warning: failed to remove components/profile: Permission denied
+warning: failed to remove components/swipe: Permission denied
+warning: failed to remove components/ui: Permission denied
+warning: failed to remove constants/: Permission denied
+warning: failed to remove fix_output.txt: Invalid argument
+warning: failed to remove hooks/: Permission denied
+warning: failed to remove scripts/: Permission denied
+warning: failed to remove src/main/resources/static/: Permission denied
+warning: failed to remove src/main/resources/templates/: Permission denied
+Removing commit_files.txt
+Removing current_status.txt
+Removing fix_everything.bat
+Removing git_log.txt
+Removing push_output.txt
+Removing restore_code.bat
+Removing run_diagnostics.bat
+Removing src_listing.txt
+Removing test_execution.txt
+The batch file cannot be found.

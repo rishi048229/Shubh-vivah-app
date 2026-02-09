@@ -9,4 +9,6 @@ import com.Shubhvivah.auth.UserEntity;
 public interface ProfileRepository extends JpaRepository<ProfileEntity, Long> {
 
     Optional<ProfileEntity> findByUser(UserEntity user);
+    Optional<ProfileEntity> findByUser_UserId(Long userId);
+    
 }

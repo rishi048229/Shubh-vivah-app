@@ -31,7 +31,7 @@ export const ProfileImagePicker = ({
   completionPercentage = 0,
   editable = true,
 }: ProfileImagePickerProps) => {
-  const { setProfileImage } = useProfile();
+  const { setProfileImage, profileData } = useProfile();
   const progress = useSharedValue(0);
   const scale = useSharedValue(0.8);
   const opacity = useSharedValue(0);
@@ -78,17 +78,30 @@ export const ProfileImagePicker = ({
     });
 
     if (!result.canceled && result.assets[0]) {
+      const newImageUri = result.assets[0].uri;
       try {
-        await setProfileImage(result.assets[0].uri);
-        // Animate success
+        // 1. Update local state & SecureStore
+        await setProfileImage(newImageUri);
+
+        // 2. Save to backend with merged profile data
+        const { profileService } = require("@/services/profileService");
+        const mergedData = {
+          ...profileData,
+          profileImageUrl: newImageUri,
+        };
+        await profileService.saveOrUpdateProfile(mergedData);
+        console.log("✅ Profile Image saved to backend");
+
+        // 3. Animate success
         scale.value = withSpring(0.95, { damping: 10 });
         setTimeout(() => {
           scale.value = withSpring(1, { damping: 15 });
         }, 150);
       } catch (error) {
+        console.error("❌ Failed to save profile image:", error);
         Alert.alert(
-          "Error",
-          "Failed to update profile picture. Please try again.",
+          "Save Failed",
+          "Profile photo updated locally but could not sync to server.",
         );
       }
     }

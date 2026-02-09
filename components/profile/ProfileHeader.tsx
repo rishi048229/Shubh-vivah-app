@@ -44,7 +44,8 @@ export const ProfileHeader = ({
 }: ProfileHeaderProps) => {
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const { profileImage, setProfileImage, completionPercentage } = useProfile();
+  const { profileImage, setProfileImage, completionPercentage, profileData } =
+    useProfile();
   const [showMenu, setShowMenu] = useState(false);
 
   const translateY = useSharedValue(20);
@@ -81,7 +82,28 @@ export const ProfileHeader = ({
     });
 
     if (!result.canceled && result.assets[0]) {
-      await setProfileImage(result.assets[0].uri);
+      const newImageUri = result.assets[0].uri;
+
+      try {
+        // 1. Update Local State & SecureStore
+        await setProfileImage(newImageUri);
+
+        // 2. Persist to Backend - merge with existing profile data
+        const { profileService } = require("@/services/profileService");
+        const mergedData = {
+          ...profileData,
+          profileImageUrl: newImageUri,
+        };
+
+        await profileService.saveOrUpdateProfile(mergedData);
+        console.log("✅ Profile Image saved to backend");
+      } catch (error) {
+        console.error("❌ Failed to save profile image:", error);
+        Alert.alert(
+          "Save Failed",
+          "Profile photo updated locally but could not sync to server. It will sync when you're back online.",
+        );
+      }
     }
   };
 

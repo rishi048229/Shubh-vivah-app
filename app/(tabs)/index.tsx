@@ -5,6 +5,7 @@ import { FreeKundaliCard } from "@/components/dashboard/FreeKundaliCard";
 import { MatchFeed } from "@/components/dashboard/MatchFeed";
 import { ProfileHealthWidget } from "@/components/dashboard/ProfileHealthWidget";
 import { ShortlistStrip } from "@/components/dashboard/ShortlistStrip";
+import LocationPickerModal from "@/components/location/LocationPickerModal";
 import { PreviousEvents } from "@/components/PreviousEvents";
 import { SideDrawer } from "@/components/SideDrawer";
 import { WeddingJourneyServices } from "@/components/WeddingJourneyServices";
@@ -16,17 +17,19 @@ import { useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import React, { useState } from "react";
 import {
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from "react-native";
 
 export default function HomeScreen() {
   const router = useRouter();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const { profileData, profileImage } = useProfile();
+  const [isLocationModalOpen, setIsLocationModalOpen] = useState(false);
+
+  const { profileData, profileImage, location, setLocation } = useProfile();
 
   const toggleMenu = () => {
     setIsMenuOpen(!isMenuOpen);
@@ -71,10 +74,35 @@ export default function HomeScreen() {
               <View style={styles.welcomeTextContainer}>
                 <Text style={styles.greetingText}>{getGreeting()}</Text>
                 <Text style={styles.userNameText}>Hello, {userName}</Text>
+
+                <TouchableOpacity
+                  style={{
+                    flexDirection: "row",
+                    alignItems: "center",
+                    marginTop: 2,
+                  }}
+                  onPress={() => setIsLocationModalOpen(true)}
+                >
+                  <Text style={styles.locationText}>
+                    📍{" "}
+                    {location
+                      ? `${location.city}, ${location.state}`
+                      : "Set your location"}
+                  </Text>
+                  <Ionicons
+                    name="pencil"
+                    size={12}
+                    color={Colors.light.maroon}
+                    style={{ marginLeft: 4 }}
+                  />
+                </TouchableOpacity>
               </View>
             </TouchableOpacity>
 
-            <TouchableOpacity style={styles.bellButton}>
+            <TouchableOpacity
+              style={styles.bellButton}
+              onPress={() => router.push("/notifications")}
+            >
               <Ionicons name="notifications-outline" size={24} color="#333" />
               <View style={styles.badge}>
                 <Text style={styles.badgeText}>12</Text>
@@ -136,11 +164,21 @@ export default function HomeScreen() {
         {/* Padding for bottom tab bar */}
         <View style={{ height: 100 }} />
       </ScrollView>
+      <LocationPickerModal
+        visible={isLocationModalOpen}
+        onClose={() => setIsLocationModalOpen(false)}
+        onSelectLocation={setLocation}
+      />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
+  locationText: {
+    fontSize: 12,
+    color: Colors.light.maroon,
+    fontWeight: "500",
+  },
   container: {
     flex: 1,
     backgroundColor: Colors.light.ivory, // Restore background color

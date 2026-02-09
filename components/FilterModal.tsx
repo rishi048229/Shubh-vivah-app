@@ -1,3 +1,4 @@
+import CustomSlider from "@/components/ui/CustomSlider";
 import { Colors } from "@/constants/Colors";
 import { Ionicons } from "@expo/vector-icons";
 import React, { useState } from "react";
@@ -9,6 +10,7 @@ import {
     TouchableOpacity,
     View,
 } from "react-native";
+import { GestureHandlerRootView } from "react-native-gesture-handler";
 import Animated, { SlideInDown, SlideOutDown } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -109,159 +111,137 @@ export const FilterModal: React.FC<FilterModalProps> = ({
           exiting={SlideOutDown.duration(200)}
           style={[styles.container, { paddingBottom: insets.bottom + 20 }]}
         >
-          {/* Header */}
-          <View style={styles.header}>
-            <Text style={styles.title}>Filter Matches</Text>
-            <TouchableOpacity onPress={onClose}>
-              <Ionicons name="close" size={24} color="#666" />
-            </TouchableOpacity>
-          </View>
-
-          <ScrollView showsVerticalScrollIndicator={false}>
-            {/* Age Range */}
-            <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Age Range</Text>
-              <View style={styles.ageDisplay}>
-                <Text style={styles.ageText}>
-                  {minAge} - {maxAge} years
-                </Text>
-              </View>
-
-              <Text style={styles.ageLabel}>Min Age:</Text>
-              <View style={styles.chips}>
-                {AGE_OPTIONS.filter((age) => age < maxAge).map((age) => (
-                  <TouchableOpacity
-                    key={`min-${age}`}
-                    style={[
-                      styles.ageChip,
-                      minAge === age && styles.chipSelected,
-                    ]}
-                    onPress={() => setMinAge(age)}
-                  >
-                    <Text
-                      style={[
-                        styles.chipText,
-                        minAge === age && styles.chipTextSelected,
-                      ]}
-                    >
-                      {age}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-
-              <Text style={styles.ageLabel}>Max Age:</Text>
-              <View style={styles.chips}>
-                {AGE_OPTIONS.filter((age) => age > minAge).map((age) => (
-                  <TouchableOpacity
-                    key={`max-${age}`}
-                    style={[
-                      styles.ageChip,
-                      maxAge === age && styles.chipSelected,
-                    ]}
-                    onPress={() => setMaxAge(age)}
-                  >
-                    <Text
-                      style={[
-                        styles.chipText,
-                        maxAge === age && styles.chipTextSelected,
-                      ]}
-                    >
-                      {age}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
+          <GestureHandlerRootView style={{ flex: 1 }}>
+            {/* Header */}
+            <View style={styles.header}>
+              <Text style={styles.title}>Filter Matches</Text>
+              <TouchableOpacity onPress={onClose}>
+                <Ionicons name="close" size={24} color="#666" />
+              </TouchableOpacity>
             </View>
 
-            {/* Location */}
-            <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Location</Text>
-              <View style={styles.chips}>
-                {LOCATIONS.map((loc) => (
-                  <TouchableOpacity
-                    key={loc}
-                    style={[
-                      styles.chip,
-                      selectedLocation === loc && styles.chipSelected,
-                    ]}
-                    onPress={() => setSelectedLocation(loc)}
-                  >
-                    <Text
-                      style={[
-                        styles.chipText,
-                        selectedLocation === loc && styles.chipTextSelected,
-                      ]}
-                    >
-                      {loc}
+            <ScrollView showsVerticalScrollIndicator={false}>
+              {/* Age Range */}
+              <View style={styles.section}>
+                <View
+                  style={{
+                    flexDirection: "row",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    marginBottom: 12,
+                  }}
+                >
+                  <Text style={styles.sectionTitle}>Age Range</Text>
+                  <View style={styles.ageDisplay}>
+                    <Text style={styles.ageText}>
+                      {minAge} - {maxAge} years
                     </Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            </View>
+                  </View>
+                </View>
 
-            {/* Religion */}
-            <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Religion</Text>
-              <View style={styles.chips}>
-                {RELIGIONS.map((rel) => (
-                  <TouchableOpacity
-                    key={rel}
-                    style={[
-                      styles.chip,
-                      selectedReligion === rel && styles.chipSelected,
-                    ]}
-                    onPress={() => setSelectedReligion(rel)}
-                  >
-                    <Text
+                <View style={{ alignItems: "center", paddingVertical: 10 }}>
+                  <CustomSlider
+                    min={18}
+                    max={60}
+                    initialMin={minAge}
+                    initialMax={maxAge}
+                    onValueChange={(min, max) => {
+                      setMinAge(min);
+                      setMaxAge(max);
+                    }}
+                  />
+                </View>
+              </View>
+
+              {/* Location */}
+              <View style={styles.section}>
+                <Text style={styles.sectionTitle}>Location</Text>
+                <View style={styles.chips}>
+                  {LOCATIONS.map((loc) => (
+                    <TouchableOpacity
+                      key={loc}
                       style={[
-                        styles.chipText,
-                        selectedReligion === rel && styles.chipTextSelected,
+                        styles.chip,
+                        selectedLocation === loc && styles.chipSelected,
                       ]}
+                      onPress={() => setSelectedLocation(loc)}
                     >
-                      {rel}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
+                      <Text
+                        style={[
+                          styles.chipText,
+                          selectedLocation === loc && styles.chipTextSelected,
+                        ]}
+                      >
+                        {loc}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
               </View>
-            </View>
 
-            {/* Education */}
-            <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Education</Text>
-              <View style={styles.chips}>
-                {EDUCATION_LEVELS.map((edu) => (
-                  <TouchableOpacity
-                    key={edu}
-                    style={[
-                      styles.chip,
-                      selectedEducation === edu && styles.chipSelected,
-                    ]}
-                    onPress={() => setSelectedEducation(edu)}
-                  >
-                    <Text
+              {/* Religion */}
+              <View style={styles.section}>
+                <Text style={styles.sectionTitle}>Religion</Text>
+                <View style={styles.chips}>
+                  {RELIGIONS.map((rel) => (
+                    <TouchableOpacity
+                      key={rel}
                       style={[
-                        styles.chipText,
-                        selectedEducation === edu && styles.chipTextSelected,
+                        styles.chip,
+                        selectedReligion === rel && styles.chipSelected,
                       ]}
+                      onPress={() => setSelectedReligion(rel)}
                     >
-                      {edu}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
+                      <Text
+                        style={[
+                          styles.chipText,
+                          selectedReligion === rel && styles.chipTextSelected,
+                        ]}
+                      >
+                        {rel}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
               </View>
-            </View>
-          </ScrollView>
 
-          {/* Action Buttons */}
-          <View style={styles.actions}>
-            <TouchableOpacity style={styles.resetBtn} onPress={handleReset}>
-              <Text style={styles.resetText}>Reset</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.applyBtn} onPress={handleApply}>
-              <Text style={styles.applyText}>Apply Filters</Text>
-            </TouchableOpacity>
-          </View>
+              {/* Education */}
+              <View style={styles.section}>
+                <Text style={styles.sectionTitle}>Education</Text>
+                <View style={styles.chips}>
+                  {EDUCATION_LEVELS.map((edu) => (
+                    <TouchableOpacity
+                      key={edu}
+                      style={[
+                        styles.chip,
+                        selectedEducation === edu && styles.chipSelected,
+                      ]}
+                      onPress={() => setSelectedEducation(edu)}
+                    >
+                      <Text
+                        style={[
+                          styles.chipText,
+                          selectedEducation === edu && styles.chipTextSelected,
+                        ]}
+                      >
+                        {edu}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </View>
+            </ScrollView>
+
+            {/* Action Buttons */}
+            <View style={styles.actions}>
+              <TouchableOpacity style={styles.resetBtn} onPress={handleReset}>
+                <Text style={styles.resetText}>Reset</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.applyBtn} onPress={handleApply}>
+                <Text style={styles.applyText}>Apply Filters</Text>
+              </TouchableOpacity>
+            </View>
+          </GestureHandlerRootView>
         </Animated.View>
       </View>
     </Modal>

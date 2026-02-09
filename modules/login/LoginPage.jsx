@@ -31,7 +31,24 @@ const LoginPage = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState({});
 
-  const { refreshProfile } = useProfile(); // Get refresh function from context
+  const { refreshProfile, isProfileComplete } = useProfile(); // Get refresh function from context
+
+  // Check valid session on mount
+  React.useEffect(() => {
+    const checkSession = async () => {
+      // If we have a token, try to refresh profile.
+      // If successful, profile data will populate.
+      await refreshProfile();
+    };
+    checkSession();
+  }, []);
+
+  // Redirect if profile is loaded
+  React.useEffect(() => {
+    if (isProfileComplete) {
+      router.replace("/(tabs)");
+    }
+  }, [isProfileComplete]);
 
   const handleLogin = async () => {
     if (!identifier || !password) {

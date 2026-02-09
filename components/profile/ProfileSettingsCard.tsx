@@ -15,10 +15,7 @@ import {
     TouchableOpacity,
     View,
 } from "react-native";
-import Animated, {
-    FadeInDown,
-    SlideInUp
-} from "react-native-reanimated";
+import Animated, { FadeInDown, SlideInUp } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 export const ProfileSettingsCard = () => {
@@ -295,6 +292,8 @@ export const ProfileSettingsCard = () => {
   );
 };
 
+import { NeumorphicToggle } from "../ui/NeumorphicToggle";
+
 const SettingToggle = ({
   icon,
   label,
@@ -313,12 +312,12 @@ const SettingToggle = ({
       </View>
       <Text style={styles.settingLabel}>{label}</Text>
     </View>
-    <Switch
-      value={value}
-      onValueChange={onToggle}
-      trackColor={{ false: "#E0E0E0", true: Colors.light.maroon }}
-      thumbColor="#FFF"
-      ios_backgroundColor="#E0E0E0"
+    <NeumorphicToggle
+      isOn={value}
+      onToggle={onToggle}
+      activeColor={Colors.light.maroon}
+      width={50}
+      height={28}
     />
   </View>
 );

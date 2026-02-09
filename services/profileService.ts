@@ -6,7 +6,12 @@ export interface ProfileDto {
   dateOfBirth?: string; // YYYY-MM-DD
   height?: number;
   weight?: number;
+  profileImageUrl?: string;
   city?: string;
+  state?: string;
+  country?: string;
+  latitude?: number;
+  longitude?: number;
   religion?: string;
   community?: string;
   caste?: string;

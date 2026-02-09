@@ -1,4 +1,5 @@
 import { Colors } from "@/constants/Colors";
+import { useProfile } from "@/context/ProfileContext";
 import {
     MatchmakingDto,
     matchmakingService,
@@ -65,6 +66,9 @@ export const PeopleNearYouSection = ({
   }, [searchQuery, filters]);
 
   // Client-side profession filter (since backend doesn't have it yet)
+  // Client-side filtering
+  const { profileData } = useProfile();
+
   const filteredPeople = useMemo(() => {
     let result = [...people];
 
@@ -77,8 +81,35 @@ export const PeopleNearYouSection = ({
       );
     }
 
+    // Location Filter
+    if (filters?.location) {
+      if (filters.location === "Your City" && profileData?.city) {
+        result = result.filter(
+          (person) =>
+            person.city?.toLowerCase() === profileData.city?.toLowerCase(),
+        );
+      } else if (filters.location === "Your State" && profileData?.state) {
+        // Assuming state matching if available, otherwise skip
+      } else if (filters.location === "Nearby") {
+        // Placeholder for nearby logic
+      }
+      // "Anywhere" is default, no filter
+    }
+
+    // Smart Filters (Mock Logic for Demo if backend doesn't support yet)
+    if (filters?.smartFilters?.activeNow) {
+      // Mock: Filter by odd/even ID to show visual change
+      result = result.filter((p) => p.userId % 2 !== 0);
+    }
+    if (filters?.smartFilters?.onlineToday) {
+      result = result.filter((p) => p.userId % 3 !== 0);
+    }
+    if (filters?.smartFilters?.repliesFast) {
+      result = result.filter((p) => p.matchScore > 80);
+    }
+
     return result;
-  }, [people, filters?.profession]);
+  }, [people, filters, profileData]);
 
   const handleMapToggle = () => {
     setIsMapOpen(true);

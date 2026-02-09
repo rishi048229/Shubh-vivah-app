@@ -26,9 +26,15 @@ export default function RootLayout() {
 
   // Hide splash screen after a short delay (failsafe)
   useEffect(() => {
+    console.log("RootLayout mounted");
     const hideSplash = async () => {
-      await new Promise((resolve) => setTimeout(resolve, 1000)); // 1 second delay
-      await SplashScreen.hideAsync();
+      try {
+        await new Promise((resolve) => setTimeout(resolve, 1000)); // 1 second delay
+        await SplashScreen.hideAsync();
+        console.log("SplashScreen hidden");
+      } catch (e) {
+        console.warn("Error hiding splash screen:", e);
+      }
     };
     hideSplash();
   }, []);

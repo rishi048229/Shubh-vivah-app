@@ -21,7 +21,7 @@ import Animated, {
 } from "react-native-reanimated";
 
 const { width } = Dimensions.get("window");
-const CARD_WIDTH = width * 0.4;
+const CARD_WIDTH = width * 0.45; // Slightly wider
 const CARD_SPACING = 16;
 const SNAP_INTERVAL = CARD_WIDTH + CARD_SPACING;
 
@@ -70,6 +70,24 @@ const MATCHES = [
     match: 85,
     image: "https://i.pravatar.cc/150?img=20",
     reason: "Shared interest in classical music.",
+  },
+  {
+    id: 6,
+    name: "Meera",
+    age: 24,
+    city: "Pune",
+    match: 82,
+    image: "https://i.pravatar.cc/150?img=32",
+    reason: "Lives closely to your preferred location.",
+  },
+  {
+    id: 7,
+    name: "Riya",
+    age: 27,
+    city: "Jaipur",
+    match: 80,
+    image: "https://i.pravatar.cc/150?img=25",
+    reason: "Caste and Community preferences match.",
   },
 ];
 

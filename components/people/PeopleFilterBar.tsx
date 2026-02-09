@@ -20,9 +20,15 @@ import { NeumorphicToggle } from "../ui/NeumorphicToggle";
 // Exported filter state type
 export interface FilterState {
   ageRange: { min: number; max: number };
+  location: string;
   maritalStatus: string;
   religion: string;
   profession: string;
+  smartFilters: {
+    activeNow: boolean;
+    repliesFast: boolean;
+    onlineToday: boolean;
+  };
 }
 
 interface FilterBarProps {
@@ -32,7 +38,13 @@ interface FilterBarProps {
 
 export const PeopleFilterBar = ({ onExpand, isExpanded }: FilterBarProps) => {
   // Matrimonial Filters
-  const filters = ["Marital Status", "Religion", "Community", "Profession"];
+  const filters = [
+    "Location",
+    "Marital Status",
+    "Religion",
+    "Community",
+    "Profession",
+  ];
 
   return (
     <View style={styles.barContainer}>
@@ -82,10 +94,16 @@ export const PeopleFilterPanel = ({
   const [ageRange, setAgeRange] = useState({ min: 21, max: 35 });
 
   // State for selectable chips
+  const [selectedLocation, setSelectedLocation] = useState<string>("Anywhere");
   const [selectedMaritalStatus, setSelectedMaritalStatus] =
     useState<string>("Any");
   const [selectedReligion, setSelectedReligion] = useState<string>("Hindu");
   const [selectedProfession, setSelectedProfession] = useState<string>("Any");
+
+  // Toggle States
+  const [activeNow, setActiveNow] = useState(true);
+  const [repliesFast, setRepliesFast] = useState(false);
+  const [onlineToday, setOnlineToday] = useState(true);
 
   React.useEffect(() => {
     height.value = withSpring(isOpen ? 550 : 0, {
@@ -106,9 +124,15 @@ export const PeopleFilterPanel = ({
     if (onApply) {
       onApply({
         ageRange,
+        location: selectedLocation,
         maritalStatus: selectedMaritalStatus,
         religion: selectedReligion,
         profession: selectedProfession,
+        smartFilters: {
+          activeNow,
+          repliesFast,
+          onlineToday,
+        },
       });
     }
     onClose();
@@ -158,6 +182,16 @@ export const PeopleFilterPanel = ({
         showsVerticalScrollIndicator={false}
       >
         <Text style={styles.panelTitle}>Refine Your Partner Search</Text>
+
+        {/* Location Filter */}
+        <View style={styles.filterSection}>
+          {renderSectionTitle("Location", "navigate")}
+          {renderChips(
+            ["Your City", "Your State", "Nearby", "Anywhere"],
+            selectedLocation || "Anywhere",
+            (val) => setSelectedLocation(val),
+          )}
+        </View>
 
         {/* Age Range Slider */}
         <View style={styles.filterSection}>
@@ -221,24 +255,24 @@ export const PeopleFilterPanel = ({
             <View style={styles.toggleRow}>
               <Text style={styles.toggleLabel}>🔥 Active Now</Text>
               <NeumorphicToggle
-                isOn={true}
-                onToggle={() => {}}
+                isOn={activeNow}
+                onToggle={() => setActiveNow(!activeNow)}
                 activeColor={Colors.light.maroon}
               />
             </View>
             <View style={styles.toggleRow}>
               <Text style={styles.toggleLabel}>⚡ Replies Fast</Text>
               <NeumorphicToggle
-                isOn={false}
-                onToggle={() => {}}
+                isOn={repliesFast}
+                onToggle={() => setRepliesFast(!repliesFast)}
                 activeColor={Colors.light.maroon}
               />
             </View>
             <View style={styles.toggleRow}>
               <Text style={styles.toggleLabel}>🌙 Online Today</Text>
               <NeumorphicToggle
-                isOn={true}
-                onToggle={() => {}}
+                isOn={onlineToday}
+                onToggle={() => setOnlineToday(!onlineToday)}
                 activeColor={Colors.light.maroon}
               />
             </View>

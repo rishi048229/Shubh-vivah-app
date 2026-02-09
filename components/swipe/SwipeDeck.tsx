@@ -57,20 +57,30 @@ export default function SwipeDeck() {
 
   // Gesture definitions
   // Define handlers to be passed to cards
+  // Refined Spring Config
+  const SPRING_CONFIG = {
+    damping: 18,
+    stiffness: 90,
+    mass: 1,
+    overshootClamping: false,
+    restDisplacementThreshold: 0.01,
+    restSpeedThreshold: 2,
+  };
+
   const triggerSwipeRight = useCallback(() => {
-    translateX.value = withSpring(width * 1.5, {}, () => {
+    translateX.value = withSpring(width * 1.5, SPRING_CONFIG, () => {
       runOnJS(handleNext)();
     });
   }, [handleNext, translateX]);
 
   const triggerSwipeLeft = useCallback(() => {
-    translateX.value = withSpring(-width * 1.5, {}, () => {
+    translateX.value = withSpring(-width * 1.5, SPRING_CONFIG, () => {
       runOnJS(handleNext)();
     });
   }, [handleNext, translateX]);
 
   const triggerSwipeUp = useCallback(() => {
-    translateY.value = withSpring(-height, {}, () => {
+    translateY.value = withSpring(-height, SPRING_CONFIG, () => {
       runOnJS(handleNext)();
     });
   }, [handleNext, translateY]);
@@ -78,25 +88,25 @@ export default function SwipeDeck() {
   const panGesture = Gesture.Pan()
     .onUpdate((e) => {
       translateX.value = e.translationX;
-      translateY.value = e.translationY; // Allow some vertical movement
+      translateY.value = e.translationY;
     })
     .onEnd((e) => {
       if (Math.abs(e.translationX) > SWIPE_THRESHOLD) {
-        // Swipe Left or Right
-        const direction = Math.sign(e.translationX); // 1 = right, -1 = left
-        translateX.value = withSpring(direction * width * 1.5, {}, () => {
-          runOnJS(handleNext)();
-        });
+        const direction = Math.sign(e.translationX);
+        translateX.value = withSpring(
+          direction * width * 1.5,
+          SPRING_CONFIG,
+          () => {
+            runOnJS(handleNext)();
+          },
+        );
       } else if (e.translationY < -SWIPE_THRESHOLD * 0.8) {
-        // Swipe Up (Details) - For now just skip animation loop
-        // In real app, this would open modal
-        translateY.value = withSpring(-height, {}, () => {
+        translateY.value = withSpring(-height, SPRING_CONFIG, () => {
           runOnJS(handleNext)();
         });
       } else {
-        // Reset
-        translateX.value = withSpring(0);
-        translateY.value = withSpring(0);
+        translateX.value = withSpring(0, SPRING_CONFIG);
+        translateY.value = withSpring(0, SPRING_CONFIG);
       }
     });
 

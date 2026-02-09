@@ -6,35 +6,42 @@ import { MatchFeed } from "@/components/dashboard/MatchFeed";
 import { ProfileHealthWidget } from "@/components/dashboard/ProfileHealthWidget";
 import { ShortlistStrip } from "@/components/dashboard/ShortlistStrip";
 import { PreviousEvents } from "@/components/PreviousEvents";
+import { SideDrawer } from "@/components/SideDrawer";
 import { WeddingJourneyServices } from "@/components/WeddingJourneyServices";
-// Logic: User said "slider will be the same just if the user will slide down he will come to other things"
-// ImmersiveHero is full screen. We will put TopNavBar *inside* ImmersiveHero or just omit it if ImmersiveHero replaces it.
-// Given the design, ImmersiveHero has its own header usually. But let's stick to the flow.
-// We will put the widgets below the Hero.
-
-// ImmersiveHero removed
-import { SideDrawer } from "@/components/SideDrawer"; // Need these too
 import { Colors } from "@/constants/Colors";
+import { useProfile } from "@/context/ProfileContext";
 import { Ionicons } from "@expo/vector-icons";
+import { Image } from "expo-image";
 import { useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import React, { useState } from "react";
 import {
-    Image,
     ScrollView,
     StyleSheet,
     Text,
     TouchableOpacity,
-    View,
+    View
 } from "react-native";
 
 export default function HomeScreen() {
   const router = useRouter();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const { profileData, profileImage } = useProfile();
 
   const toggleMenu = () => {
     setIsMenuOpen(!isMenuOpen);
   };
+
+  // Get greeting based on time
+  const getGreeting = () => {
+    const hour = new Date().getHours();
+    if (hour < 12) return "Good Morning";
+    if (hour < 17) return "Good Afternoon";
+    return "Good Evening";
+  };
+
+  const userName = profileData.fullName?.split(" ")[0] || "User";
+  const defaultAvatar = "https://i.pravatar.cc/150?img=11";
 
   return (
     <View style={styles.container}>
@@ -51,22 +58,19 @@ export default function HomeScreen() {
         overScrollMode="never"
       >
         {/* HERO SECTION: Full Screen Slider */}
-        {/* We can overlay TopNavBar here if valid, or just let Hero be Hero.
-            The user shared an image which works as a header. 
-            So we just render ImmersiveHero.
-        */}
         {/* HEADER & HERO SECTION */}
         <View style={styles.heroSection}>
           {/* Header Overlay */}
           <View style={styles.headerRow}>
             <TouchableOpacity style={styles.profileHeader} onPress={toggleMenu}>
               <Image
-                source={require("@/assets/images/irina_dhruv.jpg")}
+                source={{ uri: profileImage || defaultAvatar }}
                 style={styles.avatarImage}
+                contentFit="cover"
               />
               <View style={styles.welcomeTextContainer}>
-                <Text style={styles.greetingText}>Good Morning</Text>
-                <Text style={styles.userNameText}>Hello, Rishi</Text>
+                <Text style={styles.greetingText}>{getGreeting()}</Text>
+                <Text style={styles.userNameText}>Hello, {userName}</Text>
               </View>
             </TouchableOpacity>
 

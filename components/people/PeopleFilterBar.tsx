@@ -15,6 +15,15 @@ import Animated, {
     withSpring,
     withTiming,
 } from "react-native-reanimated";
+import { NeumorphicToggle } from "../ui/NeumorphicToggle";
+
+// Exported filter state type
+export interface FilterState {
+  ageRange: { min: number; max: number };
+  maritalStatus: string;
+  religion: string;
+  profession: string;
+}
 
 interface FilterBarProps {
   onExpand: () => void;
@@ -63,9 +72,11 @@ export const PeopleFilterBar = ({ onExpand, isExpanded }: FilterBarProps) => {
 export const PeopleFilterPanel = ({
   isOpen,
   onClose,
+  onApply,
 }: {
   isOpen: boolean;
   onClose: () => void;
+  onApply?: (filters: FilterState) => void;
 }) => {
   const height = useSharedValue(0);
   const [ageRange, setAgeRange] = useState({ min: 21, max: 35 });
@@ -73,6 +84,8 @@ export const PeopleFilterPanel = ({
   // State for selectable chips
   const [selectedMaritalStatus, setSelectedMaritalStatus] =
     useState<string>("Any");
+  const [selectedReligion, setSelectedReligion] = useState<string>("Hindu");
+  const [selectedProfession, setSelectedProfession] = useState<string>("Any");
 
   React.useEffect(() => {
     height.value = withSpring(isOpen ? 550 : 0, {
@@ -88,6 +101,18 @@ export const PeopleFilterPanel = ({
   }));
 
   if (!isOpen && height.value === 0) return null;
+
+  const handleApply = () => {
+    if (onApply) {
+      onApply({
+        ageRange,
+        maritalStatus: selectedMaritalStatus,
+        religion: selectedReligion,
+        profession: selectedProfession,
+      });
+    }
+    onClose();
+  };
 
   const renderSectionTitle = (title: string, icon: any) => (
     <View style={styles.sectionHeader}>
@@ -172,11 +197,10 @@ export const PeopleFilterPanel = ({
         {/* Religion */}
         <View style={styles.filterSection}>
           {renderSectionTitle("Religion", "people")}
-          {/* Just visual mock for now */}
           {renderChips(
             ["Hindu", "Muslim", "Sikh", "Christian", "Jain"],
-            "Hindu",
-            () => {},
+            selectedReligion,
+            setSelectedReligion,
           )}
         </View>
 
@@ -185,8 +209,8 @@ export const PeopleFilterPanel = ({
           {renderSectionTitle("Profession", "briefcase")}
           {renderChips(
             ["Any", "Engineer", "Doctor", "Business", "Teacher", "Govt. Job"],
-            "Any",
-            () => {},
+            selectedProfession,
+            setSelectedProfession,
           )}
         </View>
 
@@ -194,27 +218,30 @@ export const PeopleFilterPanel = ({
         <View style={styles.filterSection}>
           {renderSectionTitle("Smart Filters", "flash")}
           <View style={styles.chipContainer}>
-            {["🔥 Active Now", "⚡ Replies Fast", "🌙 Online Today"].map(
-              (filter) => (
-                <TouchableOpacity
-                  key={filter}
-                  style={[
-                    styles.timeChip,
-                    { backgroundColor: "#e3f2fd", borderColor: "#2196f3" },
-                  ]}
-                >
-                  <Text
-                    style={{
-                      color: "#1565c0",
-                      fontSize: 12,
-                      fontWeight: "bold",
-                    }}
-                  >
-                    {filter}
-                  </Text>
-                </TouchableOpacity>
-              ),
-            )}
+            <View style={styles.toggleRow}>
+              <Text style={styles.toggleLabel}>🔥 Active Now</Text>
+              <NeumorphicToggle
+                isOn={true}
+                onToggle={() => {}}
+                activeColor={Colors.light.maroon}
+              />
+            </View>
+            <View style={styles.toggleRow}>
+              <Text style={styles.toggleLabel}>⚡ Replies Fast</Text>
+              <NeumorphicToggle
+                isOn={false}
+                onToggle={() => {}}
+                activeColor={Colors.light.maroon}
+              />
+            </View>
+            <View style={styles.toggleRow}>
+              <Text style={styles.toggleLabel}>🌙 Online Today</Text>
+              <NeumorphicToggle
+                isOn={true}
+                onToggle={() => {}}
+                activeColor={Colors.light.maroon}
+              />
+            </View>
           </View>
         </View>
 
@@ -227,7 +254,7 @@ export const PeopleFilterPanel = ({
         <TouchableOpacity style={styles.clearBtn} onPress={onClose}>
           <Text style={styles.clearText}>Cancel</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.applyBtn} onPress={onClose}>
+        <TouchableOpacity style={styles.applyBtn} onPress={handleApply}>
           <Text style={styles.applyText}>Apply Filters</Text>
         </TouchableOpacity>
       </View>
@@ -367,8 +394,21 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
   },
   applyText: {
-    color: "#fff", // White text on maroon button
+    color: "#fff",
     fontWeight: "bold",
     fontSize: 15,
+  },
+  toggleRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    width: "100%",
+    marginBottom: 10,
+    paddingHorizontal: 5,
+  },
+  toggleLabel: {
+    fontSize: 14,
+    color: "#444",
+    fontWeight: "600",
   },
 });

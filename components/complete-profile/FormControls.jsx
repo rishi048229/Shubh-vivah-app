@@ -168,7 +168,10 @@ export const CustomModalDropdown = ({
 
 export const CustomDatePicker = ({ label, value, onChange, error }) => {
   const [showPicker, setShowPicker] = useState(false);
-  const [date, setDate] = useState(value ? new Date(value) : new Date());
+  // Default to 20 years ago instead of today (backend requires @Past)
+  const defaultDate = new Date();
+  defaultDate.setFullYear(defaultDate.getFullYear() - 20);
+  const [date, setDate] = useState(value ? new Date(value) : defaultDate);
 
   // Format date as YYYY-MM-DD for backend
   const formatDate = (d) => {

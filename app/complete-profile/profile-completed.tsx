@@ -21,20 +21,43 @@ import { ActivityIndicator, Alert } from "react-native";
 
 const ProfileCompleted = () => {
   const router = useRouter();
-  const { profileData } = useProfile();
+  const { profileData, updateProfileData } = useProfile();
   const [loading, setLoading] = useState(false);
 
   const handleProceed = async () => {
     setLoading(true);
     try {
-      await profileService.saveOrUpdateProfile(profileData);
+      const response = await profileService.saveOrUpdateProfile(profileData);
+
+      // Update local state with backend response (important for ID and normalized fields)
+      if (response.data) {
+        updateProfileData(response.data);
+      }
+
       Alert.alert("Success", "Profile submitted successfully!", [
         { text: "OK", onPress: () => router.push("/(tabs)") },
       ]);
     } catch (error: any) {
       console.error("Profile Submit Error", error);
-      const msg = error.response?.data?.message || "Failed to save profile";
-      Alert.alert("Error", msg);
+      // Handle field-level validation errors (e.g., {dateOfBirth: "Date of birth must be in the past"})
+      const errorData = error.response?.data;
+      let msg = "Failed to save profile";
+
+      if (errorData && typeof errorData === "object") {
+        // If it's a map of field errors, format them nicely
+        const fieldErrors = Object.entries(errorData)
+          .map(([field, message]) => `• ${field}: ${message}`)
+          .join("\n");
+        msg = fieldErrors || error.response?.data?.message || msg;
+      }
+
+      Alert.alert("Validation Error", msg, [
+        {
+          text: "Edit Profile",
+          onPress: () => router.push("/complete-profile/basic-details"),
+        },
+        { text: "OK" },
+      ]);
     } finally {
       setLoading(false);
     }

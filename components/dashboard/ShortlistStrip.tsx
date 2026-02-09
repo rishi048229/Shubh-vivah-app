@@ -1,5 +1,6 @@
 import { Colors } from "@/constants/Colors";
 import { Ionicons } from "@expo/vector-icons";
+import { useRouter } from "expo-router";
 import React from "react";
 import {
     Image,
@@ -11,19 +12,21 @@ import {
 } from "react-native";
 
 const SHORTLISTED = [
-  { id: 1, image: "https://via.placeholder.com/100" },
-  { id: 2, image: "https://via.placeholder.com/100" },
-  { id: 3, image: "https://via.placeholder.com/100" },
-  { id: 4, image: "https://via.placeholder.com/100" },
-  { id: 5, image: "https://via.placeholder.com/100" },
+  { id: 1, image: "https://i.pravatar.cc/100?img=1" },
+  { id: 2, image: "https://i.pravatar.cc/100?img=5" },
+  { id: 3, image: "https://i.pravatar.cc/100?img=9" },
+  { id: 4, image: "https://i.pravatar.cc/100?img=16" },
+  { id: 5, image: "https://i.pravatar.cc/100?img=20" },
 ];
 
 export const ShortlistStrip = () => {
+  const router = useRouter();
+
   return (
     <View style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Shortlisted Profiles</Text>
-        <TouchableOpacity>
+        <TouchableOpacity onPress={() => router.push("/shortlisted")}>
           <Text style={styles.viewAll}>View All</Text>
         </TouchableOpacity>
       </View>

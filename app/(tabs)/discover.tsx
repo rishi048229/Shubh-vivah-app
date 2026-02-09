@@ -1,13 +1,23 @@
+import { FilterModal, FilterState } from "@/components/FilterModal";
 import SwipeDeck from "@/components/swipe/SwipeDeck";
+import { Colors } from "@/constants/Colors";
 import { Ionicons } from "@expo/vector-icons";
-import React from "react";
+import React, { useState } from "react";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function DiscoverScreen() {
+  const [showFilter, setShowFilter] = useState(false);
+  const [filters, setFilters] = useState<FilterState | null>(null);
+
   const handleFilterPress = () => {
-    // Open filter modal (future implementation)
-    console.log("Open Discover filters");
+    setShowFilter(true);
+  };
+
+  const handleApplyFilters = (newFilters: FilterState) => {
+    setFilters(newFilters);
+    console.log("Applied discover filters:", newFilters);
+    // In real app, refetch profiles with these filters
   };
 
   return (
@@ -17,10 +27,11 @@ export default function DiscoverScreen() {
         <View style={styles.headerContent}>
           <Text style={styles.title}>Discover</Text>
           <TouchableOpacity
-            style={styles.filterButton}
+            style={[styles.filterButton, filters && styles.filterActive]}
             onPress={handleFilterPress}
           >
             <Ionicons name="options" size={24} color="#FFF" />
+            {filters && <View style={styles.filterDot} />}
           </TouchableOpacity>
         </View>
       </SafeAreaView>
@@ -30,11 +41,18 @@ export default function DiscoverScreen() {
         <SwipeDeck />
       </View>
 
-      {/* Bottom info hint (optional) */}
+      {/* Bottom info hint */}
       <View style={styles.hintContainer}>
         <Text style={styles.hintText}>Swipe for more matches</Text>
         <Ionicons name="chevron-down" size={20} color="#FFF" />
       </View>
+
+      {/* Filter Modal */}
+      <FilterModal
+        visible={showFilter}
+        onClose={() => setShowFilter(false)}
+        onApply={handleApplyFilters}
+      />
     </View>
   );
 }
@@ -42,7 +60,7 @@ export default function DiscoverScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#000", // Dark background for immersive feel
+    backgroundColor: "#000",
   },
   header: {
     position: "absolute",
@@ -73,7 +91,19 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(255,255,255,0.2)",
     justifyContent: "center",
     alignItems: "center",
-    backdropFilter: "blur(10px)", // Works on some platforms, irrelevant on Android native but good for future
+    position: "relative",
+  },
+  filterActive: {
+    backgroundColor: Colors.light.maroon,
+  },
+  filterDot: {
+    position: "absolute",
+    top: 8,
+    right: 8,
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: Colors.light.gold,
   },
   deckContainer: {
     flex: 1,

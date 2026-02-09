@@ -5,7 +5,7 @@ import {
 } from "@/services/matchmakingService";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
     ActivityIndicator,
     StyleSheet,
@@ -17,8 +17,17 @@ import Animated, { FadeIn } from "react-native-reanimated";
 import { ExploreOverlay } from "./ExploreOverlay";
 import { FullScreenMap } from "./FullScreenMap";
 import { PeopleCard } from "./PeopleCard";
+import { FilterState } from "./PeopleFilterBar";
 
-export const PeopleNearYouSection = () => {
+interface PeopleNearYouSectionProps {
+  searchQuery?: string;
+  filters?: FilterState | null;
+}
+
+export const PeopleNearYouSection = ({
+  searchQuery = "",
+  filters,
+}: PeopleNearYouSectionProps) => {
   const router = useRouter();
   const [viewMode, setViewMode] = useState<"map" | "list">("list");
   const [isMapOpen, setIsMapOpen] = useState(false);
@@ -29,24 +38,47 @@ export const PeopleNearYouSection = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Fetch matches on component mount
+  // Fetch profiles when search or filters change
   useEffect(() => {
-    const fetchMatches = async () => {
+    const fetchProfiles = async () => {
       setLoading(true);
       setError(null);
       try {
-        const matches = await matchmakingService.getMatches();
+        // Use browseProfiles for testing (doesn't require user's own profile)
+        const matches = await matchmakingService.browseProfiles({
+          search: searchQuery || undefined,
+          minAge: filters?.ageRange?.min,
+          maxAge: filters?.ageRange?.max,
+          religion:
+            filters?.religion !== "Hindu" ? filters?.religion : undefined, // Skip default
+        });
         setPeople(matches);
       } catch (err: any) {
-        console.error("Failed to fetch matches", err);
-        setError(err.response?.data?.message || "Failed to load matches");
+        console.error("Failed to fetch profiles", err);
+        setError(err.response?.data?.message || "Failed to load profiles");
       } finally {
         setLoading(false);
       }
     };
 
-    fetchMatches();
-  }, []);
+    fetchProfiles();
+  }, [searchQuery, filters]);
+
+  // Client-side profession filter (since backend doesn't have it yet)
+  const filteredPeople = useMemo(() => {
+    let result = [...people];
+
+    // Profession filter (skip if "Any")
+    if (filters?.profession && filters.profession !== "Any") {
+      result = result.filter((person) =>
+        person.occupation
+          ?.toLowerCase()
+          .includes(filters.profession.toLowerCase()),
+      );
+    }
+
+    return result;
+  }, [people, filters?.profession]);
 
   const handleMapToggle = () => {
     setIsMapOpen(true);
@@ -117,7 +149,7 @@ export const PeopleNearYouSection = () => {
             onPress={() => {
               setLoading(true);
               matchmakingService
-                .getMatches()
+                .browseProfiles()
                 .then(setPeople)
                 .catch((err: Error) => setError(err.message))
                 .finally(() => setLoading(false));
@@ -126,17 +158,19 @@ export const PeopleNearYouSection = () => {
             <Text style={styles.retryText}>Retry</Text>
           </TouchableOpacity>
         </View>
-      ) : people.length === 0 ? (
+      ) : filteredPeople.length === 0 ? (
         <View style={styles.emptyContainer}>
           <Ionicons name="people-outline" size={40} color="#ccc" />
           <Text style={styles.emptyText}>No matches found yet</Text>
           <Text style={styles.emptySubtext}>
-            Complete your profile to get better matches
+            {searchQuery || filters
+              ? "Try adjusting your search or filters"
+              : "Complete your profile to get better matches"}
           </Text>
         </View>
       ) : (
         <Animated.View entering={FadeIn} style={styles.listContainer}>
-          {people.map((person) => (
+          {filteredPeople.map((person) => (
             <PeopleCard
               key={person.userId}
               name={person.fullName}

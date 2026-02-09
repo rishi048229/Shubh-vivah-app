@@ -22,12 +22,16 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 const { width } = Dimensions.get("window");
 
+import { useProfile } from "@/context/ProfileContext";
+
 const LoginPage = () => {
   const router = useRouter();
   const [identifier, setIdentifier] = useState(""); // Renamed from email to identifier
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState({});
+
+  const { refreshProfile } = useProfile(); // Get refresh function from context
 
   const handleLogin = async () => {
     if (!identifier || !password) {
@@ -45,8 +49,12 @@ const LoginPage = () => {
 
     try {
       await authService.login(identifier, password);
-      // Determine navigation based on profile completion status via secure store or user object if available
-      // For now, assume if login works, we go to tabs
+
+      // Refresh profile data immediately after login
+      if (refreshProfile) {
+        await refreshProfile();
+      }
+
       router.replace("/(tabs)");
     } catch (error) {
       console.error("Login failed", error);

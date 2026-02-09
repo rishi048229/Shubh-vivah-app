@@ -1,23 +1,26 @@
 import { Colors } from "@/constants/Colors";
+import { useProfile } from "@/context/ProfileContext";
 import { Ionicons } from "@expo/vector-icons";
+import { Image } from "expo-image";
 import { useRouter } from "expo-router";
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import {
-  Dimensions,
-  Image,
-  Modal,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
+    Alert,
+    Dimensions,
+    Linking,
+    Modal,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
 } from "react-native";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import Animated, {
-  interpolate,
-  runOnJS,
-  useAnimatedStyle,
-  useSharedValue,
-  withTiming,
+    interpolate,
+    runOnJS,
+    useAnimatedStyle,
+    useSharedValue,
+    withTiming,
 } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -30,19 +33,40 @@ interface SideDrawerProps {
 }
 
 const MENU_ITEMS = [
-  { icon: "person-outline", label: "My Profile" },
-  { icon: "heart-circle-outline", label: "My Matches" },
-  { icon: "star-outline", label: "Shortlisted" },
-  { icon: "chatbubbles-outline", label: "Chats" },
-  { icon: "settings-outline", label: "Settings" },
-  { icon: "help-circle-outline", label: "Help & Support" },
-  { icon: "lock-closed-outline", label: "Privacy Policy" },
+  { icon: "person-outline", label: "My Profile", route: "/(tabs)/profile" },
+  {
+    icon: "heart-circle-outline",
+    label: "My Matches",
+    route: "/(tabs)/connections",
+  },
+  { icon: "star-outline", label: "Shortlisted", route: "/shortlisted" },
+  { icon: "chatbubbles-outline", label: "Chats", route: "/(tabs)/chat" },
+  {
+    icon: "settings-outline",
+    label: "Settings",
+    route: null,
+    action: "settings",
+  },
+  {
+    icon: "help-circle-outline",
+    label: "Help & Support",
+    route: null,
+    action: "help",
+  },
+  {
+    icon: "lock-closed-outline",
+    label: "Privacy Policy",
+    route: null,
+    action: "privacy",
+  },
 ];
 
 export const SideDrawer: React.FC<SideDrawerProps> = ({ isOpen, onClose }) => {
-  const router = useRouter(); // Initialize router
+  const router = useRouter();
   const insets = useSafeAreaInsets();
   const translateX = useSharedValue(-width);
+  const { profileData, profileImage, clearAllUserData } = useProfile();
+  const [showSettingsModal, setShowSettingsModal] = useState(false);
 
   useEffect(() => {
     if (isOpen) {
@@ -83,6 +107,67 @@ export const SideDrawer: React.FC<SideDrawerProps> = ({ isOpen, onClose }) => {
     };
   });
 
+  const handleMenuPress = (item: (typeof MENU_ITEMS)[0]) => {
+    onClose();
+
+    if (item.route) {
+      setTimeout(() => router.push(item.route as any), 300);
+      return;
+    }
+
+    // Handle actions
+    switch (item.action) {
+      case "settings":
+        setTimeout(() => router.push("/(tabs)/profile"), 300);
+        break;
+      case "help":
+        Alert.alert("Help & Support", "How can we help you?", [
+          {
+            text: "Email Us",
+            onPress: () => Linking.openURL("mailto:support@shubhvivah.com"),
+          },
+          {
+            text: "Call Us",
+            onPress: () => Linking.openURL("tel:+911234567890"),
+          },
+          {
+            text: "FAQ",
+            onPress: () =>
+              Alert.alert(
+                "FAQ",
+                "Visit our website for frequently asked questions.",
+              ),
+          },
+          { text: "Cancel", style: "cancel" },
+        ]);
+        break;
+      case "privacy":
+        Alert.alert(
+          "Privacy Policy",
+          "Your privacy matters to us. Read our full privacy policy at shubhvivah.com/privacy",
+        );
+        break;
+    }
+  };
+
+  const handleLogout = () => {
+    Alert.alert("Logout", "Are you sure you want to logout?", [
+      { text: "Cancel", style: "cancel" },
+      {
+        text: "Logout",
+        style: "destructive",
+        onPress: async () => {
+          onClose();
+          await clearAllUserData();
+          router.replace("/login");
+        },
+      },
+    ]);
+  };
+
+  const userName = profileData.fullName || "Complete Profile";
+  const defaultAvatar = "https://i.pravatar.cc/150?img=11";
+
   return (
     <Modal
       transparent
@@ -112,24 +197,25 @@ export const SideDrawer: React.FC<SideDrawerProps> = ({ isOpen, onClose }) => {
               </TouchableOpacity>
             </View>
 
-            {/* Profile Info */}
+            {/* Profile Info - Dynamic */}
             <TouchableOpacity
               style={styles.profileSection}
               onPress={() => {
                 onClose();
-                router.push("/(tabs)/profile"); // Navigate to profile tab
+                router.push("/(tabs)/profile");
               }}
             >
               <View style={styles.avatarContainer}>
                 <Image
-                  source={require("@/assets/images/irina_dhruv.jpg")}
+                  source={{ uri: profileImage || defaultAvatar }}
                   style={styles.avatar}
+                  contentFit="cover"
                 />
                 <View style={styles.verifiedBadge}>
                   <Ionicons name="checkmark" size={12} color="#fff" />
                 </View>
               </View>
-              <Text style={styles.name}>Rishi</Text>
+              <Text style={styles.name}>{userName}</Text>
               <Text style={styles.membership}>Premium Member</Text>
             </TouchableOpacity>
 
@@ -139,16 +225,7 @@ export const SideDrawer: React.FC<SideDrawerProps> = ({ isOpen, onClose }) => {
                 <TouchableOpacity
                   key={index}
                   style={styles.menuItem}
-                  onPress={() => {
-                    onClose();
-                    if (item.label === "My Profile")
-                      router.push("/(tabs)/profile");
-                    else if (item.label === "My Matches")
-                      router.push("/(tabs)/connections");
-                    else if (item.label === "Chats")
-                      router.push("/(tabs)/chat");
-                    // Add other routes as needed
-                  }}
+                  onPress={() => handleMenuPress(item)}
                 >
                   <View style={styles.iconBox}>
                     <Ionicons
@@ -171,10 +248,7 @@ export const SideDrawer: React.FC<SideDrawerProps> = ({ isOpen, onClose }) => {
             {/* Footer */}
             <TouchableOpacity
               style={styles.logoutButton}
-              onPress={() => {
-                onClose();
-                router.replace("/login"); // Logout logic
-              }}
+              onPress={handleLogout}
             >
               <View
                 style={[
@@ -212,7 +286,7 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     width: DRAWER_WIDTH,
-    backgroundColor: Colors.light.ivory, // Ivory BG
+    backgroundColor: Colors.light.ivory,
     borderTopRightRadius: 30,
     borderBottomRightRadius: 30,
     paddingHorizontal: 25,

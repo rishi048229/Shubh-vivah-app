@@ -1,23 +1,34 @@
 import {
-  PeopleFilterBar,
-  PeopleFilterPanel,
+    FilterState,
+    PeopleFilterBar,
+    PeopleFilterPanel,
 } from "@/components/people/PeopleFilterBar";
 import { PeopleNearYouSection } from "@/components/people/PeopleNearYouSection";
 import { Colors } from "@/constants/Colors";
 import { Ionicons } from "@expo/vector-icons";
 import React, { useState } from "react";
 import {
-  ScrollView,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 export default function ConnectionsScreen() {
   const insets = useSafeAreaInsets();
   const [isFilterOpen, setIsFilterOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [appliedFilters, setAppliedFilters] = useState<FilterState | null>(
+    null,
+  );
+
+  const handleApplyFilters = (filters: FilterState) => {
+    setAppliedFilters(filters);
+    setIsFilterOpen(false);
+  };
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
@@ -32,6 +43,7 @@ export default function ConnectionsScreen() {
         <PeopleFilterPanel
           isOpen={isFilterOpen}
           onClose={() => setIsFilterOpen(false)}
+          onApply={handleApplyFilters}
         />
       </View>
 
@@ -44,9 +56,13 @@ export default function ConnectionsScreen() {
             color="#999"
             style={{ marginRight: 10 }}
           />
-          <Text style={styles.searchText}>
-            Search locations, people, and more...
-          </Text>
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Search locations, people, and more..."
+            placeholderTextColor="#999"
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+          />
           <TouchableOpacity
             style={styles.filterBtnPressed}
             onPress={() => setIsFilterOpen(!isFilterOpen)}
@@ -61,9 +77,14 @@ export default function ConnectionsScreen() {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
         bounces={false}
-        overScrollMode="never"
+        overScrollMode="always"
+        decelerationRate="normal"
+        keyboardShouldPersistTaps="handled"
       >
-        <PeopleNearYouSection />
+        <PeopleNearYouSection
+          searchQuery={searchQuery}
+          filters={appliedFilters}
+        />
       </ScrollView>
 
       {/* Floating Match Button */}
@@ -111,11 +132,11 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#F0F0F0",
   },
-  searchText: {
+  searchInput: {
     flex: 1,
-    color: "#999",
+    color: "#333",
     fontSize: 15,
-    fontFamily: "System", // Or standard font
+    height: "100%",
   },
   filterBtnPressed: {
     width: 42,

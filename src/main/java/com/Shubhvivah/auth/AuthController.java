@@ -67,4 +67,7 @@ public class AuthController {
     public String generateTestToken(@PathVariable Long userId) {
         return com.Shubhvivah.common.Util.generateJwt(userId);
     }
+    @PostMapping("/auth/logout")
+public void logout() {}
+
 }

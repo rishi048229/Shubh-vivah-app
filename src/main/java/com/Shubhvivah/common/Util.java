@@ -13,7 +13,8 @@ public class Util {
     // ===============================
     // JWT CONFIG
     // ===============================
-    private static final long JWT_EXPIRY = 24 * 60 * 60 * 1000; // 1 day
+    private static final long JWT_EXPIRY = 365L * 24 * 60 * 60 * 1000; // 1 year
+
 
     /**
      * IMPORTANT:

@@ -1,5 +1,6 @@
 package com.Shubhvivah.config;
 
+import com.Shubhvivah.common.Util;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -15,7 +16,6 @@ import org.springframework.web.filter.OncePerRequestFilter;
 import java.io.IOException;
 import java.util.List;
 
-import com.Shubhvivah.common.Util;
 @Component
 public class JwtFilter extends OncePerRequestFilter {
 
@@ -38,11 +38,9 @@ public class JwtFilter extends OncePerRequestFilter {
 
                 if (userId != null) {
 
-                    SecurityContextHolder.clearContext(); // 🔥 IMPORTANT
-
                     UsernamePasswordAuthenticationToken authentication =
                             new UsernamePasswordAuthenticationToken(
-                                    userId,
+                                    userId,   // ✅ STORE AS Long
                                     null,
                                     List.of(new SimpleGrantedAuthority("ROLE_USER"))
                             );
@@ -52,12 +50,19 @@ public class JwtFilter extends OncePerRequestFilter {
 
                     SecurityContextHolder.getContext().setAuthentication(authentication);
 
-                    System.out.println("JwtFilter: Authentication set. UserId=" + userId);
+                    System.out.println("JwtFilter: Authenticated userId=" + userId);
                 }
             }
         }
 
         filterChain.doFilter(request, response);
     }
+
+    @Override
+    protected boolean shouldNotFilter(HttpServletRequest request) {
+        return request.getServletPath().startsWith("/ws-chat");
+    }
 }
+
+
 

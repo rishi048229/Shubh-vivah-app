@@ -102,22 +102,36 @@ public class ProfileController {
     // AUTH HELPER
     // =========================
 
-    private Long getCurrentUserId() {
-
-        var authentication = SecurityContextHolder
-                .getContext()
-                .getAuthentication();
-
-        if (authentication == null || !authentication.isAuthenticated()) {
+    public Long getCurrentUserId() {
+        var auth = SecurityContextHolder.getContext().getAuthentication();
+    
+        if (auth == null || !auth.isAuthenticated())
             throw new IllegalStateException("User not authenticated");
+    
+        Object principal = auth.getPrincipal();
+    
+        if (principal instanceof Long id) {
+            return id;
         }
-
-        Object principal = authentication.getPrincipal();
-
-        if (!(principal instanceof Long)) {
-            throw new IllegalStateException("Invalid authentication principal");
+    
+        if (principal instanceof String s) {
+            return Long.parseLong(s);
         }
-
-        return (Long) principal;
+    
+        throw new IllegalStateException("Invalid authentication principal");
     }
+    // =========================
+// VIEW ADDITIONAL PHOTOS (MATCH REQUIRED)
+// =========================
+
+@GetMapping("/photos/{ownerId}")
+public ResponseEntity<List<String>> viewAdditionalPhotos(@PathVariable Long ownerId) {
+
+    Long viewerId = getCurrentUserId();
+
+    List<String> photos = profileService.getAdditionalPhotos(viewerId, ownerId);
+
+    return ResponseEntity.ok(photos);
+}
+
 }

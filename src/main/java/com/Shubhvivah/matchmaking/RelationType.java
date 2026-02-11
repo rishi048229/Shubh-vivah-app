@@ -7,6 +7,8 @@ public enum RelationType {
     UNBLOCK,
     REPORT,
     UNREPORT,
+    MATCH,
+    REQUEST
     
  
 }

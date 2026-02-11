@@ -33,25 +33,35 @@ public class SecurityConfig {
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
 
         http
-            .csrf(csrf -> csrf.disable())
-            .cors(cors -> cors.configurationSource(corsConfigurationSource())) // 🔥 LINKED HERE
+            // Disable CSRF for WebSocket
+            .csrf(csrf -> csrf
+                    .ignoringRequestMatchers("/ws-chat/**")
+                    .disable()
+            )
+
+            .cors(cors -> cors.configurationSource(corsConfigurationSource()))
 
             .sessionManagement(session ->
-                session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
+                    session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
             )
 
             .authorizeHttpRequests(auth -> auth
-                .requestMatchers("/auth/**").permitAll()
-                .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll() // Allow pre-flight checks
-               // EXPLORE first (important)
-    .requestMatchers("/matches/explore/**").authenticated()
 
-    // then other matches
-    .requestMatchers("/matches/**").authenticated()
-    .requestMatchers("/profile/**").authenticated()
-    .requestMatchers("/horoscope/**").authenticated()
+                    // Public APIs
+                    .requestMatchers("/auth/**").permitAll()
+                    .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
 
-                .anyRequest().authenticated()
+                    // WebSocket requires auth (via JWT in URL)
+                    .requestMatchers("/ws-chat/**").permitAll()
+
+
+                    // Protected APIs
+                    .requestMatchers("/matches/explore/**").authenticated()
+                    .requestMatchers("/matches/**").authenticated()
+                    .requestMatchers("/profile/**").authenticated()
+                    .requestMatchers("/horoscope/**").authenticated()
+
+                    .anyRequest().authenticated()
             )
 
             .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);
@@ -59,16 +69,26 @@ public class SecurityConfig {
         return http.build();
     }
 
-    // 🔥 ADD THIS BEAN
+    // CORS for localhost development
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
+
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOrigins(List.of("*")); // Allow ALL for dev
-        configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
+
+        configuration.setAllowedOrigins(List.of(
+                "http://localhost:3000",
+                "http://localhost:5173",
+                "http://127.0.0.1:3000",
+                "http://localhost:8080"
+        ));
+
+        configuration.setAllowedMethods(List.of("*"));
         configuration.setAllowedHeaders(List.of("*"));
-        
+        configuration.setAllowCredentials(true);
+
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", configuration);
+
         return source;
     }
 }

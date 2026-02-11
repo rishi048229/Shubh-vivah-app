@@ -11,7 +11,6 @@ import com.Shubhvivah.profile.ProfilePhotoEntity;
 import com.Shubhvivah.profile.ProfileRepository;
 
 import jakarta.transaction.Transactional;
-
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
@@ -45,14 +44,26 @@ public class MatchmakingService {
     }
 
     /* ================= AUTH ================= */
-
     public Long getCurrentUserId() {
         var auth = SecurityContextHolder.getContext().getAuthentication();
+    
         if (auth == null || !auth.isAuthenticated())
             throw new IllegalStateException("User not authenticated");
-
-        return (Long) auth.getPrincipal();
+    
+        Object principal = auth.getPrincipal();
+    
+        if (principal instanceof Long id) {
+            return id;
+        }
+    
+        if (principal instanceof String s) {
+            return Long.parseLong(s);
+        }
+    
+        throw new IllegalStateException("Invalid authentication principal");
     }
+    
+    
 
     private int calculateAge(LocalDate dob) {
         return Period.between(dob, LocalDate.now()).getYears();
@@ -61,7 +72,6 @@ public class MatchmakingService {
     /* ================= FULL PROFILE ================= */
 
     public ProfileEntity getFullProfile(Long userId) {
-
         UserEntity user = userRepo.findById(userId)
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
@@ -105,211 +115,182 @@ public class MatchmakingService {
     }
 
     /* ================= EXPLORE NEXT ================= */
-   /* ================= EXPLORE NEXT ================= */
 
+    @Transactional
+    public MatchmakingDto getNextProfile(Long currentUserId) {
 
-@Transactional
-public MatchmakingDto getNextProfile(Long currentUserId) {
+        List<Long> viewedIds = historyRepository
+                .findByUserIdOrderByViewedAtDesc(currentUserId)
+                .stream()
+                .map(ExploreHistory::getViewedUserId)
+                .toList();
 
-    List<Long> viewedIds = historyRepository
-            .findByUserIdOrderByViewedAtDesc(currentUserId)
-            .stream()
-            .map(ExploreHistory::getViewedUserId)
-            .toList();
+        ProfileEntity me = profileRepo.findByUser_UserId(currentUserId).orElse(null);
+        if (me == null) return null;
 
-    ProfileEntity me = profileRepo.findByUser_UserId(currentUserId).orElse(null);
-    if (me == null) return null;
+        for (UserEntity user : userRepo.findAll()) {
 
-    for (UserEntity user : userRepo.findAll()) {
+            Long candidateUserId = user.getUserId();
+            if (candidateUserId.equals(currentUserId)) continue;
 
-        Long candidateUserId = user.getUserId();
+            ProfileEntity candidate = profileRepo.findByUser(user).orElse(null);
+            if (candidate == null) continue;
 
-        if (candidateUserId.equals(currentUserId)) continue;
+            // BLOCK CHECK
+            if (isBlocked(currentUserId, candidateUserId)) continue;
 
-        ProfileEntity candidate = profileRepo.findByUser(user).orElse(null);
-        if (candidate == null) continue;
+            // OPPOSITE GENDER
+            if (candidate.getGender() == null || me.getGender() == null) continue;
+            if (candidate.getGender().equalsIgnoreCase(me.getGender())) continue;
 
-        /* ===== SKIP BLOCKED USERS ===== */
+            if (candidate.getDateOfBirth() == null) continue;
+            if (candidate.getProfilePhotoUrl() == null) continue;
+            if (viewedIds.contains(candidateUserId)) continue;
 
-        boolean iBlocked = relationRepository.existsByFromUserIdAndToUserIdAndType(
-                currentUserId, candidateUserId, RelationType.BLOCK);
+            int age = calculateAge(candidate.getDateOfBirth());
 
-        boolean blockedMe = relationRepository.existsByFromUserIdAndToUserIdAndType(
-                candidateUserId, currentUserId, RelationType.BLOCK);
+            ExploreHistory history = new ExploreHistory();
+            history.setUserId(currentUserId);
+            history.setViewedUserId(candidateUserId);
+            historyRepository.save(history);
 
-        if (iBlocked || blockedMe) continue;
-
-        /* ===== OPPOSITE GENDER ONLY ===== */
-
-        if (candidate.getGender() == null || me.getGender() == null) continue;
-        if (candidate.getGender().equalsIgnoreCase(me.getGender())) continue;
-
-        /* ===== SKIP INCOMPLETE PROFILE ===== */
-
-        if (candidate.getDateOfBirth() == null) continue;
-        if (candidate.getProfilePhotoUrl() == null) continue;
-
-        /* ===== SKIP ALREADY VIEWED ===== */
-
-        if (viewedIds.contains(candidateUserId)) continue;
-
-        int age = calculateAge(candidate.getDateOfBirth());
-
-        /* ===== SAVE HISTORY ===== */
-
-        ExploreHistory history = new ExploreHistory();
-        history.setUserId(currentUserId);
-        history.setViewedUserId(candidateUserId);
-        historyRepository.save(history);
-
-        return buildDto(candidate, age);
-    }
-
-    /* ===== IF ALL USERS SEEN → RESET & RESTART ===== */
-
-    historyRepository.deleteByUserId(currentUserId);
-
-    // Try once more after reset (prevents infinite loop)
-    for (UserEntity user : userRepo.findAll()) {
-
-        Long candidateUserId = user.getUserId();
-
-        if (candidateUserId.equals(currentUserId)) continue;
-
-        ProfileEntity candidate = profileRepo.findByUser(user).orElse(null);
-        if (candidate == null) continue;
-
-        if (candidate.getGender() == null || me.getGender() == null) continue;
-        if (candidate.getGender().equalsIgnoreCase(me.getGender())) continue;
-
-        if (candidate.getDateOfBirth() == null) continue;
-        if (candidate.getProfilePhotoUrl() == null) continue;
-
-        int age = calculateAge(candidate.getDateOfBirth());
-
-        ExploreHistory history = new ExploreHistory();
-        history.setUserId(currentUserId);
-        history.setViewedUserId(candidateUserId);
-        historyRepository.save(history);
-
-        return buildDto(candidate, age);
-    }
-
-    return null; // No valid users exist
-}
-
-
-    
-    
-    
-  /* ================= EXPLORE PREVIOUS ================= */
-  public MatchmakingDto getPreviousProfile(Long currentUserId) {
-
-    List<ExploreHistory> history =
-            historyRepository.findByUserIdOrderByViewedAtDesc(currentUserId);
-
-    if (history.isEmpty()) return null;
-
-    // If only one profile viewed → return same profile (not null)
-    Long targetUserId = (history.size() == 1)
-            ? history.get(0).getViewedUserId()
-            : history.get(1).getViewedUserId();
-
-    UserEntity user = userRepo.findById(targetUserId).orElse(null);
-    if (user == null) return null;
-
-    ProfileEntity candidate = profileRepo.findByUser(user).orElse(null);
-    if (candidate == null) return null;
-
-    int age = calculateAge(candidate.getDateOfBirth());
-    return buildDto(candidate, age);
-}
-
-
-    
-    
-
-    /* ================= LIKE ================= */
-
-    public void likeUser(Long fromUserId, Long toUserId) {
-        if (!relationRepository.existsByFromUserIdAndToUserIdAndType(
-                fromUserId, toUserId, RelationType.LIKE)) {
-
-            UserRelation r = new UserRelation();
-            r.setFromUserId(fromUserId);
-            r.setToUserId(toUserId);
-            r.setType(RelationType.LIKE);
-            relationRepository.save(r);
+            return buildDto(candidate, age);
         }
+
+        // RESET HISTORY
+        historyRepository.deleteByUserId(currentUserId);
+
+        return null;
+    }
+
+    /* ================= EXPLORE PREVIOUS ================= */
+
+    public MatchmakingDto getPreviousProfile(Long currentUserId) {
+
+        List<ExploreHistory> history =
+                historyRepository.findByUserIdOrderByViewedAtDesc(currentUserId);
+
+        if (history.isEmpty()) return null;
+
+        Long targetUserId = (history.size() == 1)
+                ? history.get(0).getViewedUserId()
+                : history.get(1).getViewedUserId();
+
+        UserEntity user = userRepo.findById(targetUserId).orElse(null);
+        if (user == null) return null;
+
+        ProfileEntity candidate = profileRepo.findByUser(user).orElse(null);
+        if (candidate == null) return null;
+
+        int age = calculateAge(candidate.getDateOfBirth());
+        return buildDto(candidate, age);
+    }
+
+    /* ================= LIKE (AUTO MATCH) ================= */
+
+    @Transactional
+    public String likeUser(Long from, Long to) {
+
+        if (from.equals(to)) return "Cannot like yourself";
+
+        if (relationRepository.existsByFromUserIdAndToUserIdAndType(from, to, RelationType.LIKE))
+            return "Already liked";
+
+        relationRepository.save(UserRelation.of(from, to, RelationType.LIKE));
+
+        boolean reverseLike =
+                relationRepository.existsByFromUserIdAndToUserIdAndType(to, from, RelationType.LIKE);
+
+        if (reverseLike) {
+            relationRepository.save(UserRelation.of(from, to, RelationType.MATCH));
+            relationRepository.save(UserRelation.of(to, from, RelationType.MATCH));
+            return "MATCH!";
+        }
+
+        return "Liked";
     }
 
     /* ================= SHORTLIST ================= */
 
-    public void shortlistUser(Long fromUserId, Long toUserId) {
+    public void shortlistUser(Long from, Long to) {
         if (!relationRepository.existsByFromUserIdAndToUserIdAndType(
-                fromUserId, toUserId, RelationType.SHORTLIST)) {
+                from, to, RelationType.SHORTLIST)) {
 
-            UserRelation r = new UserRelation();
-            r.setFromUserId(fromUserId);
-            r.setToUserId(toUserId);
-            r.setType(RelationType.SHORTLIST);
-            relationRepository.save(r);
+            relationRepository.save(UserRelation.of(from, to, RelationType.SHORTLIST));
         }
     }
+
     /* ================= BLOCK ================= */
 
-public void blockUser(Long fromUserId, Long toUserId) {
+    @Transactional
+    public void blockUser(Long from, Long to) {
 
-    if (!relationRepository.existsByFromUserIdAndToUserIdAndType(
-            fromUserId, toUserId, RelationType.BLOCK)) {
+        if (relationRepository.existsByFromUserIdAndToUserIdAndType(from, to, RelationType.BLOCK))
+            return;
 
-        UserRelation r = new UserRelation();
-        r.setFromUserId(fromUserId);
-        r.setToUserId(toUserId);
-        r.setType(RelationType.BLOCK);
+        // remove positive relations
+        relationRepository.deleteBetweenUsers(from, to, RelationType.LIKE);
+        relationRepository.deleteBetweenUsers(from, to, RelationType.MATCH);
+        relationRepository.deleteBetweenUsers(from, to, RelationType.SHORTLIST);
 
+        relationRepository.deleteBetweenUsers(to, from, RelationType.LIKE);
+        relationRepository.deleteBetweenUsers(to, from, RelationType.MATCH);
+        relationRepository.deleteBetweenUsers(to, from, RelationType.SHORTLIST);
+
+        relationRepository.save(UserRelation.of(from, to, RelationType.BLOCK));
+    }
+
+    /* ================= UNBLOCK ================= */
+
+    public void unblockUser(Long from, Long to) {
+        relationRepository.deleteBetweenUsers(from, to, RelationType.BLOCK);
+    }
+
+    /* ================= REPORT ================= */
+
+    @Transactional
+    public void reportUser(Long from, Long to, String reason) {
+
+        if (relationRepository.existsByFromUserIdAndToUserIdAndType(from, to, RelationType.REPORT))
+            return;
+
+        UserRelation r = UserRelation.of(from, to, RelationType.REPORT);
+        r.setReportReason(reason);
         relationRepository.save(r);
     }
-}
 
-/* ================= UNBLOCK ================= */
+    /* ================= HELPERS ================= */
 
-public void unblockUser(Long fromUserId, Long toUserId) {
-    relationRepository.deleteByFromUserIdAndToUserIdAndType(
-            fromUserId, toUserId, RelationType.BLOCK);
-}
-
-/* ================= GET LIKED ================= */
+    public boolean isBlocked(Long u1, Long u2) {
+        return relationRepository.existsByFromUserIdAndToUserIdAndType(u1, u2, RelationType.BLOCK)
+                || relationRepository.existsByFromUserIdAndToUserIdAndType(u2, u1, RelationType.BLOCK);
+    }
+    /* ================= GET LIKED USERS ================= */
 
 public List<UserRelation> getLikedUsers(Long userId) {
     return relationRepository.findByFromUserIdAndType(userId, RelationType.LIKE);
 }
 
-/* ================= GET SHORTLISTED ================= */
+/* ================= GET SHORTLISTED USERS ================= */
 
 public List<UserRelation> getShortlistedUsers(Long userId) {
     return relationRepository.findByFromUserIdAndType(userId, RelationType.SHORTLIST);
 }
 
-/* ================= GET BLOCKED ================= */
+/* ================= GET BLOCKED USERS ================= */
 
 public List<UserRelation> getBlockedUsers(Long userId) {
     return relationRepository.findByFromUserIdAndType(userId, RelationType.BLOCK);
 }
-@Transactional
-public void reportUser(Long fromUserId, Long toUserId, String reason) {
+public void sendRequest(Long from, Long to) {
 
-    // Prevent duplicate reports
-    if (relationRepository.existsByFromUserIdAndToUserIdAndType(
-            fromUserId, toUserId, RelationType.REPORT)) {
+    if (relationRepository.existsByFromUserIdAndToUserIdAndType(from, to, RelationType.REQUEST))
         return;
-    }
 
     UserRelation r = new UserRelation();
-    r.setFromUserId(fromUserId);
-    r.setToUserId(toUserId);
-    r.setType(RelationType.REPORT);
-    r.setReportReason(reason);
+    r.setFromUserId(from);
+    r.setToUserId(to);
+    r.setType(RelationType.REQUEST);
 
     relationRepository.save(r);
 }

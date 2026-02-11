@@ -25,4 +25,13 @@ public class UserRelation {
     @Column(length = 500)
 private String reportReason;
 
+public static UserRelation of(Long from, Long to, RelationType type) {
+    UserRelation r = new UserRelation();
+    r.setFromUserId(from);
+    r.setToUserId(to);
+    r.setType(type);
+    return r;
+}
+
+
 }

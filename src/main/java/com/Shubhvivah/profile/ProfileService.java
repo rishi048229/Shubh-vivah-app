@@ -6,18 +6,24 @@ import org.springframework.stereotype.Service;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.multipart.MultipartFile;
 import java.util.List;
+
+
+import com.Shubhvivah.matchmaking.RelationType;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import com.Shubhvivah.common.ImageUploadService;
+import com.Shubhvivah.matchmaking.UserRelationRepository;
 
 @Service
 @RequiredArgsConstructor
 public class ProfileService {
 
+
     private final ProfileRepository profileRepo;
     private final UserRepository userRepo;
+    private final UserRelationRepository relationRepository;
     private final ProfilePhotoRepository photoRepo;
     private static final int MAX_ADDITIONAL_PHOTOS = 5;
     private final ImageUploadService imageUploadService;
@@ -177,7 +183,25 @@ public class ProfileService {
 
         profileRepo.save(profile);
     }
+    public List<String> getAdditionalPhotos(Long viewer, Long owner) {
 
+        boolean matched =
+                relationRepository.existsByFromUserIdAndToUserIdAndType(viewer, owner, RelationType.MATCH)
+                &&
+                relationRepository.existsByFromUserIdAndToUserIdAndType(owner, viewer, RelationType.MATCH);
+    
+        if (!matched) {
+            throw new RuntimeException("Connection required to view additional photos.");
+        }
+    
+        return photoRepo.findByProfile_User_UserId(owner)
+                .stream()
+                .map(ProfilePhotoEntity::getPhotoUrl)
+                .toList();
+    }
+    
+    
+    
     /*
      * =======================
      * MAPPERS

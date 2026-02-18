@@ -1,4 +1,4 @@
-import TodaysMatchCard from "@/components/TodaysMatchCard";
+import TodaysMatchCard from "@/components/Home/TodaysMatchCard";
 import { Colors } from "@/constants/Colors";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";

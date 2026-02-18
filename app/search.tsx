@@ -1,8 +1,12 @@
-import SearchMatchCard from "@/components/SearchMatchCard"; // Import new component
+import FilterModal from "@/components/Connections/FilterModal"; // Import FilterModal
+import SearchMatchCard from "@/components/Connections/SearchMatchCard";
 import { Colors } from "@/constants/Colors";
+import { searchProfiles } from "@/services/matchService";
+import { DEFAULT_FILTERS, FilterState } from "@/types/connections";
 import { Ionicons } from "@expo/vector-icons";
+import { BottomSheetModal } from "@gorhom/bottom-sheet";
 import { useRouter } from "expo-router";
-import React, { useState } from "react";
+import React, { useRef, useState } from "react";
 import {
     FlatList,
     Platform,
@@ -18,59 +22,97 @@ import {
 
 const RECENT_SEARCHES = ["Anjali", "Mumbai", "Software Engineer", "Pune"];
 
-// Updated Data with Job field
-const SEARCH_RESULTS = [
-  {
-    id: "1",
-    name: "Anjali Sharma",
-    age: "21",
-    location: "Mumbai",
-    job: "Software Engineer , 4LPA",
-    matchPercentage: "92%",
-    tags: ["Software Engineer", "4LPA"],
-    img: "https://randomuser.me/api/portraits/women/65.jpg",
-  },
-  {
-    id: "2",
-    name: "Anjali Sharma",
-    age: "21",
-    location: "Mumbai",
-    job: "Software Engineer , 4LPA",
-    matchPercentage: "92%",
-    tags: ["Software Engineer", "4LPA"],
-    img: "https://randomuser.me/api/portraits/women/65.jpg",
-  },
-  {
-    id: "3",
-    name: "Anjali Sharma",
-    age: "21",
-    location: "Mumbai",
-    job: "Software Engineer , 4LPA",
-    matchPercentage: "92%",
-    tags: ["Software Engineer", "4LPA"],
-    img: "https://randomuser.me/api/portraits/women/65.jpg",
-  },
-  {
-    id: "4",
-    name: "Anjali Sharma",
-    age: "21",
-    location: "Mumbai",
-    job: "Software Engineer , 4LPA",
-    matchPercentage: "92%",
-    tags: ["Software Engineer", "4LPA"],
-    img: "https://randomuser.me/api/portraits/women/65.jpg",
-  },
-];
+// Local type for Search Screen
+interface SearchResult {
+  id: string;
+  name: string;
+  age: string;
+  location: string;
+  job: string;
+  matchPercentage: string;
+  tags: string[];
+  img: string;
+}
 
 export default function SearchScreen() {
   const router = useRouter();
   const [searchText, setSearchText] = useState("");
+  const [results, setResults] = useState<SearchResult[]>([]);
+
+  // Filter State
+  const filterModalRef = useRef<BottomSheetModal>(null);
+  const [currentFilters, setCurrentFilters] =
+    useState<FilterState>(DEFAULT_FILTERS);
+
+  // Debounce search
+  React.useEffect(() => {
+    const timer = setTimeout(() => {
+      handleSearch(searchText);
+    }, 600);
+    return () => clearTimeout(timer);
+  }, [searchText]);
+
+  const handleSearch = async (text: string) => {
+    // If text is empty and no filters, clear results
+    if (!text && isDefaultFilters(currentFilters)) {
+      setResults([]);
+      return;
+    }
+
+    try {
+      // Pass filters to searchProfiles
+      const data = await searchProfiles(text, {
+        minAge: currentFilters.ageRange[0],
+        maxAge: currentFilters.ageRange[1],
+        city:
+          currentFilters.cities.length > 0
+            ? currentFilters.cities[0]
+            : undefined,
+        religion:
+          currentFilters.religions.length > 0
+            ? currentFilters.religions[0]
+            : undefined,
+        community:
+          currentFilters.communities.length > 0
+            ? currentFilters.communities[0]
+            : undefined,
+        maritalStatus:
+          currentFilters.maritalStatus.length > 0
+            ? currentFilters.maritalStatus[0]
+            : undefined,
+      });
+
+      const mapped: SearchResult[] = data.map((p) => ({
+        id: p.userId.toString(),
+        name: p.fullName,
+        age: p.age.toString(),
+        location: p.city || "Unknown",
+        job: p.occupation || "Software Engineer",
+        matchPercentage: (p.matchScore || 75) + "%",
+        tags: [p.occupation || "Professional"],
+        img:
+          p.profilePhotoUrl || "https://randomuser.me/api/portraits/lego/1.jpg",
+      }));
+      setResults(mapped);
+    } catch (e) {
+      console.log("Search error", e);
+    }
+  };
+
+  const isDefaultFilters = (filters: FilterState) => {
+    return JSON.stringify(filters) === JSON.stringify(DEFAULT_FILTERS);
+  };
+
+  const handleApplyFilters = (filters: FilterState) => {
+    setCurrentFilters(filters);
+    handleSearch(searchText); // Trigger search again with new filters
+  };
 
   const handleBack = () => {
     router.back();
   };
 
-  const renderItem = ({ item }: { item: (typeof SEARCH_RESULTS)[0] }) => (
+  const renderItem = ({ item }: { item: SearchResult }) => (
     <SearchMatchCard
       name={item.name}
       age={item.age}
@@ -108,7 +150,12 @@ export default function SearchScreen() {
             />
           </View>
 
-          <TouchableOpacity style={styles.filterButton}>
+          <TouchableOpacity
+            style={styles.filterButton}
+            onPress={() => {
+              filterModalRef.current?.present();
+            }}
+          >
             <Ionicons name="filter-outline" size={22} color="#C21807" />
           </TouchableOpacity>
         </View>
@@ -137,11 +184,19 @@ export default function SearchScreen() {
 
       {/* Search Results */}
       <FlatList
-        data={SEARCH_RESULTS}
+        data={results}
         keyExtractor={(item) => item.id}
         renderItem={renderItem}
         contentContainerStyle={styles.listContent}
         showsVerticalScrollIndicator={false}
+      />
+
+      {/* Filter Modal */}
+      <FilterModal
+        ref={filterModalRef}
+        currentFilters={currentFilters}
+        onApply={handleApplyFilters}
+        onClose={() => filterModalRef.current?.dismiss()}
       />
     </SafeAreaView>
   );

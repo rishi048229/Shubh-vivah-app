@@ -1,19 +1,19 @@
+import { Colors } from "@/constants/Colors";
 import { Ionicons } from "@expo/vector-icons";
-import React, { useState } from "react";
 import {
-    Platform,
-    ScrollView,
-    StatusBar,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View
-} from "react-native";
+    BottomSheetBackdrop,
+    BottomSheetModal,
+    BottomSheetTextInput,
+    BottomSheetView,
+    useBottomSheetModal,
+} from "@gorhom/bottom-sheet";
+import React, { forwardRef, useCallback, useMemo, useState } from "react";
+import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
+
+export type HomeSearchOverlayRef = BottomSheetModal;
 
 interface HomeSearchOverlayProps {
-  visible: boolean;
-  onClose: () => void;
+  onSearch?: (query: string) => void;
 }
 
 const SUGGESTION_CHIPS = [
@@ -26,87 +26,122 @@ const SUGGESTION_CHIPS = [
   "30-35",
 ];
 
-export default function HomeSearchOverlay({
-  visible,
-  onClose,
-}: HomeSearchOverlayProps) {
-  const [query, setQuery] = useState("");
+const RECENT_SEARCHES = ["Priya", "Doctor in Pune", "Software Engineer"];
 
-  if (!visible) return null;
+const HomeSearchOverlay = forwardRef<BottomSheetModal, HomeSearchOverlayProps>(
+  ({ onSearch }, ref) => {
+    const [query, setQuery] = useState("");
+    const { dismiss } = useBottomSheetModal();
 
-  return (
-    <View style={styles.container}>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={onClose} style={styles.backButton}>
-          <Ionicons name="arrow-back" size={24} color="#000" />
-        </TouchableOpacity>
-        <View style={styles.inputContainer}>
-          <Ionicons
-            name="search"
-            size={20}
-            color="#666"
-            style={{ marginRight: 8 }}
-          />
-          <TextInput
-            style={styles.input}
-            placeholder="Search matches..."
-            autoFocus
-            value={query}
-            onChangeText={setQuery}
-          />
-          {query.length > 0 && (
-            <TouchableOpacity onPress={() => setQuery("")}>
-              <Ionicons name="close-circle" size={18} color="#999" />
+    const snapPoints = useMemo(() => ["60%", "90%"], []);
+
+    const renderBackdrop = useCallback(
+      (props: any) => (
+        <BottomSheetBackdrop
+          {...props}
+          disappearsOnIndex={-1}
+          appearsOnIndex={0}
+          opacity={0.5}
+        />
+      ),
+      [],
+    );
+
+    const handleSearchCheck = () => {
+      if (onSearch) onSearch(query);
+      (ref as any)?.current?.dismiss();
+    };
+
+    return (
+      <BottomSheetModal
+        ref={ref}
+        index={0}
+        snapPoints={snapPoints}
+        backdropComponent={renderBackdrop}
+        enablePanDownToClose
+        keyboardBlurBehavior="restore"
+        android_keyboardInputMode="adjustResize"
+        backgroundStyle={{ borderRadius: 24, backgroundColor: "#FFF" }}
+      >
+        <BottomSheetView style={styles.contentContainer}>
+          {/* Header / Input */}
+          <View style={styles.header}>
+            <View style={styles.inputContainer}>
+              <Ionicons
+                name="search"
+                size={20}
+                color="#666"
+                style={{ marginRight: 8 }}
+              />
+              <BottomSheetTextInput
+                style={styles.input}
+                placeholder="Search matches..."
+                placeholderTextColor="#999"
+                value={query}
+                onChangeText={setQuery}
+                onSubmitEditing={handleSearchCheck}
+                returnKeyType="search"
+              />
+              {query.length > 0 && (
+                <TouchableOpacity onPress={() => setQuery("")}>
+                  <Ionicons name="close-circle" size={18} color="#999" />
+                </TouchableOpacity>
+              )}
+            </View>
+            <TouchableOpacity onPress={() => (ref as any)?.current?.dismiss()}>
+              <Text style={styles.cancelText}>Cancel</Text>
             </TouchableOpacity>
-          )}
-        </View>
-      </View>
+          </View>
 
-      <ScrollView style={styles.content} keyboardShouldPersistTaps="handled">
-        <Text style={styles.sectionTitle}>Recent Searches</Text>
-        <View style={styles.recentList}>
-          {["Priya", "Doctor in Pune", "Software Engineer"].map((item, idx) => (
-            <TouchableOpacity key={idx} style={styles.recentItem}>
-              <Ionicons name="time-outline" size={20} color="#666" />
-              <Text style={styles.recentText}>{item}</Text>
-            </TouchableOpacity>
-          ))}
-        </View>
+          {/* Recent Searches */}
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Recent Searches</Text>
+            <View style={styles.recentList}>
+              {RECENT_SEARCHES.map((item, idx) => (
+                <TouchableOpacity
+                  key={idx}
+                  style={styles.recentItem}
+                  onPress={() => setQuery(item)}
+                >
+                  <Ionicons name="time-outline" size={20} color="#666" />
+                  <Text style={styles.recentText}>{item}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
 
-        <Text style={[styles.sectionTitle, { marginTop: 24 }]}>Trending</Text>
-        <View style={styles.chipsContainer}>
-          {SUGGESTION_CHIPS.map((chip, idx) => (
-            <TouchableOpacity key={idx} style={styles.chip}>
-              <Text style={styles.chipText}>{chip}</Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-      </ScrollView>
-    </View>
-  );
-}
+          {/* Trending / Suggestions */}
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Trending</Text>
+            <View style={styles.chipsContainer}>
+              {SUGGESTION_CHIPS.map((chip, idx) => (
+                <TouchableOpacity
+                  key={idx}
+                  style={styles.chip}
+                  onPress={() => setQuery(chip)}
+                >
+                  <Text style={styles.chipText}>{chip}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+        </BottomSheetView>
+      </BottomSheetModal>
+    );
+  },
+);
 
 const styles = StyleSheet.create({
-  container: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: "#FFF",
-    zIndex: 100, // Topmost level
-    paddingTop:
-      Platform.OS === "android" ? (StatusBar.currentHeight || 0) + 10 : 50,
+  contentContainer: {
+    flex: 1,
+    paddingHorizontal: 20,
+    paddingTop: 10,
   },
   header: {
     flexDirection: "row",
     alignItems: "center",
-    paddingHorizontal: 20,
-    marginBottom: 20,
+    marginBottom: 24,
     gap: 12,
-  },
-  backButton: {
-    padding: 4,
   },
   inputContainer: {
     flex: 1,
@@ -121,10 +156,15 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 16,
     color: "#000",
+    paddingVertical: 12, // Ensure touch target
   },
-  content: {
-    flex: 1,
-    paddingHorizontal: 20,
+  cancelText: {
+    color: Colors.maroon,
+    fontSize: 16,
+    fontWeight: "600",
+  },
+  section: {
+    marginBottom: 24,
   },
   sectionTitle: {
     fontSize: 14,
@@ -139,6 +179,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 12,
+    paddingVertical: 4,
   },
   recentText: {
     fontSize: 16,
@@ -161,3 +202,5 @@ const styles = StyleSheet.create({
     fontWeight: "500",
   },
 });
+
+export default HomeSearchOverlay;

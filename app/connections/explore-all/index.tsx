@@ -2,7 +2,7 @@ import ConnectionProfileCard from "@/components/Connections/ConnectionProfileCar
 import FilterModal from "@/components/Connections/FilterModal";
 import SearchBarWithSuggestions from "@/components/Connections/SearchBarWithSuggestions";
 import { Colors } from "@/constants/Colors";
-import { MOCK_MATCHES } from "@/data/mockConnectionsData";
+import { searchProfiles } from "@/services/matchService";
 import {
     DEFAULT_FILTERS,
     FilterState,
@@ -32,7 +32,7 @@ export default function ExploreAllScreen() {
   const [filters, setFilters] = useState<FilterState>(DEFAULT_FILTERS);
   const [filterModalVisible, setFilterModalVisible] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
-  const [matches, setMatches] = useState<MatchProfile[]>(MOCK_MATCHES);
+  const [matches, setMatches] = useState<MatchProfile[]>([]);
   const [sortBy, setSortBy] = useState<SortOption>("best_match");
   const [menuVisible, setMenuVisible] = useState(false);
   const [page, setPage] = useState(1);
@@ -40,96 +40,93 @@ export default function ExploreAllScreen() {
   const filterModalRef =
     React.useRef<import("@gorhom/bottom-sheet").BottomSheetModal>(null);
 
+  // Initial Fetch
+  React.useEffect(() => {
+    fetchMatches();
+  }, []);
+
+  const fetchMatches = async (
+    query = searchQuery,
+    currentFilters = filters,
+  ) => {
+    setRefreshing(true);
+    try {
+      // Use the shared searchProfiles from index.tsx logic
+      // Note: If filters are empty/default, backend should return all (or top) profiles.
+      const data = await searchProfiles(query, {
+        minAge: currentFilters.ageRange[0],
+        maxAge: currentFilters.ageRange[1],
+        city:
+          currentFilters.cities[0] === "Any"
+            ? undefined
+            : currentFilters.cities[0],
+        religion:
+          currentFilters.religions[0] === "Any"
+            ? undefined
+            : currentFilters.religions[0],
+        maritalStatus:
+          currentFilters.maritalStatus[0] === "Any"
+            ? undefined
+            : currentFilters.maritalStatus[0],
+        community:
+          currentFilters.communities[0] === "Any"
+            ? undefined
+            : currentFilters.communities[0],
+      });
+
+      // Map to UI
+      const mapped = data.map((p) => ({
+        id: p.userId.toString(),
+        name: p.fullName,
+        age: p.age,
+        location: p.city || "Unknown",
+        city: p.city || "Unknown",
+        state: "Unknown",
+        distance: p.distanceKm || 0,
+        matchPercentage: p.matchScore || 75,
+        matchReasons: p.religion ? [p.religion] : [], // Use religion as match reason
+        imageUri:
+          p.profilePhotoUrl || "https://randomuser.me/api/portraits/lego/1.jpg",
+        profession: p.occupation || "Not Specified", // Use real occupation
+        education: p.education || "Not Specified",
+        religion: p.religion || "Hindu",
+        caste: p.caste || "",
+        verified: true,
+        onlineStatus: "recently_active" as const,
+        maritalStatus: p.maritalStatus || "Never Married",
+      }));
+      setMatches(mapped);
+    } catch (err) {
+      console.log("Explore All Error", err);
+    } finally {
+      setRefreshing(false);
+    }
+  };
+
   const handleSearch = (query: string) => {
     setSearchQuery(query);
-    filterMatches(query, filters, sortBy);
+    // Debounce this in real app
+    fetchMatches(query, filters);
   };
 
   const handleApplyFilters = (newFilters: FilterState) => {
     setFilters(newFilters);
-    filterMatches(searchQuery, newFilters, sortBy);
+    fetchMatches(searchQuery, newFilters);
   };
 
   const handleSortChange = (option: SortOption) => {
     setSortBy(option);
-    filterMatches(searchQuery, filters, option);
+    // Sort locally for now as API might not support it
+    const sorted = [...matches];
+    if (option === "nearby") sorted.sort((a, b) => a.distance - b.distance);
+    if (option === "best_match")
+      sorted.sort((a, b) => b.matchPercentage - a.matchPercentage);
+    setMatches(sorted);
     setMenuVisible(false);
   };
 
-  const filterMatches = (
-    query: string,
-    currentFilters: FilterState,
-    sortOption: SortOption,
-  ) => {
-    let filtered = [...MOCK_MATCHES];
-
-    // Apply search and filters (same as in main connections page)
-    if (query) {
-      const lowerQuery = query.toLowerCase();
-      filtered = filtered.filter(
-        (match) =>
-          match.name.toLowerCase().includes(lowerQuery) ||
-          match.city.toLowerCase().includes(lowerQuery) ||
-          match.profession.toLowerCase().includes(lowerQuery) ||
-          match.caste.toLowerCase().includes(lowerQuery),
-      );
-    }
-
-    filtered = filtered.filter(
-      (match) =>
-        match.age >= currentFilters.ageRange[0] &&
-        match.age <= currentFilters.ageRange[1] &&
-        match.distance <= currentFilters.distanceRadius,
-    );
-
-    if (currentFilters.states.length > 0) {
-      filtered = filtered.filter((match) =>
-        currentFilters.states.includes(match.state),
-      );
-    }
-
-    if (currentFilters.cities.length > 0) {
-      filtered = filtered.filter((match) =>
-        currentFilters.cities.includes(match.city),
-      );
-    }
-
-    if (currentFilters.religions.length > 0) {
-      filtered = filtered.filter((match) =>
-        currentFilters.religions.includes(match.religion),
-      );
-    }
-
-    // Sort
-    switch (sortOption) {
-      case "nearby":
-        filtered.sort((a, b) => a.distance - b.distance);
-        break;
-      case "best_match":
-        filtered.sort((a, b) => b.matchPercentage - a.matchPercentage);
-        break;
-      case "recently_active":
-        filtered.sort((a, b) => {
-          const statusOrder = { online: 0, recently_active: 1, offline: 2 };
-          return statusOrder[a.onlineStatus] - statusOrder[b.onlineStatus];
-        });
-        break;
-      case "newest":
-        // For demo, just reverse the array
-        filtered.reverse();
-        break;
-    }
-
-    setMatches(filtered);
-  };
-
   const onRefresh = useCallback(() => {
-    setRefreshing(true);
-    setTimeout(() => {
-      setMatches([...MOCK_MATCHES]);
-      setPage(1);
-      setRefreshing(false);
-    }, 1000);
+    fetchMatches();
   }, []);
 
   const handleLoadMore = () => {

@@ -1,11 +1,12 @@
 import { Colors } from "@/constants/Colors";
+import { useAuth } from "@/context/AuthContext";
+import * as profileService from "@/services/profileService";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
     Dimensions,
     Image,
-    LayoutAnimation,
     Modal,
     Platform,
     SafeAreaView,
@@ -36,54 +37,35 @@ const MENU_WIDTH = width * 0.8; // 80% screen width
 type MenuItemProps = {
   icon: keyof typeof Ionicons.glyphMap;
   label: string;
-  children?: React.ReactNode;
-  isExpanded: boolean;
   onPress: () => void;
+  isLogout?: boolean;
 };
 
-const MenuItem = ({
-  icon,
-  label,
-  children,
-  isExpanded,
-  onPress,
-}: MenuItemProps) => {
+const MenuItem = ({ icon, label, onPress, isLogout }: MenuItemProps) => {
   return (
-    <View style={styles.menuItemContainer}>
-      <TouchableOpacity
-        style={styles.menuItem}
-        onPress={onPress}
-        activeOpacity={0.7}
-      >
-        <View style={styles.menuItemLeft}>
-          <View style={styles.iconContainer}>
-            <Ionicons name={icon} size={22} color="white" />
-          </View>
-          <Text style={styles.menuItemLabel}>{label}</Text>
+    <TouchableOpacity
+      style={[styles.pillItem, isLogout && styles.logoutItem]}
+      onPress={onPress}
+      activeOpacity={0.8}
+    >
+      <View style={styles.menuItemLeft}>
+        <View style={styles.iconContainer}>
+          <Ionicons
+            name={icon}
+            size={20}
+            color={isLogout ? "#FFF" : Colors.maroon}
+          />
         </View>
-        <Ionicons
-          name={isExpanded ? "chevron-up" : "chevron-down"}
-          size={20}
-          color="white"
-        />
-      </TouchableOpacity>
-      {/* 
-        You can also leave LayoutAnimation for accordion expanding, 
-        or switch to Reanimated for that too. 
-        Keeping as is for now since user only complained about the side menu sliding.
-      */}
-      {isExpanded && <View style={styles.menuContent}>{children}</View>}
-    </View>
+        <Text style={[styles.menuItemLabel, isLogout && styles.logoutText]}>
+          {label}
+        </Text>
+      </View>
+      {!isLogout && (
+        <Ionicons name="chevron-forward" size={18} color={Colors.maroon} />
+      )}
+    </TouchableOpacity>
   );
 };
-
-// Sub-item row for the accordion content
-const MenuSubItem = ({ label, value }: { label: string; value: string }) => (
-  <View style={styles.subItemRow}>
-    <Text style={styles.subItemLabel}>{label}</Text>
-    <Text style={styles.subItemValue}>{value}</Text>
-  </View>
-);
 
 export default function SideMenu({
   visible,
@@ -92,12 +74,50 @@ export default function SideMenu({
   visible: boolean;
   onClose: () => void;
 }) {
-  const [expandedItem, setExpandedItem] = useState<string | null>(null);
   const router = useRouter();
+  const { logout, userId } = useAuth();
+  const [userName, setUserName] = useState("User");
+  const [userImage, setUserImage] = useState(
+    "https://randomuser.me/api/portraits/men/32.jpg",
+  );
 
-  const toggleItem = (label: string) => {
-    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
-    setExpandedItem(expandedItem === label ? null : label);
+  const [userCity, setUserCity] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (visible) {
+      loadUserProfile();
+    }
+  }, [visible]);
+
+  const loadUserProfile = async () => {
+    try {
+      const profile = await profileService.getProfile();
+      if (profile) {
+        setUserName(profile.fullName || "User");
+        if (profile.profilePhotoUrl) {
+          setUserImage(profile.profilePhotoUrl);
+        }
+        if (profile.city) {
+          setUserCity(profile.city);
+        }
+      }
+    } catch (error) {
+      console.log("Error loading profile in SideMenu", error);
+    }
+  };
+
+  const handleNavigation = (path: string) => {
+    onClose();
+    // Small timeout to allow drawer to close smooth
+    setTimeout(() => {
+      router.push(path as any);
+    }, 200);
+  };
+
+  const handleLogout = async () => {
+    onClose();
+    await logout();
+    router.replace("/(auth)/landing" as any);
   };
 
   if (!visible) return null;
@@ -106,11 +126,10 @@ export default function SideMenu({
     <Modal
       visible={visible}
       transparent
-      animationType="none" // Turn off default modal animation to use Reanimated
+      animationType="none"
       onRequestClose={onClose}
     >
       <View style={styles.overlay}>
-        {/* Blur/Dark Background */}
         <TouchableOpacity style={styles.backdrop} onPress={onClose}>
           <Animated.View
             entering={FadeIn.duration(300)}
@@ -119,7 +138,6 @@ export default function SideMenu({
           />
         </TouchableOpacity>
 
-        {/* Side Drawer with SlideInLeft */}
         <Animated.View
           entering={SlideInLeft.duration(300)}
           exiting={SlideOutLeft.duration(300)}
@@ -130,157 +148,85 @@ export default function SideMenu({
               showsVerticalScrollIndicator={false}
               contentContainerStyle={styles.scrollContent}
             >
-              {/* Profile Section */}
+              {/* Profile Header */}
               <View style={styles.profileSection}>
-                <View style={styles.profileImageContainer}>
+                <View style={styles.imageWrapper}>
                   <Image
-                    source={{
-                      uri: "https://randomuser.me/api/portraits/men/32.jpg",
-                    }}
+                    source={{ uri: userImage }}
                     style={styles.profileImage}
                   />
-                  <View style={styles.addIconBadge}>
-                    <Ionicons name="add" size={12} color="white" />
-                  </View>
                 </View>
-
-                <Text style={styles.profileName}>Rahul More</Text>
-
-                <TouchableOpacity style={styles.editProfileButton}>
-                  <Ionicons name="create-outline" size={16} color="#C21807" />
-                  <Text style={styles.editProfileText}>Edit Profile</Text>
-                </TouchableOpacity>
-              </View>
-
-              <View style={styles.separator} />
-
-              {/* Menu Items - Updated to match design */}
-              <View style={styles.menuList}>
-                <TouchableOpacity
-                  style={styles.simpleMenuItem}
-                  onPress={() => {
-                    onClose();
-                    router.push("/profile" as any);
-                  }}
-                  activeOpacity={0.7}
-                >
-                  <View style={styles.menuItemLeft}>
-                    <Ionicons name="person-outline" size={22} color="white" />
-                    <Text style={styles.menuItemLabel}>Profile</Text>
-                  </View>
-                  <Ionicons name="chevron-forward" size={20} color="white" />
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                  style={styles.simpleMenuItem}
-                  onPress={() => {
-                    /* Navigate to Matches */
-                  }}
-                  activeOpacity={0.7}
-                >
-                  <View style={styles.menuItemLeft}>
-                    <Ionicons name="heart-outline" size={22} color="white" />
-                    <Text style={styles.menuItemLabel}>
-                      Matches & Connection
+                <Text style={styles.profileName}>{userName}</Text>
+                {userCity && (
+                  <View
+                    style={{
+                      flexDirection: "row",
+                      alignItems: "center",
+                      marginTop: 4,
+                      gap: 4,
+                    }}
+                  >
+                    <Ionicons name="location-sharp" size={14} color="#666" />
+                    <Text
+                      style={{ fontSize: 14, color: "#666", fontWeight: "500" }}
+                    >
+                      {userCity}
                     </Text>
                   </View>
-                  <Ionicons name="chevron-forward" size={20} color="white" />
-                </TouchableOpacity>
-
+                )}
                 <TouchableOpacity
-                  style={styles.simpleMenuItem}
-                  onPress={() => {
-                    /* Navigate to Messages */
-                  }}
-                  activeOpacity={0.7}
+                  style={styles.viewProfileBtn}
+                  onPress={() => handleNavigation("/profile")}
                 >
-                  <View style={styles.menuItemLeft}>
-                    <Ionicons
-                      name="chatbubble-outline"
-                      size={22}
-                      color="white"
-                    />
-                    <Text style={styles.menuItemLabel}>Messages</Text>
-                  </View>
-                  <Ionicons name="chevron-forward" size={20} color="white" />
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                  style={styles.simpleMenuItem}
-                  onPress={() => {
-                    /* Navigate to Astro & Kundali */
-                  }}
-                  activeOpacity={0.7}
-                >
-                  <View style={styles.menuItemLeft}>
-                    <Ionicons name="planet-outline" size={22} color="white" />
-                    <Text style={styles.menuItemLabel}>Astro & Kundali</Text>
-                  </View>
-                  <Ionicons name="chevron-forward" size={20} color="white" />
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                  style={styles.simpleMenuItem}
-                  onPress={() => {
-                    /* Navigate to Services */
-                  }}
-                  activeOpacity={0.7}
-                >
-                  <View style={styles.menuItemLeft}>
-                    <Ionicons name="gift-outline" size={22} color="white" />
-                    <Text style={styles.menuItemLabel}>Services</Text>
-                  </View>
-                  <Ionicons name="chevron-forward" size={20} color="white" />
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                  style={styles.simpleMenuItem}
-                  onPress={() => {
-                    /* Navigate to Membership */
-                  }}
-                  activeOpacity={0.7}
-                >
-                  <View style={styles.menuItemLeft}>
-                    <Ionicons name="diamond-outline" size={22} color="white" />
-                    <Text style={styles.menuItemLabel}>Membership plan</Text>
-                  </View>
-                  <Ionicons name="chevron-forward" size={20} color="white" />
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                  style={styles.simpleMenuItem}
-                  onPress={() => {
-                    /* Navigate to Settings */
-                  }}
-                  activeOpacity={0.7}
-                >
-                  <View style={styles.menuItemLeft}>
-                    <Ionicons name="settings-outline" size={22} color="white" />
-                    <Text style={styles.menuItemLabel}>Settings</Text>
-                  </View>
-                  <Ionicons name="chevron-forward" size={20} color="white" />
-                </TouchableOpacity>
-
-                <View style={styles.separator} />
-
-                <TouchableOpacity
-                  style={styles.simpleMenuItem}
-                  onPress={() => {
-                    /* Handle Logout */
-                  }}
-                  activeOpacity={0.7}
-                >
-                  <View style={styles.menuItemLeft}>
-                    <Ionicons name="log-out-outline" size={22} color="white" />
-                    <Text style={styles.menuItemLabel}>Logout</Text>
-                  </View>
-                  <Ionicons name="chevron-forward" size={20} color="white" />
+                  <Text style={styles.viewProfileText}>View Profile</Text>
                 </TouchableOpacity>
               </View>
 
-              {/* Bottom Chat / Service buttons from design (Optional matching) */}
-              <View style={styles.bottomActions}>
-                {/* Can add bottom buttons here if needed, keeping it simple for now */}
+              <View style={styles.menuList}>
+                <MenuItem
+                  icon="person-outline"
+                  label="My Profile"
+                  onPress={() => handleNavigation("/profile")}
+                />
+                <MenuItem
+                  icon="heart-circle-outline"
+                  label="My Matches"
+                  onPress={() => handleNavigation("/(tabs)/match")}
+                />
+                <MenuItem
+                  icon="star-outline"
+                  label="Shortlisted"
+                  onPress={() => handleNavigation("/shortlisted")}
+                />
+                <MenuItem
+                  icon="chatbubbles-outline"
+                  label="Chats"
+                  onPress={() => handleNavigation("/(tabs)/chat")}
+                />
+                <MenuItem
+                  icon="settings-outline"
+                  label="Settings"
+                  onPress={() => handleNavigation("/settings")}
+                />
+                <MenuItem
+                  icon="help-circle-outline"
+                  label="Help & Support"
+                  onPress={() => handleNavigation("/help")}
+                />
+                <MenuItem
+                  icon="shield-checkmark-outline"
+                  label="Privacy Policy"
+                  onPress={() => handleNavigation("/privacy")}
+                />
+
+                <View style={styles.spacer} />
+
+                <TouchableOpacity
+                  style={styles.logoutBtn}
+                  onPress={handleLogout}
+                >
+                  <Text style={styles.logoutText}>Logout</Text>
+                </TouchableOpacity>
               </View>
             </ScrollView>
           </SafeAreaView>
@@ -305,16 +251,12 @@ const styles = StyleSheet.create({
   drawer: {
     width: MENU_WIDTH,
     height: "100%",
-    backgroundColor: "#C21807", // Red background
+    backgroundColor: "#F8F8F8", // Off-white/Gray background for modern look
     borderTopRightRadius: 30,
     borderBottomRightRadius: 30,
     overflow: "hidden",
-    // Shadow
     shadowColor: "#000",
-    shadowOffset: {
-      width: 5,
-      height: 0,
-    },
+    shadowOffset: { width: 5, height: 0 },
     shadowOpacity: 0.3,
     shadowRadius: 5,
     elevation: 10,
@@ -327,121 +269,104 @@ const styles = StyleSheet.create({
   },
   profileSection: {
     alignItems: "center",
-    paddingTop: 40,
-    paddingBottom: 20,
+    paddingTop: 50,
+    paddingBottom: 30,
+    backgroundColor: Colors.ivory,
+    borderBottomLeftRadius: 30,
+    borderBottomRightRadius: 30,
+    marginBottom: 20,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 3,
   },
-  profileImageContainer: {
-    position: "relative",
-    marginBottom: 10,
+  imageWrapper: {
+    padding: 4,
+    backgroundColor: "#FFF",
+    borderRadius: 50,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 4,
   },
   profileImage: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    borderWidth: 3,
-    borderColor: Colors.gold, // Gold border
-  },
-  addIconBadge: {
-    position: "absolute",
-    bottom: 0,
-    right: 0,
-    backgroundColor: "#C21807",
-    borderRadius: 10,
-    width: 20,
-    height: 20,
-    justifyContent: "center",
-    alignItems: "center",
-    borderWidth: 2,
-    borderColor: "white",
+    width: 90,
+    height: 90,
+    borderRadius: 45,
   },
   profileName: {
-    fontSize: 20,
+    fontSize: 22,
     fontWeight: "bold",
-    color: "white",
-    marginBottom: 10,
+    color: "#2D1406",
+    marginTop: 12,
   },
-  editProfileButton: {
-    backgroundColor: "white",
-    flexDirection: "row",
-    alignItems: "center",
+  viewProfileBtn: {
+    marginTop: 8,
     paddingHorizontal: 16,
-    paddingVertical: 8,
+    paddingVertical: 6,
+    backgroundColor: Colors.maroon,
     borderRadius: 20,
-    gap: 6,
   },
-  editProfileText: {
-    color: "#C21807",
-    fontWeight: "bold",
-    fontSize: 14,
-  },
-  separator: {
-    height: 1,
-    backgroundColor: "rgba(255,255,255,0.2)",
-    marginHorizontal: 20,
-    marginVertical: 10,
+  viewProfileText: {
+    color: "#FFF",
+    fontSize: 12,
+    fontWeight: "600",
   },
   menuList: {
     paddingHorizontal: 20,
-    paddingTop: 10,
   },
-  menuItemContainer: {
-    marginBottom: 15,
-  },
-  menuItem: {
+  pillItem: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingVertical: 5,
+    backgroundColor: "#FFF",
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    borderRadius: 16,
+    marginBottom: 12,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  logoutItem: {
+    backgroundColor: Colors.maroon,
+    marginTop: 20,
   },
   menuItemLeft: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 15,
+    gap: 14,
   },
   iconContainer: {
-    // width: 30,
-    // alignItems: 'center'
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: "#FFF0F0", // Light red bg for icon
+    justifyContent: "center",
+    alignItems: "center",
   },
   menuItemLabel: {
     fontSize: 16,
-    color: "white",
-    fontWeight: "500",
+    fontWeight: "600",
+    color: "#333",
   },
-  simpleMenuItem: {
+  logoutText: {
+    color: "#FFF",
+  },
+  spacer: {
+    height: 20,
+  },
+  logoutBtn: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
-    paddingVertical: 15,
-  },
-  menuContent: {
+    justifyContent: "center",
+    backgroundColor: Colors.maroon,
+    paddingVertical: 14,
+    borderRadius: 16,
     marginTop: 10,
-    marginLeft: 40, // Indent content
-    backgroundColor: "rgba(0,0,0,0.1)",
-    borderRadius: 8,
-    padding: 10,
-  },
-  subItemRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    marginBottom: 6,
-  },
-  subItemLabel: {
-    color: "rgba(255,255,255,0.8)",
-    fontSize: 14,
-  },
-  subItemValue: {
-    color: "white",
-    fontWeight: "600",
-    fontSize: 14,
-  },
-  settingsOption: {
-    paddingVertical: 8,
-  },
-  settingsOptionText: {
-    color: "white",
-    fontSize: 14,
-  },
-  bottomActions: {
-    padding: 20,
   },
 });

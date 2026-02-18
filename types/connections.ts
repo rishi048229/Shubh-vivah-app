@@ -23,7 +23,9 @@ export interface MatchProfile {
   income?: string;
   manglikStatus?: "yes" | "no" | "anshik";
   maritalStatus: string;
+  occupation?: string; // Mapped from profession in some places
   height?: string;
+  bio?: string;
 }
 
 export interface FilterState {
@@ -34,6 +36,7 @@ export interface FilterState {
   religions: string[];
   castes: string[];
   educationLevels: string[];
+  communities: string[]; // Added community
   manglikStatus?: "yes" | "no" | "any";
   maritalStatus: string[];
   lifestylePreferences: string[];
@@ -58,6 +61,7 @@ export const DEFAULT_FILTERS: FilterState = {
   religions: [],
   castes: [],
   educationLevels: [],
+  communities: [], // Added default
   manglikStatus: "any",
   maritalStatus: [],
   lifestylePreferences: [],

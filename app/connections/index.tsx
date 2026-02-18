@@ -4,28 +4,25 @@ import ModernSearchBar from "@/components/Connections/ModernSearchBar";
 import QuickViewModal from "@/components/Connections/QuickViewModal";
 import PreferencesSheet from "@/components/Home/New/PreferencesSheet";
 import { Colors } from "@/constants/Colors";
-import { MOCK_MATCHES } from "@/data/mockConnectionsData";
+import { searchProfiles } from "@/services/matchService";
 import {
-  DEFAULT_FILTERS,
-  FilterState,
-  MatchProfile,
+    DEFAULT_FILTERS,
+    FilterState,
+    MatchProfile,
 } from "@/types/connections";
 import { Ionicons } from "@expo/vector-icons";
-import {
-  BottomSheetModal
-} from "@gorhom/bottom-sheet";
+import { BottomSheetModal } from "@gorhom/bottom-sheet";
 import { useRouter } from "expo-router";
-import React, { useCallback, useRef, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
-  FlatList,
-  Platform,
-  RefreshControl,
-  SafeAreaView,
-  StatusBar,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
+    FlatList,
+    Platform,
+    RefreshControl,
+    StatusBar,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
 } from "react-native";
 
 export default function ConnectionsScreen() {
@@ -39,7 +36,57 @@ export default function ConnectionsScreen() {
   const [isSearchExpanded, setIsSearchExpanded] = useState(false);
   const [quickViewVisible, setQuickViewVisible] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
-  const [matches, setMatches] = useState<MatchProfile[]>(MOCK_MATCHES);
+  const [matches, setMatches] = useState<MatchProfile[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  // Initial Fetch
+  useEffect(() => {
+    fetchMatches();
+  }, []);
+
+  const fetchMatches = async () => {
+    setLoading(true);
+    try {
+      // For "Connections", we might want to search with current filters
+      // OR just show explore suggestions. Let's use searchProfiles for the grid.
+      // If no filters, it returns broad matches.
+      const data = await searchProfiles(searchQuery, {
+        minAge: filters.ageRange[0],
+        maxAge: filters.ageRange[1],
+        city: filters.cities.length > 0 ? filters.cities[0] : undefined,
+        religion:
+          filters.religions.length > 0 ? filters.religions[0] : undefined,
+      });
+
+      // Map API response to UI MatchProfile
+      const mappedMatches: MatchProfile[] = data.map((p) => ({
+        id: p.userId.toString(),
+        name: p.fullName,
+        age: p.age,
+        location: p.city || "Unknown",
+        city: p.city || "Unknown",
+        state: "Unknown",
+        distance: p.distanceKm || 0,
+        matchPercentage: p.matchScore || 75,
+        matchReasons: [p.religion, p.caste].filter(Boolean) as string[],
+        imageUri:
+          p.profilePhotoUrl || "https://randomuser.me/api/portraits/lego/1.jpg",
+        profession: p.occupation || "Not Specified",
+        education: p.education || "Not Specified",
+        religion: p.religion || "Hindu",
+        caste: p.caste || "",
+        verified: true,
+        onlineStatus: "recently_active",
+        maritalStatus: p.maritalStatus || "Never Married",
+      }));
+
+      setMatches(mappedMatches);
+    } catch (error) {
+      console.log("Error fetching matches:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleQuickView = (profile: MatchProfile) => {
     setSelectedProfile(profile);
@@ -48,126 +95,38 @@ export default function ConnectionsScreen() {
 
   const handleSearch = (query: string) => {
     setSearchQuery(query);
-    filterMatches(query, filters);
+    // Debounce or just trigger fetch
+    // For now, let's trigger search directly if user hits enter or stops typing
+    // Real-time filtering might need debouncing.
   };
 
-  const handleApplyFilters = (newFilters: FilterState) => {
-    setFilters(newFilters);
-    filterMatches(searchQuery, newFilters);
+  // Trigger search when query changes (with debounce in real app)
+  // Here we just use useEffect or manual trigger.
+  // Let's use useEffect to react to query/filter changes
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      fetchMatches();
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [searchQuery, filters]);
+
+  const handleApplyFilters = (newFilters: any) => {
+    // Map sheet filters to FilterState
+    const mapped: FilterState = {
+      ...DEFAULT_FILTERS,
+      ageRange: newFilters.ageRange || [18, 35],
+      religions: newFilters.religion !== "Any" ? [newFilters.religion] : [],
+      cities: newFilters.city ? [newFilters.city] : [],
+      // ... map others if needed
+    };
+    setFilters(mapped);
   };
 
-  const filterMatches = (query: string, currentFilters: FilterState) => {
-    let filtered = [...MOCK_MATCHES];
-
-    // Search filter
-    if (query) {
-      const lowerQuery = query.toLowerCase();
-      filtered = filtered.filter(
-        (match) =>
-          match.name.toLowerCase().includes(lowerQuery) ||
-          match.city.toLowerCase().includes(lowerQuery) ||
-          match.profession.toLowerCase().includes(lowerQuery) ||
-          match.caste.toLowerCase().includes(lowerQuery),
-      );
-    }
-
-    // Age filter
-    filtered = filtered.filter(
-      (match) =>
-        match.age >= currentFilters.ageRange[0] &&
-        match.age <= currentFilters.ageRange[1],
-    );
-
-    // Distance filter
-    filtered = filtered.filter(
-      (match) => match.distance <= currentFilters.distanceRadius,
-    );
-
-    // State filter
-    if (currentFilters.states.length > 0) {
-      filtered = filtered.filter((match) =>
-        currentFilters.states.includes(match.state),
-      );
-    }
-
-    // City filter
-    if (currentFilters.cities.length > 0) {
-      filtered = filtered.filter((match) =>
-        currentFilters.cities.includes(match.city),
-      );
-    }
-
-    // Religion filter
-    if (currentFilters.religions.length > 0) {
-      filtered = filtered.filter((match) =>
-        currentFilters.religions.includes(match.religion),
-      );
-    }
-
-    // Education filter
-    if (currentFilters.educationLevels.length > 0) {
-      filtered = filtered.filter((match) =>
-        currentFilters.educationLevels.includes(match.education),
-      );
-    }
-
-    // Manglik filter
-    if (
-      currentFilters.manglikStatus &&
-      currentFilters.manglikStatus !== "any"
-    ) {
-      filtered = filtered.filter(
-        (match) => match.manglikStatus === currentFilters.manglikStatus,
-      );
-    }
-
-    // Marital status filter
-    if (currentFilters.maritalStatus.length > 0) {
-      filtered = filtered.filter((match) =>
-        currentFilters.maritalStatus.includes(match.maritalStatus),
-      );
-    }
-
-    // Height filter (min height)
-    if (currentFilters.minHeight && currentFilters.minHeight > 0) {
-      filtered = filtered.filter((match) => {
-        if (!match.height) return false;
-        const [feet, inches] = match.height
-          .replace('"', "")
-          .split("'")
-          .map(Number);
-        const totalInches = (feet || 0) * 12 + (inches || 0);
-        return totalInches >= (currentFilters.minHeight || 0);
-      });
-    }
-
-    // Income filter (min income)
-    if (currentFilters.minIncome && currentFilters.minIncome > 0) {
-      filtered = filtered.filter((match) => {
-        if (!match.income) return false;
-        const incomeValue = parseInt(match.income.split(" ")[0]);
-        return incomeValue >= (currentFilters.minIncome || 0);
-      });
-    }
-
-    // Profession filter
-    if (currentFilters.professions.length > 0) {
-      filtered = filtered.filter((match) =>
-        currentFilters.professions.includes(match.profession),
-      );
-    }
-
-    setMatches(filtered);
-  };
-
-  const onRefresh = useCallback(() => {
+  const onRefresh = useCallback(async () => {
     setRefreshing(true);
-    // Simulate refresh
-    setTimeout(() => {
-      setMatches([...MOCK_MATCHES]);
-      setRefreshing(false);
-    }, 1000);
-  }, []);
+    await fetchMatches();
+    setRefreshing(false);
+  }, [filters, searchQuery]);
 
   const renderHeader = () => (
     <View>
@@ -201,7 +160,7 @@ export default function ConnectionsScreen() {
   );
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <View style={styles.safeArea}>
       <StatusBar barStyle="dark-content" backgroundColor={Colors.ivory} />
 
       {/* Header */}
@@ -254,7 +213,11 @@ export default function ConnectionsScreen() {
       />
 
       {/* Preferences Sheet */}
-      <PreferencesSheet ref={preferencesRef} onDismiss={() => {}} />
+      <PreferencesSheet
+        ref={preferencesRef}
+        onDismiss={() => {}}
+        onApply={handleApplyFilters}
+      />
 
       {/* Quick View Modal */}
       <QuickViewModal
@@ -262,7 +225,7 @@ export default function ConnectionsScreen() {
         profile={selectedProfile}
         onClose={() => setQuickViewVisible(false)}
       />
-    </SafeAreaView>
+    </View>
   );
 }
 

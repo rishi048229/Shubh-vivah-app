@@ -1,16 +1,27 @@
 import { Colors } from "@/constants/Colors";
-import { Ionicons } from "@expo/vector-icons";
 import {
-    BottomSheetBackdrop,
-    BottomSheetModal,
-    BottomSheetScrollView,
+  BottomSheetBackdrop,
+  BottomSheetFooter,
+  BottomSheetModal,
+  BottomSheetScrollView,
 } from "@gorhom/bottom-sheet";
 import Slider from "@react-native-community/slider";
+import {
+  Briefcase,
+  Calendar,
+  ChevronDown,
+  Heart,
+  Home,
+  SlidersHorizontal,
+  Users,
+} from "lucide-react-native";
 import React, { forwardRef, useCallback, useMemo, useState } from "react";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 interface PreferencesSheetProps {
   onDismiss: () => void;
+  onApply?: (filters: any) => void;
 }
 
 const SECTIONS = [
@@ -71,9 +82,10 @@ const SECTIONS = [
 ];
 
 const PreferencesSheet = forwardRef<BottomSheetModal, PreferencesSheetProps>(
-  ({ onDismiss }, ref) => {
+  ({ onDismiss, onApply }, ref) => {
     // 90% height for a nice tall sheet
     const snapPoints = useMemo(() => ["85%"], []);
+    const insets = useSafeAreaInsets();
 
     // State
     const [ageRange, setAgeRange] = useState(25); // Simplified single thumb for demo, or we can do a range if lib supports it well. standard slider is single thumb.
@@ -115,12 +127,69 @@ const PreferencesSheet = forwardRef<BottomSheetModal, PreferencesSheetProps>(
       [],
     );
 
+    const renderFooter = useCallback(
+      (props: any) => (
+        <BottomSheetFooter {...props} bottomInset={0}>
+          <View style={[styles.footer, { paddingBottom: insets.bottom + 20 }]}>
+            <TouchableOpacity
+              style={styles.applyButton}
+              onPress={() => {
+                const mappedFilters: any = {
+                  ...selectedFilters,
+                  ageRange: [18, maxAge],
+                  cities:
+                    selectedFilters.city && selectedFilters.city !== "Any"
+                      ? [selectedFilters.city]
+                      : [],
+                  religions:
+                    selectedFilters.religion &&
+                    selectedFilters.religion !== "Any"
+                      ? [selectedFilters.religion]
+                      : [],
+                  communities:
+                    selectedFilters.community &&
+                    selectedFilters.community !== "Any"
+                      ? [selectedFilters.community]
+                      : [],
+                  professions:
+                    selectedFilters.profession &&
+                    selectedFilters.profession !== "Any"
+                      ? [selectedFilters.profession]
+                      : [],
+                  maritalStatus:
+                    selectedFilters.marital && selectedFilters.marital !== "Any"
+                      ? [selectedFilters.marital]
+                      : [],
+                  educationLevels:
+                    selectedFilters.education &&
+                    selectedFilters.education !== "Any"
+                      ? [selectedFilters.education]
+                      : [],
+                  lifestylePreferences:
+                    selectedFilters.diet && selectedFilters.diet !== "Any"
+                      ? [selectedFilters.diet]
+                      : [],
+                };
+
+                onApply?.(mappedFilters);
+                (ref as any)?.current?.dismiss();
+              }}
+            >
+              <Text style={styles.applyText}>Apply Filters</Text>
+            </TouchableOpacity>
+          </View>
+        </BottomSheetFooter>
+      ),
+      [insets.bottom, maxAge, onApply, ref, selectedFilters],
+    );
+
     return (
       <BottomSheetModal
         ref={ref}
         index={0}
         snapPoints={snapPoints}
         backdropComponent={renderBackdrop}
+        footerComponent={renderFooter}
         enablePanDownToClose
         onDismiss={onDismiss}
         backgroundStyle={{ backgroundColor: "#FFF", borderRadius: 24 }}
@@ -130,7 +199,7 @@ const PreferencesSheet = forwardRef<BottomSheetModal, PreferencesSheetProps>(
           <View style={styles.header}>
             <TouchableOpacity onPress={() => (ref as any)?.current?.dismiss()}>
               <View style={styles.closeIconContainer}>
-                <Ionicons name="options" size={20} color="#FFF" />
+                <SlidersHorizontal size={20} color="#FFF" />
               </View>
             </TouchableOpacity>
 
@@ -138,22 +207,25 @@ const PreferencesSheet = forwardRef<BottomSheetModal, PreferencesSheetProps>(
             <View style={styles.topFilterScroll}>
               <TouchableOpacity style={styles.topFilterChip}>
                 <Text style={styles.topFilterText}>Marital Status</Text>
-                <Ionicons name="chevron-down" size={12} color="#C21807" />
+                <ChevronDown size={12} color="#C21807" />
               </TouchableOpacity>
               <TouchableOpacity style={styles.topFilterChip}>
                 <Text style={styles.topFilterText}>Religion</Text>
-                <Ionicons name="chevron-down" size={12} color="#C21807" />
+                <ChevronDown size={12} color="#C21807" />
               </TouchableOpacity>
               <TouchableOpacity style={styles.topFilterChip}>
                 <Text style={styles.topFilterText}>Community</Text>
-                <Ionicons name="chevron-down" size={12} color="#C21807" />
+                <ChevronDown size={12} color="#C21807" />
               </TouchableOpacity>
             </View>
           </View>
 
           <BottomSheetScrollView
             style={{ flex: 1 }}
-            contentContainerStyle={styles.scrollContent}
+            contentContainerStyle={[
+              styles.scrollContent,
+              { paddingBottom: insets.bottom + 100 },
+            ]}
             showsVerticalScrollIndicator={false}
           >
             <Text style={styles.mainTitle}>Refine Your Partner Search</Text>
@@ -162,7 +234,7 @@ const PreferencesSheet = forwardRef<BottomSheetModal, PreferencesSheetProps>(
             <View style={styles.section}>
               <View style={styles.sectionHeaderRow}>
                 <View style={styles.iconTitle}>
-                  <Ionicons name="calendar" size={18} color="#FFC107" />
+                  <Calendar size={18} color="#8B0000" />
                   <Text style={styles.sectionTitle}>Age Range</Text>
                 </View>
                 <Text style={styles.rangeValue}>
@@ -190,16 +262,16 @@ const PreferencesSheet = forwardRef<BottomSheetModal, PreferencesSheetProps>(
               <View key={section.id} style={styles.section}>
                 <View style={styles.iconTitle}>
                   {section.id === "marital" && (
-                    <Ionicons name="heart" size={18} color="#FFC107" />
+                    <Heart size={18} color="#8B0000" />
                   )}
                   {section.id === "religion" && (
-                    <Ionicons name="people" size={18} color="#FFC107" />
+                    <Users size={18} color="#8B0000" />
                   )}
                   {section.id === "profession" && (
-                    <Ionicons name="briefcase" size={18} color="#FFC107" />
+                    <Briefcase size={18} color="#8B0000" />
                   )}
                   {section.id === "community" && (
-                    <Ionicons name="home" size={18} color="#FFC107" />
+                    <Home size={18} color="#8B0000" />
                   )}
                   <Text style={styles.sectionTitle}>{section.title}</Text>
                 </View>
@@ -230,20 +302,6 @@ const PreferencesSheet = forwardRef<BottomSheetModal, PreferencesSheetProps>(
 
             <View style={{ height: 100 }} />
           </BottomSheetScrollView>
-
-          {/* Footer Actions */}
-          <View style={styles.footer}>
-            <TouchableOpacity onPress={() => (ref as any)?.current?.dismiss()}>
-              <Text style={styles.cancelText}>Cancel</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={styles.applyButton}
-              onPress={() => (ref as any)?.current?.dismiss()}
-            >
-              <Text style={styles.applyText}>Apply Filters</Text>
-            </TouchableOpacity>
-          </View>
         </View>
       </BottomSheetModal>
     );
@@ -341,36 +399,33 @@ const styles = StyleSheet.create({
     borderColor: "#EEE",
   },
   selectedChip: {
-    backgroundColor: "#FFC107", // Gold/Yellow
-    borderColor: "#FFC107",
+    backgroundColor: "#8B0000", // Maroon
+    borderColor: "#8B0000",
   },
   chipText: {
     color: "#666",
     fontSize: 14,
   },
   selectedChipText: {
-    color: "#000",
+    color: "#FFF",
     fontWeight: "600",
   },
   footer: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
     padding: 20,
+    backgroundColor: "#FFFFF0",
     borderTopWidth: 1,
-    borderTopColor: "#EEE",
-    backgroundColor: "#FFF",
-  },
-  cancelText: {
-    fontSize: 16,
-    color: "#666",
-    fontWeight: "500",
+    borderTopColor: "#E0E0E0",
   },
   applyButton: {
     backgroundColor: "#8B0000",
-    paddingVertical: 12,
-    paddingHorizontal: 32,
-    borderRadius: 25,
+    paddingVertical: 14,
+    borderRadius: 30,
+    alignItems: "center",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 8,
   },
   applyText: {
     color: "#FFF",

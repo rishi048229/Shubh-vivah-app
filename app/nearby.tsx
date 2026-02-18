@@ -1,38 +1,45 @@
 import { Colors } from "@/constants/Colors";
-import { Ionicons } from "@expo/vector-icons";
+import { Ionicons, MaterialIcons } from "@expo/vector-icons";
+import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
 import React from "react";
 import {
-    Image,
-    Platform,
-    SafeAreaView,
-    ScrollView,
-    StatusBar,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  Dimensions,
+  FlatList,
+  Image,
+  Platform,
+  SafeAreaView,
+  StatusBar,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from "react-native";
+
+const { width } = Dimensions.get("window");
+const CARD_WIDTH = (width - 48) / 2; // 2 columns with padding
 
 // Dummy data for nearby profiles
 const NEARBY_PROFILES = [
   {
     id: "1",
-    name: "Anjali Sharma",
-    age: "21",
+    name: "Kavya Yadav",
+    age: "24",
     profession: "Software Engineer",
     salary: "4LPA",
-    location: "Mumbai",
+    location: "Chennai",
     image: "https://randomuser.me/api/portraits/women/65.jpg",
+    verified: true,
   },
   {
     id: "2",
-    name: "Priya Desai",
-    age: "24",
+    name: "Myra Reddy",
+    age: "21",
     profession: "Product Designer",
     salary: "5LPA",
-    location: "Mumbai",
+    location: "Lucknow",
     image: "https://randomuser.me/api/portraits/women/32.jpg",
+    verified: true,
   },
   {
     id: "3",
@@ -42,6 +49,7 @@ const NEARBY_PROFILES = [
     salary: "4.5LPA",
     location: "Mumbai",
     image: "https://randomuser.me/api/portraits/women/44.jpg",
+    verified: false,
   },
   {
     id: "4",
@@ -51,6 +59,7 @@ const NEARBY_PROFILES = [
     salary: "6LPA",
     location: "Mumbai",
     image: "https://randomuser.me/api/portraits/women/12.jpg",
+    verified: true,
   },
   {
     id: "5",
@@ -60,62 +69,68 @@ const NEARBY_PROFILES = [
     salary: "5.5LPA",
     location: "Mumbai",
     image: "https://randomuser.me/api/portraits/women/10.jpg",
+    verified: false,
   },
 ];
 
 type ProfileCardProps = {
-  name: string;
-  age: string;
-  profession: string;
-  salary: string;
-  location: string;
-  image: string;
+  item: (typeof NEARBY_PROFILES)[0];
   onViewProfile: () => void;
 };
 
-function ProfileCard({
-  name,
-  age,
-  profession,
-  salary,
-  location,
-  image,
-  onViewProfile,
-}: ProfileCardProps) {
+function ProfileCard({ item, onViewProfile }: ProfileCardProps) {
   return (
     <View style={styles.card}>
-      <Image source={{ uri: image }} style={styles.profileImage} />
-      <View style={styles.cardContent}>
-        <Text style={styles.nameText}>
-          {name} , {age}
-        </Text>
-        <Text style={styles.professionText}>
-          {profession} , {salary}
-        </Text>
-        <View style={styles.locationRow}>
-          <Ionicons name="location-outline" size={16} color="#666" />
-          <Text style={styles.locationText}>{location}</Text>
-        </View>
+      {/* Image Section */}
+      <View style={styles.imageContainer}>
+        <Image source={{ uri: item.image }} style={styles.profileImage} />
 
-        <View style={styles.actionsRow}>
-          <View style={styles.iconButtons}>
-            <TouchableOpacity style={styles.iconButton}>
-              <Ionicons name="heart" size={24} color="#C21807" />
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.iconButton}>
-              <Ionicons name="chatbubble-outline" size={24} color="#666" />
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.iconButton}>
-              <Ionicons name="star-outline" size={24} color="#666" />
-            </TouchableOpacity>
-          </View>
-          <TouchableOpacity
-            style={styles.viewProfileButton}
-            onPress={onViewProfile}
-          >
-            <Text style={styles.viewProfileText}>View Profile</Text>
+        {/* Gradient Overlay for text readability if needed, or just style */}
+        <LinearGradient
+          colors={["transparent", "rgba(0,0,0,0.1)"]}
+          style={styles.imageGradient}
+        />
+
+        {/* Action Icons Overlay */}
+        <View style={styles.overlayIcons}>
+          <TouchableOpacity style={styles.iconButtonBlur}>
+            <Ionicons name="star-outline" size={20} color="#FFF" />
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.iconButtonBlur}>
+            <Ionicons name="heart-outline" size={20} color="#FFF" />
           </TouchableOpacity>
         </View>
+      </View>
+
+      {/* Content Section */}
+      <View style={styles.cardContent}>
+        <View style={styles.nameRow}>
+          <Text style={styles.nameText} numberOfLines={1}>
+            {item.name}
+          </Text>
+          {item.verified && (
+            <MaterialIcons name="verified" size={16} color="#3b82f6" />
+          )}
+        </View>
+
+        <Text style={styles.detailsText}>
+          {item.age} • {item.location}
+        </Text>
+
+        <Text style={styles.professionText} numberOfLines={1}>
+          {/* Display profession or fallback */}
+          NOT SPECIFIED
+        </Text>
+
+        <TouchableOpacity style={styles.connectButton} onPress={onViewProfile}>
+          <Ionicons
+            name="person-add-outline"
+            size={16}
+            color="#FFF"
+            style={{ marginRight: 6 }}
+          />
+          <Text style={styles.connectButtonText}>Connect</Text>
+        </TouchableOpacity>
       </View>
     </View>
   );
@@ -143,25 +158,21 @@ export default function NearbyScreen() {
           <View style={styles.placeholder} />
         </View>
 
-        {/* Profile List */}
-        <ScrollView
-          style={styles.scrollView}
-          contentContainerStyle={styles.scrollContent}
-          showsVerticalScrollIndicator={false}
-        >
-          {NEARBY_PROFILES.map((profile) => (
+        {/* Profile Grid */}
+        <FlatList
+          data={NEARBY_PROFILES}
+          keyExtractor={(item) => item.id}
+          renderItem={({ item }) => (
             <ProfileCard
-              key={profile.id}
-              name={profile.name}
-              age={profile.age}
-              profession={profile.profession}
-              salary={profile.salary}
-              location={profile.location}
-              image={profile.image}
-              onViewProfile={() => handleViewProfile(profile.id)}
+              item={item}
+              onViewProfile={() => handleViewProfile(item.id)}
             />
-          ))}
-        </ScrollView>
+          )}
+          numColumns={2}
+          columnWrapperStyle={styles.columnWrapper}
+          contentContainerStyle={styles.listContent}
+          showsVerticalScrollIndicator={false}
+        />
       </View>
     </SafeAreaView>
   );
@@ -185,6 +196,8 @@ const styles = StyleSheet.create({
     paddingVertical: 15,
     borderBottomWidth: 1,
     borderBottomColor: "#E0E0E0",
+    backgroundColor: Colors.ivory,
+    zIndex: 10,
   },
   backButton: {
     padding: 4,
@@ -197,18 +210,18 @@ const styles = StyleSheet.create({
   placeholder: {
     width: 32,
   },
-  scrollView: {
-    flex: 1,
-  },
-  scrollContent: {
+  listContent: {
     padding: 16,
-    gap: 16,
   },
+  columnWrapper: {
+    justifyContent: "space-between",
+    marginBottom: 16,
+  },
+  /* Card Styles */
   card: {
-    flexDirection: "row",
+    width: CARD_WIDTH,
     backgroundColor: "#FFF",
     borderRadius: 12,
-    padding: 12,
     shadowColor: "#000",
     shadowOffset: {
       width: 0,
@@ -217,59 +230,78 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 3,
+    overflow: "hidden",
+  },
+  imageContainer: {
+    width: "100%",
+    aspectRatio: 1, // Square image
+    position: "relative",
   },
   profileImage: {
-    width: 80,
-    height: 80,
-    borderRadius: 12,
-    marginRight: 12,
+    width: "100%",
+    height: "100%",
+    resizeMode: "cover",
+  },
+  imageGradient: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  overlayIcons: {
+    position: "absolute",
+    top: 8,
+    right: 8,
+    gap: 8,
+  },
+  iconButtonBlur: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: "rgba(0,0,0,0.2)", // Semi-transparent dark
+    justifyContent: "center",
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.3)",
   },
   cardContent: {
-    flex: 1,
+    padding: 12,
+  },
+  nameRow: {
+    flexDirection: "row",
+    alignItems: "center",
     justifyContent: "space-between",
+    marginBottom: 4,
   },
   nameText: {
     fontSize: 16,
     fontWeight: "bold",
-    color: "#000",
-    marginBottom: 4,
+    color: "#1a1a1a",
+    flex: 1,
+    marginRight: 4,
   },
-  professionText: {
-    fontSize: 14,
-    color: "#666",
-    marginBottom: 4,
-  },
-  locationRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-    marginBottom: 8,
-  },
-  locationText: {
+  detailsText: {
     fontSize: 13,
     color: "#666",
+    marginBottom: 2,
   },
-  actionsRow: {
+  professionText: {
+    fontSize: 11,
+    color: "#999",
+    fontWeight: "600",
+    marginBottom: 12,
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
+  },
+  connectButton: {
     flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-  },
-  iconButtons: {
-    flexDirection: "row",
-    gap: 12,
-  },
-  iconButton: {
-    padding: 4,
-  },
-  viewProfileButton: {
-    backgroundColor: "#C21807",
-    paddingHorizontal: 16,
-    paddingVertical: 8,
+    backgroundColor: "#4a0404", // Maroon
     borderRadius: 20,
+    paddingVertical: 8,
+    justifyContent: "center",
+    alignItems: "center",
+    width: "100%",
   },
-  viewProfileText: {
+  connectButtonText: {
     color: "#FFF",
-    fontSize: 12,
-    fontWeight: "bold",
+    fontSize: 14,
+    fontWeight: "600",
   },
 });

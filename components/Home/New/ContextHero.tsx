@@ -39,7 +39,7 @@ export default function ContextHero({
           <Text style={styles.contextText}>{contextText}</Text>
           {location && (
             <View style={styles.locationRow}>
-              <Ionicons name="location-outline" size={12} color={Colors.gray} />
+              <Ionicons name="location-outline" size={12} color="#666" />
               <Text style={styles.locationText}>{location}</Text>
             </View>
           )}
@@ -47,7 +47,9 @@ export default function ContextHero({
 
         {/* Notification Icon (Optional, can be added here) */}
         <View style={styles.actions}>
-          <Ionicons name="notifications-outline" size={24} color="#000" />
+          <TouchableOpacity onPress={() => console.log("Notifications")}>
+            <Ionicons name="notifications-outline" size={24} color="#000" />
+          </TouchableOpacity>
         </View>
       </View>
     </View>
@@ -59,7 +61,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: 10,
     paddingBottom: 10,
-    backgroundColor: "#FFF",
+    backgroundColor: Colors.ivory,
   },
   row: {
     flexDirection: "row",
@@ -99,7 +101,7 @@ const styles = StyleSheet.create({
   },
   contextText: {
     fontSize: 13,
-    color: Colors.gray,
+    color: "#666",
     marginTop: 2,
   },
   locationRow: {
@@ -110,7 +112,7 @@ const styles = StyleSheet.create({
   },
   locationText: {
     fontSize: 11,
-    color: Colors.gray,
+    color: "#666",
   },
   actions: {
     marginLeft: "auto",

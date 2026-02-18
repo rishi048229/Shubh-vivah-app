@@ -2,11 +2,11 @@ import { Colors } from "@/constants/Colors";
 import { Ionicons } from "@expo/vector-icons";
 import React from "react";
 import {
-  ScrollView,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
 } from "react-native";
 
 export interface QuickActionItem {
@@ -18,11 +18,12 @@ export interface QuickActionItem {
 }
 
 const QUICK_ACTIONS: QuickActionItem[] = [
-  { id: "1", label: "Search", icon: "search-outline" },
-  { id: "2", label: "Preferences", icon: "options-outline" },
-  { id: "3", label: "Nearby", icon: "location-outline" },
-  { id: "4", label: "Shortlisted", icon: "heart-outline" },
-  { id: "5", label: "Visitors", icon: "eye-outline" },
+  { id: "daily", label: "Daily", icon: "calendar-outline" },
+  { id: "nearby", label: "Nearby", icon: "location-outline" },
+  { id: "shortlisted", label: "Shortlisted", icon: "heart-outline" },
+  { id: "search", label: "Search", icon: "search-outline" },
+  { id: "preferences", label: "Preferences", icon: "options-outline" },
+  { id: "visitors", label: "Visitors", icon: "eye-outline" },
 ];
 
 interface QuickActionsProps {

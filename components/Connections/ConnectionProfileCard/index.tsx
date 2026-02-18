@@ -1,24 +1,24 @@
+import { Colors } from "@/constants/Colors";
+import * as matchService from "@/services/matchService";
 import { MatchProfile } from "@/types/connections";
-import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
+import { CheckCircle2, Heart, Star, UserPlus } from "lucide-react-native";
 import { MotiView } from "moti";
 import React, { useState } from "react";
 import {
-  Dimensions,
-  ImageBackground,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
+    Dimensions,
+    ImageBackground,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
 } from "react-native";
 
 const { width } = Dimensions.get("window");
 // Grid layout: 2 columns with spacing
-const ITEM_SPACING = 12;
-const PAGE_PADDING = 20;
-const CARD_WIDTH = (width - PAGE_PADDING * 2 - ITEM_SPACING) / 2;
-const CARD_HEIGHT = 260;
+// Card width is roughly (screen width - padding) / 2
+const CARD_WIDTH = (width - 48) / 2;
 
 interface ConnectionProfileCardProps {
   profile: MatchProfile;
@@ -33,10 +33,34 @@ export default function ConnectionProfileCard({
 }: ConnectionProfileCardProps) {
   const router = useRouter();
   const [liked, setLiked] = useState(false);
+  const [shortlisted, setShortlisted] = useState(false);
 
-  const handleConnect = () => {
-    // Implement connect logic
-    console.log("Connect with", profile.name);
+  const handleConnect = async () => {
+    try {
+      await matchService.sendRequest(parseInt(profile.id));
+    } catch (e) {
+      console.log(e);
+    }
+  };
+
+  const handleLike = async () => {
+    try {
+      setLiked(!liked);
+      await matchService.likeUser(parseInt(profile.id));
+    } catch (e) {
+      console.log(e);
+      setLiked(!liked);
+    }
+  };
+
+  const handleShortlist = async () => {
+    try {
+      setShortlisted(!shortlisted);
+      await matchService.shortlistUser(parseInt(profile.id));
+    } catch (e) {
+      console.log(e);
+      setShortlisted(!shortlisted);
+    }
   };
 
   return (
@@ -55,57 +79,76 @@ export default function ConnectionProfileCard({
         onPress={() => onQuickView?.(profile)}
         style={styles.card}
       >
-        <ImageBackground
-          source={{ uri: profile.imageUri }}
-          style={styles.imageBackground}
-          imageStyle={styles.imageStyle}
-        >
-          {/* Top Right Like Button */}
-          <TouchableOpacity
-            style={styles.likeButton}
-            onPress={() => setLiked(!liked)}
+        {/* Image Section (Square Aspect Ratio) */}
+        <View style={styles.imageContainer}>
+          <ImageBackground
+            source={{ uri: profile.imageUri }}
+            style={styles.imageBackground}
+            imageStyle={styles.imageStyle}
           >
-            <Ionicons
-              name={liked ? "heart" : "heart-outline"}
-              size={20}
-              color={liked ? "#FF4B4B" : "#FFF"}
-            />
-          </TouchableOpacity>
-
-          {/* Bottom Content */}
-          <View style={styles.bottomContainer}>
             <LinearGradient
-              colors={["transparent", "rgba(0,0,0,0.8)", "rgba(0,0,0,0.95)"]}
+              colors={["transparent", "rgba(0,0,0,0.4)"]}
               style={styles.gradient}
             />
-            <View style={styles.content}>
-              <View style={styles.textContainer}>
-                <View style={styles.nameRow}>
-                  <Text style={styles.name} numberOfLines={1}>
-                    {profile.name}
-                  </Text>
-                  {profile.verified && (
-                    <Ionicons
-                      name="checkmark-circle"
-                      size={14}
-                      color="#2196F3"
-                    />
-                  )}
-                </View>
-                <Text style={styles.profession} numberOfLines={1}>
-                  {profile.profession}
-                </Text>
-              </View>
 
+            {/* Top Right Action Buttons - Overlaid */}
+            <View style={styles.actionButtons}>
               <TouchableOpacity
-                style={styles.connectButton}
-                onPress={handleConnect}
+                style={styles.iconButton}
+                onPress={handleShortlist}
               >
-                <Text style={styles.connectText}>Connect</Text>
+                <Star
+                  size={14}
+                  color={shortlisted ? "#FFC107" : "#FFF"}
+                  fill={shortlisted ? "#FFC107" : "transparent"}
+                />
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.iconButton} onPress={handleLike}>
+                <Heart
+                  size={14}
+                  color={liked ? "#FF4B4B" : "#FFF"}
+                  fill={liked ? "#FF4B4B" : "transparent"}
+                />
               </TouchableOpacity>
             </View>
+          </ImageBackground>
+        </View>
+
+        {/* Info Content */}
+        <View style={styles.infoContent}>
+          <View style={styles.textContainer}>
+            <View style={styles.nameRow}>
+              <Text style={styles.name} numberOfLines={1}>
+                {profile.name}
+              </Text>
+              {profile.verified && (
+                <CheckCircle2
+                  size={16}
+                  color="#2196F3"
+                  fill="#E3F2FD"
+                  style={{ marginLeft: 4 }}
+                />
+              )}
+            </View>
+
+            <Text style={styles.subText} numberOfLines={1}>
+              {profile.age} • {profile.city}
+            </Text>
+
+            {/* Optional: Profession if space permits, or omit for cleaner look */}
+            {/* <Text style={styles.profession} numberOfLines={1}>
+              {profile.profession}
+            </Text> */}
           </View>
-        </ImageBackground>
+
+          <TouchableOpacity
+            style={styles.connectButton}
+            onPress={handleConnect}
+          >
+            <UserPlus size={16} color="#FFF" />
+            <Text style={styles.connectText}>Connect</Text>
+          </TouchableOpacity>
+        </View>
       </TouchableOpacity>
     </MotiView>
   );
@@ -114,49 +157,54 @@ export default function ConnectionProfileCard({
 const styles = StyleSheet.create({
   container: {
     width: CARD_WIDTH,
-    height: CARD_HEIGHT,
-    marginBottom: 0, // Handled by grid gap
+    marginBottom: 0,
   },
   card: {
-    flex: 1,
-    borderRadius: 20,
-    overflow: "hidden",
-    backgroundColor: "#F0F0F0",
+    backgroundColor: "#FFF",
+    borderRadius: 12,
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 5,
-    elevation: 5,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+    overflow: "hidden",
+    height: "auto", // Let content determine height
+  },
+  imageContainer: {
+    width: "100%",
+    aspectRatio: 1, // Force square
   },
   imageBackground: {
-    flex: 1,
-    justifyContent: "space-between",
+    width: "100%",
+    height: "100%",
   },
   imageStyle: {
-    borderRadius: 20,
+    // No specific border radius here strictly needed if parent overflows hidden,
+    // but safe to keep
   },
-  likeButton: {
+  gradient: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  actionButtons: {
     position: "absolute",
-    top: 10,
-    right: 10,
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: "rgba(0,0,0,0.2)",
+    top: 8,
+    right: 8,
+    flexDirection: "column",
+    gap: 8,
+  },
+  iconButton: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: "rgba(0, 0, 0, 0.4)",
     justifyContent: "center",
     alignItems: "center",
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.2)",
+    borderColor: "rgba(255, 255, 255, 0.3)",
   },
-  gradient: {
-    position: "absolute",
-    left: 0,
-    right: 0,
-    bottom: 0,
-    height: "100%",
-  },
-  content: {
-    gap: 10,
+  infoContent: {
+    padding: 12,
+    gap: 8,
   },
   textContainer: {
     gap: 2,
@@ -164,33 +212,37 @@ const styles = StyleSheet.create({
   nameRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 4,
   },
   name: {
-    fontSize: 16,
-    fontWeight: "bold",
-    color: "#FFF",
-    flex: 1,
+    fontSize: 15,
+    fontWeight: "700",
+    color: "#1a1a1a",
+    flexShrink: 1,
+  },
+  subText: {
+    fontSize: 12,
+    color: "#666",
+    fontWeight: "500",
   },
   profession: {
     fontSize: 11,
-    color: "rgba(255,255,255,0.8)",
+    color: "#999",
+    fontWeight: "500",
+    textTransform: "uppercase",
   },
   connectButton: {
-    backgroundColor: "#FFF",
+    backgroundColor: Colors.maroon,
     paddingVertical: 8,
-    borderRadius: 12,
+    borderRadius: 20,
+    flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
+    gap: 6,
+    width: "100%",
   },
   connectText: {
-    fontSize: 12,
-    fontWeight: "bold",
-    color: "#000",
-  },
-  bottomContainer: {
-    padding: 12,
-    width: "100%",
-    marginTop: "auto",
+    fontSize: 13,
+    fontWeight: "600",
+    color: "#FFF",
   },
 });

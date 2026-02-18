@@ -1,8 +1,15 @@
+import CompleteProfileCard from "@/components/Profile/CompleteProfileCard";
 import { Colors } from "@/constants/Colors";
+import { useProfileForm } from "@/context/ProfileFormContext";
+import * as profileService from "@/services/profileService";
 import { Ionicons } from "@expo/vector-icons";
-import { useRouter } from "expo-router";
-import React from "react";
+import * as ImagePicker from "expo-image-picker";
+import { useFocusEffect, useRouter } from "expo-router";
+import * as SecureStore from "expo-secure-store";
+import React, { useCallback, useState } from "react";
 import {
+    ActivityIndicator,
+    Alert,
     Dimensions,
     Image,
     Platform,
@@ -19,6 +26,194 @@ const { width } = Dimensions.get("window");
 
 export default function ProfileScreen() {
   const router = useRouter();
+  const { updateFormData } = useProfileForm();
+
+  const [profile, setProfile] = useState<profileService.ProfileData | null>(
+    null,
+  );
+  const [isLoading, setIsLoading] = useState(true);
+  const [uploading, setUploading] = useState(false);
+
+  // Fetch profile whenever screen comes into focus
+  useFocusEffect(
+    useCallback(() => {
+      loadProfile();
+    }, []),
+  );
+
+  const loadProfile = async () => {
+    try {
+      const data = await profileService.getProfile();
+      setProfile(data);
+      // Seed the form context for editing
+      updateFormData(data as any);
+    } catch (error) {
+      console.log("Failed to load profile", error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleLogout = async () => {
+    try {
+      await SecureStore.deleteItemAsync("auth_token");
+      router.replace("/(auth)/login");
+    } catch (error) {
+      console.log("Error logging out", error);
+    }
+  };
+
+  const handlePickImage = async (type: "main" | "additional") => {
+    // Permission check
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== "granted") {
+      Alert.alert(
+        "Permission needed",
+        "Please grant permission to access your photos.",
+      );
+      return;
+    }
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: type === "main",
+      aspect: type === "main" ? [1, 1] : undefined,
+      quality: 0.8,
+    });
+
+    if (!result.canceled && result.assets && result.assets.length > 0) {
+      handleUpload(result.assets[0].uri, type);
+    }
+  };
+
+  const handleUpload = async (uri: string, type: "main" | "additional") => {
+    setUploading(true);
+    try {
+      if (type === "main") {
+        const url = await profileService.uploadProfilePhoto(uri);
+        // Optimistic update
+        setProfile((prev) => (prev ? { ...prev, profilePhotoUrl: url } : null));
+        Alert.alert("Success", "Profile photo updated!");
+      } else {
+        const urls = await profileService.uploadAdditionalPhotos([uri]);
+        Alert.alert("Success", "Photo added to gallery!");
+        loadProfile(); // Reload to get new gallery
+      }
+    } catch (error) {
+      Alert.alert("Error", "Failed to upload photo. Please try again.");
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const handleEdit = (section: string) => {
+    if (!profile) return;
+
+    // Pre-fill context is handled in loadProfile
+
+    switch (section) {
+      case "basic": // Edit name, job, location -> Basic Details or Education
+        router.push("/complete-profile/basic-details");
+        break;
+      case "about":
+        router.push("/complete-profile/lifestyle-habits"); // Assuming 'About Me' is in lifestyle or basic
+        break;
+      case "personal":
+        router.push("/complete-profile/basic-details");
+        break;
+      case "family":
+        router.push("/complete-profile/family-details");
+        break;
+      case "horoscope":
+        router.push("/complete-profile/religious-details");
+        break;
+      case "lifestyle":
+        router.push("/complete-profile/lifestyle-habits");
+        break;
+      case "partner":
+        // Partner preferences might be a separate screen or part of lifestyle/basic
+        // For now, mapping to lifestyle as placeholder or if it exists there
+        router.push("/complete-profile/lifestyle-habits");
+        break;
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <View
+        style={[
+          styles.container,
+          { justifyContent: "center", alignItems: "center" },
+        ]}
+      >
+        <ActivityIndicator size="large" color={Colors.maroon} />
+      </View>
+    );
+  }
+
+  if (!profile) {
+    return (
+      <View
+        style={[
+          styles.container,
+          { justifyContent: "center", alignItems: "center" },
+        ]}
+      >
+        <Text>Failed to load profile</Text>
+        <TouchableOpacity
+          onPress={loadProfile}
+          style={{
+            marginTop: 20,
+            padding: 10,
+            backgroundColor: Colors.maroon,
+            borderRadius: 5,
+            width: 120,
+            alignItems: "center",
+          }}
+        >
+          <Text style={{ color: "#FFF" }}>Retry</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          onPress={handleLogout}
+          style={{
+            marginTop: 15,
+            padding: 10,
+            backgroundColor: "transparent",
+            borderRadius: 5,
+            borderWidth: 1,
+            borderColor: Colors.maroon,
+            width: 120,
+            alignItems: "center",
+          }}
+        >
+          <Text style={{ color: Colors.maroon }}>Logout</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
+
+  // Calculate completion percentage (simple heuristic)
+  const calculateCompletion = () => {
+    let fields = 0;
+    let filled = 0;
+    if (!profile) return 0;
+    const keys = Object.keys(profile) as (keyof profileService.ProfileData)[];
+    keys.forEach((k) => {
+      // @ts-ignore
+      if (
+        profile[k] !== null &&
+        profile[k] !== "" &&
+        k !== "additionalPhotos"
+      ) {
+        filled++;
+      }
+      fields++;
+    });
+    return Math.round((filled / fields) * 100);
+  };
+
+  const completion = calculateCompletion();
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -29,7 +224,13 @@ export default function ProfileScreen() {
         <TouchableOpacity onPress={() => router.back()}>
           <Ionicons name="arrow-back" size={24} color="#2D1406" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Rahul More , 25</Text>
+        <Text style={styles.headerTitle}>
+          {profile.fullName || "User Profiles"},{" "}
+          {profile.dateOfBirth
+            ? new Date().getFullYear() -
+              new Date(profile.dateOfBirth).getFullYear()
+            : ""}
+        </Text>
         <View style={{ width: 24 }} />
       </View>
 
@@ -37,21 +238,43 @@ export default function ProfileScreen() {
         {/* Profile Image Section */}
         <View style={styles.imageSection}>
           <Image
-            source={{ uri: "https://randomuser.me/api/portraits/men/32.jpg" }}
+            source={{
+              uri:
+                profile.profilePhotoUrl ||
+                "https://randomuser.me/api/portraits/men/32.jpg",
+            }}
             style={styles.profileImage}
           />
-          <TouchableOpacity style={styles.editImageButton}>
-            <Ionicons name="pencil" size={18} color={Colors.maroon} />
+          <TouchableOpacity
+            style={styles.editImageButton}
+            onPress={() => handlePickImage("main")}
+          >
+            {uploading ? (
+              <ActivityIndicator size="small" color={Colors.maroon} />
+            ) : (
+              <Ionicons name="pencil" size={18} color={Colors.maroon} />
+            )}
           </TouchableOpacity>
         </View>
 
         {/* Basic Info Below Image */}
         <View style={styles.basicInfo}>
-          <Text style={styles.profileName}>Rahul More , 25</Text>
-          <Text style={styles.profession}>Software Engineer , 4 LPA</Text>
+          <Text style={styles.profileName}>
+            {profile.fullName},{" "}
+            {profile.dateOfBirth
+              ? new Date().getFullYear() -
+                new Date(profile.dateOfBirth).getFullYear()
+              : "N/A"}
+          </Text>
+          <Text style={styles.profession}>
+            {profile.occupation || "Not Specified"},{" "}
+            {profile.annualIncome ? `${profile.annualIncome} LPA` : ""}
+          </Text>
           <View style={styles.locationRow}>
             <Ionicons name="location" size={14} color="#666" />
-            <Text style={styles.locationText}>Mumbai</Text>
+            <Text style={styles.locationText}>
+              {profile.city || "Location not set"}
+            </Text>
           </View>
 
           {/* Profile Status and Likes */}
@@ -59,30 +282,34 @@ export default function ProfileScreen() {
             <View style={styles.statItem}>
               <Text style={styles.statLabel}>Profile Status</Text>
               <View style={styles.progressBar}>
-                <View style={[styles.progressFill, { width: "75%" }]} />
+                <View
+                  style={[styles.progressFill, { width: `${completion}%` }]}
+                />
               </View>
-              <Text style={styles.statValue}>75%</Text>
+              <Text style={styles.statValue}>{completion}%</Text>
             </View>
             <View style={styles.statItem}>
               <Ionicons name="heart" size={16} color={Colors.maroon} />
-              <Text style={styles.likesText}>465 Likes</Text>
+              <Text style={styles.likesText}>0 Likes</Text>
             </View>
           </View>
         </View>
 
+        {/* Complete Profile Card (CTA if low percentage) */}
+        {completion < 100 && <CompleteProfileCard />}
+
         {/* About Section */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>About Anjali</Text>
-            <TouchableOpacity>
+            <Text style={styles.sectionTitle}>
+              About {profile.fullName?.split(" ")[0] || "Me"}
+            </Text>
+            <TouchableOpacity onPress={() => handleEdit("about")}>
               <Ionicons name="pencil-outline" size={20} color={Colors.maroon} />
             </TouchableOpacity>
           </View>
           <Text style={styles.aboutText}>
-            Hi , I'm Anjali Sharma. Based in mumbai. I'm a Software Engineer who
-            values family & career equally . I lead an active lifestyle , enjoy
-            exploring new cuisines and have a pass...
-            <Text style={styles.readMore}>Read More</Text>
+            {profile.aboutMe || "Tell us about yourself..."}
           </Text>
         </View>
 
@@ -90,19 +317,33 @@ export default function ProfileScreen() {
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>Personal Information</Text>
-            <TouchableOpacity>
+            <TouchableOpacity onPress={() => handleEdit("personal")}>
               <Ionicons name="pencil-outline" size={20} color={Colors.maroon} />
             </TouchableOpacity>
           </View>
           <View style={styles.infoGrid}>
-            <InfoRow label="Height" value={`5'6"`} />
+            <InfoRow
+              label="Height"
+              value={profile.height ? `${profile.height} cm` : "Not set"}
+            />
             <InfoRow label="Mother Tongue" value="Hindi" />
-            <InfoRow label="Religion" value="Hindu" />
-            <InfoRow label="Caste" value="Brahmin" />
-            <InfoRow label="Sub Caste" value="Deshastha" />
-            <InfoRow label="Education" value="B.Tech, Computer Science" />
-            <InfoRow label="Occupation" value="Software Engineer" />
-            <InfoRow label="Annual Income" value="4 LPA" />
+            <InfoRow label="Religion" value={profile.religion || "Not set"} />
+            <InfoRow label="Caste" value={profile.caste || "Not set"} />
+            <InfoRow label="Sub Caste" value="Not set" />
+            <InfoRow
+              label="Education"
+              value={profile.highestEducation || "Not set"}
+            />
+            <InfoRow
+              label="Occupation"
+              value={profile.occupation || "Not set"}
+            />
+            <InfoRow
+              label="Annual Income"
+              value={
+                profile.annualIncome ? `${profile.annualIncome} LPA` : "Not set"
+              }
+            />
           </View>
         </View>
 
@@ -110,33 +351,55 @@ export default function ProfileScreen() {
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>Family</Text>
-            <TouchableOpacity>
+            <TouchableOpacity onPress={() => handleEdit("family")}>
               <Ionicons name="pencil-outline" size={20} color={Colors.maroon} />
             </TouchableOpacity>
           </View>
           <View style={styles.infoGrid}>
-            <InfoRow label="Father" value="Rajesh Sharma , Businessman" />
-            <InfoRow label="Mother" value="Sunita Sharma , Homemaker" />
-            <InfoRow label="Sibling's" value="1 Brother , 0 Sister" />
-            <InfoRow label="Family Type" value="Nuclear" />
-            <InfoRow label="Family Values" value="Moderate" />
-            <InfoRow label="Native Place" value="Mumbai" />
+            <InfoRow
+              label="Father"
+              value={profile.fatherOccupation || "Not set"}
+            />
+            <InfoRow
+              label="Mother"
+              value={profile.motherOccupation || "Not set"}
+            />
+            <InfoRow
+              label="Siblings"
+              value={`${profile.brothers || 0} Brother(s), ${profile.sisters || 0} Sister(s)`}
+            />
+            <InfoRow
+              label="Family Type"
+              value={profile.familyType || "Not set"}
+            />
+            <InfoRow
+              label="Family Values"
+              value={profile.familyValues || "Not set"}
+            />
+            <InfoRow label="Native Place" value={profile.city || "Not set"} />
           </View>
         </View>
 
-        {/* Horoscope */}
+        {/* Horoscope (Religious Details) */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>Horoscope</Text>
-            <TouchableOpacity>
+            <TouchableOpacity onPress={() => handleEdit("horoscope")}>
               <Ionicons name="pencil-outline" size={20} color={Colors.maroon} />
             </TouchableOpacity>
           </View>
           <View style={styles.infoGrid}>
-            <InfoRow label="Horoscope Available" value="Yes" />
-            <InfoRow label="Manglik" value="No" />
-            <InfoRow label="Birth Date" value="10-10-2005" />
-            <InfoRow label="Birth Place" value="Rahata" />
+            <InfoRow label="Rashi" value={profile.rashi || "Not set"} />
+            <InfoRow label="Nakshatra" value={profile.nakshatra || "Not set"} />
+            <InfoRow
+              label="Manglik"
+              value={profile.manglikStatus || "Not set"}
+            />
+            <InfoRow
+              label="Date of Birth"
+              value={profile.dateOfBirth || "Not set"}
+            />
+            <InfoRow label="Birth Place" value={profile.city || "Not set"} />
           </View>
         </View>
 
@@ -144,58 +407,61 @@ export default function ProfileScreen() {
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>Lifestyle</Text>
-            <TouchableOpacity>
+            <TouchableOpacity onPress={() => handleEdit("lifestyle")}>
               <Ionicons name="pencil-outline" size={20} color={Colors.maroon} />
             </TouchableOpacity>
           </View>
           <View style={styles.infoGrid}>
-            <InfoRow label="Non Vegetarian" value="Yes" />
-            <InfoRow label="Hobbies" value="Travel , Music , Cooking ." />
-          </View>
-        </View>
-
-        {/* Partner Preference */}
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Partner Preference</Text>
-            <TouchableOpacity>
-              <Ionicons name="pencil-outline" size={20} color={Colors.maroon} />
-            </TouchableOpacity>
-          </View>
-          <View style={styles.infoGrid}>
-            <InfoRow label="Age Range" value="24-28 Years" />
-            <InfoRow label="Preferred Height" value={`5'6" To 6'2"`} />
             <InfoRow
-              label="Preferred Occupation"
-              value="Engineer , MBA or Similar"
+              label="Eating Habits"
+              value={profile.eatingHabits || "Not set"}
             />
-            <InfoRow label="Preferred Location" value="Mumbai , Pune" />
-            <InfoRow
-              label="Community Preference"
-              value="Brahmin / Open to similar Communities"
-            />
-            <InfoRow label="Marital Status" value="Never Married" />
+            <InfoRow label="Diet" value={profile.dietPreference || "Not set"} />
+            <InfoRow label="Drinking" value={profile.drinking ? "Yes" : "No"} />
+            <InfoRow label="Smoking" value={profile.smoking ? "Yes" : "No"} />
           </View>
         </View>
 
         {/* Additional Photos */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Additional Photoes</Text>
+            <Text style={styles.sectionTitle}>Additional Photos</Text>
             <View style={styles.photoCounter}>
-              <Text style={styles.photoCounterText}>0/5</Text>
+              <Text style={styles.photoCounterText}>
+                {profile.additionalPhotos?.length || 0}/5
+              </Text>
             </View>
           </View>
           <Text style={styles.photoSubtitle}>
-            Add up to 5 Photoes to showcase yourself better
+            Add up to 5 Photos to showcase yourself better
           </Text>
           <View style={styles.photoGrid}>
-            <TouchableOpacity style={styles.addPhotoBox}>
-              <Ionicons name="add" size={32} color={Colors.maroon} />
+            <TouchableOpacity
+              style={styles.addPhotoBox}
+              onPress={() => handlePickImage("additional")}
+            >
+              {uploading ? (
+                <ActivityIndicator color={Colors.maroon} />
+              ) : (
+                <Ionicons name="add" size={32} color={Colors.maroon} />
+              )}
               <Text style={styles.addPhotoText}>Add Photo</Text>
             </TouchableOpacity>
-            {[1, 2, 3, 4].map((i) => (
-              <View key={i} style={styles.emptyPhotoBox}>
+
+            {profile.additionalPhotos &&
+              profile.additionalPhotos.map((photoUrl, index) => (
+                <Image
+                  key={index}
+                  source={{ uri: photoUrl }}
+                  style={styles.galleryPhoto}
+                />
+              ))}
+
+            {/* Empty placeholders */}
+            {Array.from({
+              length: Math.max(0, 4 - (profile.additionalPhotos?.length || 0)),
+            }).map((_, i) => (
+              <View key={`empty-${i}`} style={styles.emptyPhotoBox}>
                 <Ionicons name="image-outline" size={32} color="#CCC" />
               </View>
             ))}
@@ -449,6 +715,11 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     justifyContent: "center",
     alignItems: "center",
+  },
+  galleryPhoto: {
+    width: (width - 80) / 3,
+    height: (width - 80) / 3,
+    borderRadius: 12,
   },
   verificationGrid: {
     flexDirection: "row",

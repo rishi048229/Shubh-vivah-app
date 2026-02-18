@@ -6,13 +6,13 @@ import { useRouter } from "expo-router";
 import { MotiView } from "moti";
 import React from "react";
 import {
-  Dimensions,
-  ImageBackground,
-  Modal,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
+    Dimensions,
+    ImageBackground,
+    Modal,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
 } from "react-native";
 import MatchPercentageRing from "../../MatchPercentageRing";
 
@@ -34,9 +34,8 @@ export default function QuickViewModal({
   if (!profile) return null;
 
   const handleConnect = () => {
-    // Implement connect logic
-    console.log("Connect requested with", profile.name);
     onClose();
+    router.push(`/profile/${profile.id}` as any);
   };
 
   return (

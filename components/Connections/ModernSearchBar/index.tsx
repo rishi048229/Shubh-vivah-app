@@ -1,13 +1,14 @@
+import { getSearchSuggestions } from "@/services/matchService";
 import { Ionicons } from "@expo/vector-icons";
-import { useRouter } from "expo-router";
-import React, { useState } from "react";
+import React, { useRef, useState } from "react";
 import {
     Keyboard,
+    ScrollView,
     StyleSheet,
     Text,
     TextInput,
     TouchableOpacity,
-    View
+    View,
 } from "react-native";
 
 interface ModernSearchBarProps {
@@ -17,27 +18,21 @@ interface ModernSearchBarProps {
   placeholder?: string;
 }
 
-// Mock data for new design
+// Fallback data
 const SUGGESTION_CHIPS = [
-  "America",
-  "American Football",
-  "Winter",
-  "What to watch",
-  "Family",
-  "Cars",
-  "Football",
-  "Love",
-  "Dating",
-  "Marriage",
-  "Trends",
-  "fyp",
+  "New York",
+  "Software Engineer",
+  "Hindu",
+  "Doctor",
+  "Mumbai",
+  "Delhi",
+  "MBA",
+  "Never Married",
 ];
 
 const HISTORY_ITEMS = [
-  { id: "1", text: "#Fifa" },
-  { id: "2", text: "FIFA World Cup" },
-  { id: "3", text: "Qatar" },
-  { id: "4", text: "Basketball" },
+  { id: "1", text: "Mumbai" },
+  { id: "2", text: "Engineer" },
 ];
 
 const Colors = {
@@ -57,7 +52,8 @@ export default function ModernSearchBar({
 }: ModernSearchBarProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [isFocused, setIsFocused] = useState(false);
-  const router = useRouter();
+  const [suggestions, setSuggestions] = useState<string[]>([]);
+  const debounceRef = useRef<any>(null);
 
   const handleFocus = () => {
     setIsFocused(true);
@@ -78,7 +74,36 @@ export default function ModernSearchBar({
     onExpandChange?.(false);
   };
 
-  const showSuggestions = isFocused || searchQuery.length > 0;
+  const fetchSuggestions = async (text: string) => {
+    if (!text || text.length < 2) {
+      setSuggestions([]);
+      return;
+    }
+    try {
+      const results = await getSearchSuggestions(text);
+      setSuggestions(results);
+    } catch (e) {
+      console.log("Suggestion error", e);
+    }
+  };
+
+  const handleTextChange = (text: string) => {
+    setSearchQuery(text);
+    onSearch(text); // Trigger search immediately or you can debounce this too if you want 'real-time' search results not just suggestions
+
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => {
+      fetchSuggestions(text);
+    }, 300);
+  };
+
+  const handleSuggestionPress = (chip: string) => {
+    setSearchQuery(chip);
+    onSearch(chip);
+    handleDismiss();
+  };
+
+  const showSuggestions = isFocused;
 
   return (
     <View style={styles.container}>
@@ -90,30 +115,37 @@ export default function ModernSearchBar({
             isFocused && styles.searchInputFocused,
           ]}
         >
-          <Ionicons
-            name="search-outline"
-            size={20}
-            color={isFocused ? Colors.maroon : Colors.placeholder}
-            style={styles.searchIcon}
-          />
+          {isFocused ? (
+            <TouchableOpacity onPress={handleDismiss} style={styles.iconButton}>
+              <Ionicons name="arrow-back" size={24} color={Colors.maroon} />
+            </TouchableOpacity>
+          ) : (
+            <Ionicons
+              name="search-outline"
+              size={20}
+              color={Colors.placeholder}
+              style={styles.searchIcon}
+            />
+          )}
+
           <TextInput
             style={styles.searchInput}
             placeholder={placeholder}
             placeholderTextColor={Colors.placeholder}
             value={searchQuery}
-            onChangeText={(text) => {
-              setSearchQuery(text);
-              onSearch(text);
-            }}
+            onChangeText={handleTextChange}
             onFocus={handleFocus}
-            // onBlur handled manually to prevent immediate close on tap
+            // onBlur handled manually via handleDismiss or timeout in parent if needed
           />
+
           {searchQuery.length > 0 && (
             <TouchableOpacity
               onPress={() => {
                 setSearchQuery("");
                 onSearch("");
+                setSuggestions([]);
               }}
+              style={styles.iconButton}
             >
               <Ionicons
                 name="close-circle"
@@ -132,28 +164,31 @@ export default function ModernSearchBar({
       {/* Suggestions Dropdown Overlay */}
       {showSuggestions && (
         <View style={styles.dropdownOverlay}>
-          <View style={styles.dropdownContent}>
+          <ScrollView
+            style={styles.dropdownContent}
+            keyboardShouldPersistTaps="handled"
+          >
             {/* Suggestions Section */}
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Suggestions</Text>
+              <Text style={styles.sectionTitle}>
+                {suggestions.length > 0 ? "Suggestions" : "Popular"}
+              </Text>
               <View style={styles.chipsContainer}>
-                {SUGGESTION_CHIPS.slice(0, 8).map((chip, index) => (
-                  <TouchableOpacity
-                    key={index}
-                    style={styles.chip}
-                    onPress={() => {
-                      setSearchQuery(chip);
-                      onSearch(chip);
-                      handleDismiss();
-                    }}
-                  >
-                    <Text style={styles.chipText}>{chip}</Text>
-                  </TouchableOpacity>
-                ))}
+                {(suggestions.length > 0 ? suggestions : SUGGESTION_CHIPS).map(
+                  (chip, index) => (
+                    <TouchableOpacity
+                      key={index}
+                      style={styles.chip}
+                      onPress={() => handleSuggestionPress(chip)}
+                    >
+                      <Text style={styles.chipText}>{chip}</Text>
+                    </TouchableOpacity>
+                  ),
+                )}
               </View>
             </View>
 
-            {/* History Section */}
+            {/* History Section (Mock) */}
             <View style={styles.section}>
               <View style={styles.historyHeader}>
                 <Text style={styles.sectionTitle}>Recent</Text>
@@ -166,11 +201,7 @@ export default function ModernSearchBar({
                   <TouchableOpacity
                     key={item.id}
                     style={styles.historyItem}
-                    onPress={() => {
-                      setSearchQuery(item.text);
-                      onSearch(item.text);
-                      handleDismiss();
-                    }}
+                    onPress={() => handleSuggestionPress(item.text)}
                   >
                     <View style={styles.historyLeft}>
                       <Ionicons
@@ -181,9 +212,10 @@ export default function ModernSearchBar({
                       <Text style={styles.historyText}>{item.text}</Text>
                     </View>
                     <Ionicons
-                      name="arrow-up-right"
+                      name="arrow-up"
                       size={18}
                       color={Colors.placeholder}
+                      style={{ transform: [{ rotate: "45deg" }] }}
                     />
                   </TouchableOpacity>
                 ))}
@@ -199,7 +231,7 @@ export default function ModernSearchBar({
                 color={Colors.placeholder}
               />
             </TouchableOpacity>
-          </View>
+          </ScrollView>
         </View>
       )}
     </View>
@@ -208,7 +240,7 @@ export default function ModernSearchBar({
 
 const styles = StyleSheet.create({
   container: {
-    marginBottom: 0, // Parent handles spacing
+    marginBottom: 0,
     zIndex: 1000,
   },
   searchRow: {
@@ -221,9 +253,9 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     backgroundColor: "#FFF",
-    paddingHorizontal: 16,
+    paddingHorizontal: 12,
     height: 54,
-    borderRadius: 27, // Fully rounded
+    borderRadius: 27,
     borderWidth: 1,
     borderColor: Colors.border,
     shadowColor: Colors.maroon,
@@ -237,13 +269,17 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
   },
   searchIcon: {
-    marginRight: 10,
+    marginRight: 8,
+  },
+  iconButton: {
+    padding: 4,
   },
   searchInput: {
     flex: 1,
     fontSize: 16,
     color: Colors.text,
     fontWeight: "500",
+    marginLeft: 4,
   },
   filterButton: {
     width: 54,
@@ -263,7 +299,7 @@ const styles = StyleSheet.create({
   // Dropdown Styling
   dropdownOverlay: {
     position: "absolute",
-    top: 65, // Below the search bar
+    top: 65,
     left: 0,
     right: 0,
     backgroundColor: "#FFF",
@@ -345,8 +381,14 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     paddingTop: 10,
+    paddingBottom: 20,
     gap: 5,
     borderTopWidth: 1,
     borderTopColor: "#F0F0F0",
+  },
+  closeText: {
+    fontSize: 14,
+    color: Colors.placeholder,
+    fontWeight: "500",
   },
 });

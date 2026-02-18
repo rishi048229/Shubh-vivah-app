@@ -15,7 +15,8 @@ export const MOCK_MATCHES: MatchProfile[] = [
     distance: 2.5,
     matchPercentage: 94,
     matchReasons: ["Same City", "Similar Age", "Preferred Education"],
-    imageUri: "https://randomuser.me/api/portraits/women/65.jpg",
+    imageUri:
+      "https://images.unsplash.com/photo-1595225476474-87563907a212?q=80&w=1000&auto=format&fit=crop",
     profession: "Software Engineer",
     education: "B.Tech",
     religion: "Hindu",
@@ -37,7 +38,8 @@ export const MOCK_MATCHES: MatchProfile[] = [
     distance: 185,
     matchPercentage: 88,
     matchReasons: ["Same State", "Lifestyle Match", "Similar Age"],
-    imageUri: "https://randomuser.me/api/portraits/women/42.jpg",
+    imageUri:
+      "https://images.unsplash.com/photo-1616084403156-9de11a13fe7d?q=80&w=1000&auto=format&fit=crop",
     profession: "Doctor",
     education: "MBBS",
     religion: "Hindu",
@@ -60,7 +62,8 @@ export const MOCK_MATCHES: MatchProfile[] = [
     distance: 5.2,
     matchPercentage: 92,
     matchReasons: ["Same City", "Similar Age", "Non-Manglik"],
-    imageUri: "https://randomuser.me/api/portraits/women/76.jpg",
+    imageUri:
+      "https://images.unsplash.com/photo-1620120197779-7a7019e99c4c?q=80&w=1000&auto=format&fit=crop",
     profession: "Teacher",
     education: "M.Ed",
     religion: "Hindu",
@@ -83,7 +86,8 @@ export const MOCK_MATCHES: MatchProfile[] = [
     distance: 55,
     matchPercentage: 86,
     matchReasons: ["Same State", "Preferred Education", "Similar Values"],
-    imageUri: "https://randomuser.me/api/portraits/women/33.jpg",
+    imageUri:
+      "https://images.unsplash.com/photo-1544005313-94ddf0286df2?q=80&w=1000&auto=format&fit=crop",
     profession: "Business Analyst",
     education: "MBA",
     religion: "Jain",
@@ -105,7 +109,8 @@ export const MOCK_MATCHES: MatchProfile[] = [
     distance: 320,
     matchPercentage: 90,
     matchReasons: ["Same State", "Lifestyle Match", "Similar Education"],
-    imageUri: "https://randomuser.me/api/portraits/women/57.jpg",
+    imageUri:
+      "https://images.unsplash.com/photo-1579546929518-9e396f3cc809?q=80&w=1000&auto=format&fit=crop",
     profession: "Chartered Accountant",
     education: "CA",
     religion: "Hindu",
@@ -128,7 +133,8 @@ export const MOCK_MATCHES: MatchProfile[] = [
     distance: 3.8,
     matchPercentage: 91,
     matchReasons: ["Same City", "Similar Age", "Preferred Profession"],
-    imageUri: "https://randomuser.me/api/portraits/women/12.jpg",
+    imageUri:
+      "https://images.unsplash.com/photo-1494790108377-be9c29b29330?q=80&w=1000&auto=format&fit=crop",
     profession: "Graphic Designer",
     education: "B.Des",
     religion: "Hindu",
@@ -150,7 +156,8 @@ export const MOCK_MATCHES: MatchProfile[] = [
     distance: 410,
     matchPercentage: 85,
     matchReasons: ["Same State", "Similar Values", "Lifestyle Match"],
-    imageUri: "https://randomuser.me/api/portraits/women/45.jpg",
+    imageUri:
+      "https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=1000&auto=format&fit=crop",
     profession: "Marketing Manager",
     education: "MBA",
     religion: "Hindu",
@@ -172,7 +179,8 @@ export const MOCK_MATCHES: MatchProfile[] = [
     distance: 1.2,
     matchPercentage: 89,
     matchReasons: ["Same City", "Similar Age", "Non-Manglik"],
-    imageUri: "https://randomuser.me/api/portraits/women/24.jpg",
+    imageUri:
+      "https://images.unsplash.com/photo-1549234676-419b642636a0?q=80&w=1000&auto=format&fit=crop",
     profession: "Fashion Designer",
     education: "B.Des",
     religion: "Hindu",

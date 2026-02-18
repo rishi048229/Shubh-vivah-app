@@ -7,7 +7,8 @@ import { Colors } from "@/constants/Colors";
 import { MOCK_CHATS } from "@/data/mockChatData";
 import { StatusBar } from "expo-status-bar";
 import React, { useMemo, useState } from "react";
-import { SafeAreaView, StyleSheet, View } from "react-native";
+import { StyleSheet, View } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function ChatScreen() {
   const [selectedFilter, setSelectedFilter] = useState("All");

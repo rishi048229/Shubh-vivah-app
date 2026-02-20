@@ -40,7 +40,7 @@ const Input: React.FC<InputProps> = ({
       >
         {icon && (
           <View style={styles.iconContainer}>
-            {React.cloneElement(icon as React.ReactElement, {
+            {React.cloneElement(icon as React.ReactElement<{ color: string }>, {
               color: Colors.primary,
             })}
           </View>

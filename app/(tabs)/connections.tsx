@@ -1,3 +1,1 @@
-import ConnectionsScreen from "@/app/connections/index";
-
-export default ConnectionsScreen;
+export { default } from "@/screens/connections/index";

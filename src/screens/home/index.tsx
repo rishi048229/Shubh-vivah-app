@@ -16,6 +16,7 @@ import LocationPermissionModal from "@/components/Location/LocationPermissionMod
 import { Colors } from "@/constants/Colors";
 import { MOCK_MATCHES } from "@/data/mockConnectionsData";
 import * as matchService from "@/services/matchService";
+import * as profileService from "@/services/profileService";
 import { MatchProfile } from "@/types/connections";
 import { BottomSheetModal } from "@gorhom/bottom-sheet";
 import { useRouter } from "expo-router";
@@ -29,6 +30,68 @@ import Animated, {
 } from "react-native-reanimated";
 import SideMenu from "@/components/SideMenu"; // Force refresh
 
+// --- Helper: Calculate profile completion ---
+function calcProfileCompletion(profile: any): {
+  percentage: number;
+  missingFields: string[];
+} {
+  const fields = [
+    { key: "fullName", label: "Full Name" },
+    { key: "gender", label: "Gender" },
+    { key: "dateOfBirth", label: "Date of Birth" },
+    { key: "height", label: "Height" },
+    { key: "weight", label: "Weight" },
+    { key: "city", label: "City" },
+    { key: "religion", label: "Religion" },
+    { key: "community", label: "Community" },
+    { key: "caste", label: "Caste" },
+    { key: "highestEducation", label: "Education" },
+    { key: "education", label: "Education" },
+    { key: "occupation", label: "Occupation" },
+    { key: "annualIncome", label: "Annual Income" },
+    { key: "familyType", label: "Family Type" },
+    { key: "aboutMe", label: "About Me" },
+    { key: "profilePhotoUrl", label: "Profile Photo" },
+    { key: "manglikStatus", label: "Manglik Status" },
+    { key: "rashi", label: "Rashi" },
+    { key: "nakshatra", label: "Nakshatra" },
+    { key: "eatingHabits", label: "Eating Habits" },
+  ];
+
+  if (!profile)
+    return {
+      percentage: 0,
+      missingFields: fields.map((f) => f.label),
+    };
+
+  let filled = 0;
+  const missing: string[] = [];
+
+  // Deduplicate education fields
+  const seen = new Set<string>();
+
+  fields.forEach((f) => {
+    if (seen.has(f.label)) return;
+
+    const val = profile[f.key];
+    if (
+      val !== null &&
+      val !== undefined &&
+      val !== "" &&
+      val !== 0
+    ) {
+      filled++;
+    } else {
+      missing.push(f.label);
+    }
+    seen.add(f.label);
+  });
+
+  const uniqueFieldCount = seen.size;
+  const pct = Math.round((filled / uniqueFieldCount) * 100);
+  return { percentage: pct, missingFields: missing };
+}
+
 export default function HomeScreen() {
   const router = useRouter();
 
@@ -41,11 +104,13 @@ export default function HomeScreen() {
   const [locationModalVisible, setLocationModalVisible] = useState(false);
   const hasAutoPromptedLocation = useRef(false);
 
-  // ... (Data State and Animation Refs remain exact same as original)
-
   // Data State
   const [allMatches, setAllMatches] = useState<MatchProfile[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+
+  // Profile completion state
+  const [profileCompletion, setProfileCompletion] = useState(0);
+  const [missingFields, setMissingFields] = useState<string[]>([]);
 
   // Animation Refs
   const scrollY = useSharedValue(0);
@@ -70,15 +135,22 @@ export default function HomeScreen() {
 
   const loadUserProfile = async () => {
     try {
-      const profile = await import("@/services/profileService").then((m) =>
-        m.getProfile(),
-      );
+      const profile = await profileService.getProfile();
       if (profile && profile.fullName) {
         setUserName(profile.fullName.split(" ")[0]); // First name
+      } else {
+        setUserName("New User"); // Fallback for new empty profiles
       }
       if (profile && profile.profilePhotoUrl) {
         setUserImage(profile.profilePhotoUrl);
       }
+
+      // Calculate profile completion
+      const { percentage, missingFields: missing } =
+        calcProfileCompletion(profile);
+      setProfileCompletion(percentage);
+      setMissingFields(missing);
+
       // Check for location
       if (profile && profile.city) {
         setUserLocation(profile.city);
@@ -151,7 +223,7 @@ export default function HomeScreen() {
         loadMatches();
         break;
       case "nearby":
-        router.push("/nearby" as any);
+        router.push("/routes/nearby" as any);
         break;
       case "shortlisted":
         shortlistedRef.current?.present();
@@ -209,10 +281,12 @@ export default function HomeScreen() {
           location={userLocation}
           scrollY={scrollY}
           onAvatarPress={() => setSideMenuVisible(true)}
-          onNotificationPress={() => router.push("/notifications" as any)}
+          onNotificationPress={() =>
+            router.push("/routes/notifications" as any)
+          }
           onPrimaryAction={() => {
-            // Scroll to matches or whatever primary action is
-            console.log("Primary Action");
+            // Navigate to discover matches / connections
+            router.push("/connections" as any);
           }}
           onSecondaryAction={() => preferencesRef.current?.present()}
           onLocationPress={() => setLocationModalVisible(true)}
@@ -229,6 +303,7 @@ export default function HomeScreen() {
         onClose={() => setLocationModalVisible(false)}
         onLocationDetected={(city: string) => {
           console.log("Location detected:", city);
+          setUserLocation(city);
           // Reload profile to verify persistence and update UI
           loadUserProfile();
           loadMatches();
@@ -308,7 +383,7 @@ export default function HomeScreen() {
             {/* 4. Discover Around You (NEW - Radar) */}
             <NearbyRadarSection
               profiles={nearbyMatches}
-              onExplorePress={() => router.push("/nearby" as any)}
+              onExplorePress={() => router.push("/routes/nearby" as any)}
               userLocation={userLocation}
             />
 
@@ -378,10 +453,11 @@ export default function HomeScreen() {
               />
             </View>
 
-            {/* Profile Completion */}
+            {/* Profile Completion - Dynamic */}
             <ProfileCompletion
-              percentage={70}
-              missingFields={["Horoscope", "Bio"]}
+              percentage={profileCompletion}
+              missingFields={missingFields}
+              onPress={() => router.push("/complete-profile" as any)}
             />
 
             {/* Bottom Spacer for Tab Bar */}

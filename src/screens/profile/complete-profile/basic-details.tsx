@@ -73,20 +73,31 @@ const BasicDetails = () => {
   // Sync local state with context data once loaded
   React.useEffect(() => {
     if (!isLoading && contextData) {
-      setFormData((prev) => ({
-        ...prev,
-        fullName: contextData.fullName || prev.fullName,
-        email: contextData.email || prev.email,
-        phone: contextData.phone || prev.phone,
-        gender: contextData.gender || (params?.gender as string) || prev.gender,
-        dob: contextData.dateOfBirth || prev.dob,
-        height: contextData.height ? `${contextData.height}` : prev.height, // You might need formatting logic here if height is stored as number but displayed with units
-        weight: contextData.weight ? `${contextData.weight} kg` : prev.weight,
-        city: contextData.city || prev.city,
-        fatherName: contextData.fatherName || prev.fatherName,
-        motherName: contextData.motherName || prev.motherName,
-        profileCreatedBy: contextData.profileCreatedBy || prev.profileCreatedBy,
-      }));
+      setFormData((prev) => {
+        let displayHeight = prev.height;
+        if (contextData.height) {
+          const cm = contextData.height;
+          const totalInches = Math.round(cm / 2.54);
+          const feet = Math.floor(totalInches / 12);
+          const inches = totalInches % 12;
+          displayHeight = `${feet}'${inches}"`;
+        }
+
+        return {
+          ...prev,
+          fullName: contextData.fullName || prev.fullName,
+          email: contextData.email || prev.email,
+          phone: contextData.phone || prev.phone,
+          gender: contextData.gender || (params?.gender as string) || prev.gender,
+          dob: contextData.dateOfBirth || prev.dob,
+          height: displayHeight,
+          weight: contextData.weight ? `${contextData.weight} kg` : prev.weight,
+          city: contextData.city || prev.city,
+          fatherName: contextData.fatherName || prev.fatherName,
+          motherName: contextData.motherName || prev.motherName,
+          profileCreatedBy: contextData.profileCreatedBy || prev.profileCreatedBy,
+        };
+      });
     }
   }, [contextData, isLoading, params?.gender]);
 
@@ -164,9 +175,16 @@ const BasicDetails = () => {
       fatherName: formData.fatherName.trim(),
       motherName: formData.motherName.trim(),
       profileCreatedBy: formData.profileCreatedBy,
-      height: formData.height
-        ? parseFloat(formData.height.replace(/[^0-9.]/g, ""))
-        : null,
+      height: (() => {
+        if (!formData.height) return null;
+        const match = formData.height.match(/(\d+)'(\d+)"/);
+        if (match) {
+          const feet = parseInt(match[1], 10);
+          const inches = parseInt(match[2], 10);
+          return Math.round((feet * 12 + inches) * 2.54);
+        }
+        return parseFloat(formData.height.replace(/[^0-9.]/g, "")) || null;
+      })(),
       weight: formData.weight
         ? parseFloat(formData.weight.replace(/[^0-9.]/g, ""))
         : null,

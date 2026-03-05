@@ -1,5 +1,9 @@
 import api from "./api";
 
+/**
+ * Match profile DTO matching backend's MatchmakingDto / ExploreProfileDto
+ * Backend base path: /matches
+ */
 export interface MatchProfile {
   userId: number;
   fullName: string;
@@ -25,6 +29,8 @@ export interface UserRelation {
   reportReason?: string;
 }
 
+/* ================= EXPLORE ================= */
+
 /**
  * GET /matches/explore/next — Get next explore profile
  */
@@ -41,6 +47,8 @@ export async function explorePrevious(): Promise<MatchProfile | null> {
   return res.data;
 }
 
+/* ================= FULL PROFILE ================= */
+
 /**
  * GET /matches/profile/:userId — View full profile
  */
@@ -48,6 +56,8 @@ export async function viewFullProfile(userId: number): Promise<any> {
   const res = await api.get(`/matches/profile/${userId}`);
   return res.data;
 }
+
+/* ================= ACTIONS ================= */
 
 /**
  * POST /matches/explore/like/:userId
@@ -81,6 +91,8 @@ export async function unblockUser(userId: number): Promise<string> {
   return res.data;
 }
 
+/* ================= REQUESTS ================= */
+
 /**
  * POST /matches/request/:toUserId — Send connection request
  */
@@ -108,6 +120,8 @@ export async function reportUser(
   return res.data;
 }
 
+/* ================= LISTS ================= */
+
 /**
  * GET /matches/liked — Get liked users list
  */
@@ -132,12 +146,16 @@ export async function getBlockedUsers(): Promise<UserRelation[]> {
   return res.data;
 }
 
+/* ================= SEARCH (stub — backend has no search endpoint yet) ================= */
+
 /**
- * GET /matches/search?query=... — Search profiles
+ * Search profiles — currently returns empty array since backend
+ * MatchmakingController has no search endpoint.
+ * TODO: Add search endpoint to backend when needed.
  */
 export async function searchProfiles(
-  query?: string,
-  filters?: {
+  _query?: string,
+  _filters?: {
     minAge?: number;
     maxAge?: number;
     city?: string;
@@ -146,23 +164,12 @@ export async function searchProfiles(
     maritalStatus?: string;
   },
 ): Promise<MatchProfile[]> {
-  const params = new URLSearchParams();
-  if (query) params.append("query", query);
-  if (filters?.minAge) params.append("minAge", filters.minAge.toString());
-  if (filters?.maxAge) params.append("maxAge", filters.maxAge.toString());
-  if (filters?.city) params.append("city", filters.city);
-  if (filters?.religion) params.append("religion", filters.religion);
-  if (filters?.community) params.append("caste", filters.community); // Map community to caste
-  if (filters?.maritalStatus)
-    params.append("maritalStatus", filters.maritalStatus);
-
-  const res = await api.get(`/matches/search?${params.toString()}`);
-  return res.data;
+  // Backend has no /matches/search endpoint — return empty for now
+  console.warn("searchProfiles: Backend search endpoint not yet implemented");
+  return [];
 }
 
-export async function getSearchSuggestions(query: string): Promise<string[]> {
-  const res = await api.get(
-    `/matches/search/suggestions?query=${encodeURIComponent(query)}`,
-  );
-  return res.data;
+export async function getSearchSuggestions(_query: string): Promise<string[]> {
+  // Backend has no suggestions endpoint — return empty for now
+  return [];
 }

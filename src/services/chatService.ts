@@ -18,36 +18,18 @@ export interface ChatMessage {
 }
 
 /**
- * GET /chat/history?u1=&u2= — Fetch chat history between two users
+ * GET /chat/history?otherUserId= — Fetch chat history between current user and other user.
+ * Backend uses Principal to identify current user from JWT, so we only pass otherUserId.
  */
 export async function getChatHistory(
-  u1: number,
-  u2: number,
+  otherUserId: number,
 ): Promise<ChatMessage[]> {
-  const res = await api.get(`/chat/history?u1=${u1}&u2=${u2}`);
+  const res = await api.get(`/chat/history?otherUserId=${otherUserId}`);
   return res.data;
 }
 
 /**
- * POST /chat/send - Send a message
- */
-export async function sendMessage(
-  senderId: number,
-  receiverId: number,
-  content: string,
-): Promise<ChatMessage> {
-  const res = await api.post("/chat/send", {
-    senderId,
-    receiverId,
-    content,
-    message: content, // Dual field support just in case
-    type: "TEXT",
-  });
-  return res.data;
-}
-
-/**
- * Get WebSocket base URL
+ * Get WebSocket base URL for STOMP connection
  */
 function getWsBaseUrl(): string {
   if (Platform.OS === "android") {
@@ -58,9 +40,15 @@ function getWsBaseUrl(): string {
 
 /**
  * Build the WebSocket connection URL with JWT token
+ * Backend WebSocket endpoint: /ws-chat
  */
 export async function getWsUrl(): Promise<string> {
-  const token = await SecureStore.getItemAsync("auth_token");
+  let token: string | null = null;
+  if (Platform.OS === "web") {
+    token = localStorage.getItem("auth_token");
+  } else {
+    token = await SecureStore.getItemAsync("auth_token");
+  }
   return `${getWsBaseUrl()}/ws-chat?token=${token}`;
 }
 

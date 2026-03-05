@@ -2,140 +2,299 @@ import { Colors } from "@/constants/Colors";
 import { Ionicons, MaterialIcons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
-import React from "react";
+import React, { useEffect } from "react";
 import {
   Dimensions,
   FlatList,
   Image,
   Platform,
   SafeAreaView,
+  ScrollView,
   StatusBar,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from "react-native";
+import Animated, {
+  Easing,
+  FadeInDown,
+  FadeInUp,
+  useAnimatedStyle,
+  useSharedValue,
+  withDelay,
+  withRepeat,
+  withSequence,
+  withSpring,
+  withTiming,
+} from "react-native-reanimated";
 
 const { width } = Dimensions.get("window");
-const CARD_WIDTH = (width - 48) / 2; // 2 columns with padding
 
-// Dummy data for nearby profiles
-const NEARBY_PROFILES = [
+// --- State-grouped profile data ---
+const STATES_DATA = [
   {
-    id: "1",
-    name: "Kavya Yadav",
-    age: "24",
-    profession: "Software Engineer",
-    salary: "4LPA",
-    location: "Chennai",
-    image: "https://randomuser.me/api/portraits/women/65.jpg",
-    verified: true,
+    state: "Maharashtra",
+    profiles: [
+      { id: "1", name: "Kavya Yadav", age: "24", location: "Mumbai", image: "https://randomuser.me/api/portraits/women/65.jpg", verified: true },
+      { id: "2", name: "Sneha Kulkarni", age: "23", location: "Pune", image: "https://randomuser.me/api/portraits/women/32.jpg", verified: true },
+      { id: "3", name: "Riya Joshi", age: "22", location: "Nagpur", image: "https://randomuser.me/api/portraits/women/44.jpg", verified: false },
+    ],
   },
   {
-    id: "2",
-    name: "Myra Reddy",
-    age: "21",
-    profession: "Product Designer",
-    salary: "5LPA",
-    location: "Lucknow",
-    image: "https://randomuser.me/api/portraits/women/32.jpg",
-    verified: true,
+    state: "Karnataka",
+    profiles: [
+      { id: "4", name: "Myra Reddy", age: "21", location: "Bangalore", image: "https://randomuser.me/api/portraits/women/12.jpg", verified: true },
+      { id: "5", name: "Ananya Rao", age: "25", location: "Mysore", image: "https://randomuser.me/api/portraits/women/10.jpg", verified: true },
+    ],
   },
   {
-    id: "3",
-    name: "Neha Gupta",
-    age: "22",
-    profession: "Data Analyst",
-    salary: "4.5LPA",
-    location: "Mumbai",
-    image: "https://randomuser.me/api/portraits/women/44.jpg",
-    verified: false,
+    state: "Delhi NCR",
+    profiles: [
+      { id: "6", name: "Priya Sharma", age: "24", location: "New Delhi", image: "https://randomuser.me/api/portraits/women/55.jpg", verified: true },
+      { id: "7", name: "Neha Gupta", age: "22", location: "Gurgaon", image: "https://randomuser.me/api/portraits/women/22.jpg", verified: false },
+      { id: "8", name: "Sakshi Verma", age: "23", location: "Noida", image: "https://randomuser.me/api/portraits/women/33.jpg", verified: true },
+    ],
   },
   {
-    id: "4",
-    name: "Riya Singh",
-    age: "23",
-    profession: "Architect",
-    salary: "6LPA",
-    location: "Mumbai",
-    image: "https://randomuser.me/api/portraits/women/12.jpg",
-    verified: true,
+    state: "Tamil Nadu",
+    profiles: [
+      { id: "9", name: "Divya Subramanian", age: "24", location: "Chennai", image: "https://randomuser.me/api/portraits/women/40.jpg", verified: true },
+      { id: "10", name: "Lakshmi Iyer", age: "26", location: "Coimbatore", image: "https://randomuser.me/api/portraits/women/48.jpg", verified: true },
+    ],
   },
   {
-    id: "5",
-    name: "Sneha Patel",
-    age: "25",
-    profession: "Marketing Manager",
-    salary: "5.5LPA",
-    location: "Mumbai",
-    image: "https://randomuser.me/api/portraits/women/10.jpg",
-    verified: false,
+    state: "Gujarat",
+    profiles: [
+      { id: "11", name: "Meera Patel", age: "23", location: "Ahmedabad", image: "https://randomuser.me/api/portraits/women/16.jpg", verified: true },
+      { id: "12", name: "Kruti Shah", age: "24", location: "Surat", image: "https://randomuser.me/api/portraits/women/28.jpg", verified: false },
+    ],
+  },
+  {
+    state: "Rajasthan",
+    profiles: [
+      { id: "13", name: "Pooja Rathore", age: "22", location: "Jaipur", image: "https://randomuser.me/api/portraits/women/58.jpg", verified: true },
+      { id: "14", name: "Nisha Shekhawat", age: "25", location: "Udaipur", image: "https://randomuser.me/api/portraits/women/62.jpg", verified: true },
+    ],
   },
 ];
 
-type ProfileCardProps = {
-  item: (typeof NEARBY_PROFILES)[0];
-  onViewProfile: () => void;
-};
+// --- Radar Map Component ---
+function MapRadar() {
+  const pulse1 = useSharedValue(0.6);
+  const pulse2 = useSharedValue(0.4);
+  const pulse3 = useSharedValue(0.2);
+  const dotScale = useSharedValue(1);
 
-function ProfileCard({ item, onViewProfile }: ProfileCardProps) {
+  useEffect(() => {
+    // Expanding pulse rings
+    pulse1.value = withRepeat(
+      withSequence(
+        withTiming(1.8, { duration: 2000, easing: Easing.out(Easing.ease) }),
+        withTiming(0.6, { duration: 0 }),
+      ),
+      -1,
+    );
+    pulse2.value = withRepeat(
+      withSequence(
+        withDelay(
+          600,
+          withTiming(1.6, { duration: 2000, easing: Easing.out(Easing.ease) }),
+        ),
+        withTiming(0.4, { duration: 0 }),
+      ),
+      -1,
+    );
+    pulse3.value = withRepeat(
+      withSequence(
+        withDelay(
+          1200,
+          withTiming(1.4, { duration: 2000, easing: Easing.out(Easing.ease) }),
+        ),
+        withTiming(0.2, { duration: 0 }),
+      ),
+      -1,
+    );
+
+    // Center dot blinking
+    dotScale.value = withRepeat(
+      withSequence(
+        withTiming(1.3, { duration: 800 }),
+        withTiming(1, { duration: 800 }),
+      ),
+      -1,
+    );
+  }, []);
+
+  const pulseStyle1 = useAnimatedStyle(() => ({
+    transform: [{ scale: pulse1.value }],
+    opacity: 2 - pulse1.value,
+  }));
+  const pulseStyle2 = useAnimatedStyle(() => ({
+    transform: [{ scale: pulse2.value }],
+    opacity: 1.8 - pulse2.value,
+  }));
+  const pulseStyle3 = useAnimatedStyle(() => ({
+    transform: [{ scale: pulse3.value }],
+    opacity: 1.5 - pulse3.value,
+  }));
+  const dotStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: dotScale.value }],
+  }));
+
+  // Generate blinking profile dots around the radar
+  const blipPositions = [
+    { x: -60, y: -40 },
+    { x: 50, y: -55 },
+    { x: -75, y: 30 },
+    { x: 65, y: 45 },
+    { x: -20, y: 65 },
+    { x: 40, y: -10 },
+    { x: -50, y: -70 },
+    { x: 80, y: 15 },
+  ];
+
   return (
-    <View style={styles.card}>
-      {/* Image Section */}
-      <View style={styles.imageContainer}>
-        <Image source={{ uri: item.image }} style={styles.profileImage} />
+    <View style={mapStyles.container}>
+      <LinearGradient
+        colors={["#1A0A0A", "#2D0F0F", "#1A0808"]}
+        style={StyleSheet.absoluteFill}
+      />
 
-        {/* Gradient Overlay for text readability if needed, or just style */}
-        <LinearGradient
-          colors={["transparent", "rgba(0,0,0,0.1)"]}
-          style={styles.imageGradient}
-        />
+      {/* Grid lines */}
+      <View style={mapStyles.gridH1} />
+      <View style={mapStyles.gridH2} />
+      <View style={mapStyles.gridV1} />
+      <View style={mapStyles.gridV2} />
 
-        {/* Action Icons Overlay */}
-        <View style={styles.overlayIcons}>
-          <TouchableOpacity style={styles.iconButtonBlur}>
-            <Ionicons name="star-outline" size={20} color="#FFF" />
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.iconButtonBlur}>
-            <Ionicons name="heart-outline" size={20} color="#FFF" />
-          </TouchableOpacity>
-        </View>
-      </View>
+      {/* Radar rings */}
+      <View style={mapStyles.ring1} />
+      <View style={mapStyles.ring2} />
+      <View style={mapStyles.ring3} />
 
-      {/* Content Section */}
-      <View style={styles.cardContent}>
-        <View style={styles.nameRow}>
-          <Text style={styles.nameText} numberOfLines={1}>
-            {item.name}
-          </Text>
-          {item.verified && (
-            <MaterialIcons name="verified" size={16} color="#3b82f6" />
-          )}
-        </View>
+      {/* Pulse effects */}
+      <Animated.View style={[mapStyles.pulse, pulseStyle1]} />
+      <Animated.View style={[mapStyles.pulse, pulseStyle2]} />
+      <Animated.View style={[mapStyles.pulse, pulseStyle3]} />
 
-        <Text style={styles.detailsText}>
-          {item.age} • {item.location}
-        </Text>
+      {/* Profile blips */}
+      {blipPositions.map((pos, i) => (
+        <BlinkingDot key={i} x={pos.x} y={pos.y} delay={i * 400} index={i} />
+      ))}
 
-        <Text style={styles.professionText} numberOfLines={1}>
-          {/* Display profession or fallback */}
-          NOT SPECIFIED
-        </Text>
+      {/* Center marker */}
+      <Animated.View style={[mapStyles.centerDot, dotStyle]}>
+        <Ionicons name="navigate" size={18} color="#FFF" />
+      </Animated.View>
 
-        <TouchableOpacity style={styles.connectButton} onPress={onViewProfile}>
-          <Ionicons
-            name="person-add-outline"
-            size={16}
-            color="#FFF"
-            style={{ marginRight: 6 }}
-          />
-          <Text style={styles.connectButtonText}>Connect</Text>
-        </TouchableOpacity>
+      {/* Label */}
+      <View style={mapStyles.labelContainer}>
+        <Ionicons name="location" size={14} color="#FF6B6B" />
+        <Text style={mapStyles.labelText}>People Around You</Text>
       </View>
     </View>
   );
 }
 
+// --- Blinking Dot Component ---
+function BlinkingDot({ x, y, delay, index }: { x: number; y: number; delay: number; index: number }) {
+  const opacity = useSharedValue(0);
+  const scale = useSharedValue(0);
+
+  useEffect(() => {
+    opacity.value = withDelay(
+      delay,
+      withRepeat(
+        withSequence(
+          withTiming(1, { duration: 1000 }),
+          withTiming(0.3, { duration: 1000 }),
+        ),
+        -1,
+      ),
+    );
+    scale.value = withDelay(delay, withSpring(1, { damping: 12 }));
+  }, []);
+
+  const style = useAnimatedStyle(() => ({
+    opacity: opacity.value,
+    transform: [{ scale: scale.value }],
+  }));
+
+  const colors = ["#FF6B6B", "#FFD93D", "#6BCB77", "#4D96FF", "#FF6B6B", "#C084FC", "#F472B6", "#34D399"];
+
+  return (
+    <Animated.View
+      style={[
+        mapStyles.blip,
+        {
+          marginLeft: x,
+          marginTop: y,
+        },
+        style,
+      ]}
+    >
+      <View style={[mapStyles.blipInner, { backgroundColor: colors[index % colors.length] }]} />
+    </Animated.View>
+  );
+}
+
+// --- Profile Card ---
+type ProfileType = (typeof STATES_DATA)[0]["profiles"][0];
+
+function NearbyProfileCard({
+  item,
+  index,
+  onPress,
+}: {
+  item: ProfileType;
+  index: number;
+  onPress: () => void;
+}) {
+  return (
+    <Animated.View
+      entering={FadeInDown.delay(index * 100)
+        .duration(400)
+        .springify()
+        .damping(15)}
+    >
+      <TouchableOpacity style={cardStyles.card} onPress={onPress} activeOpacity={0.85}>
+        <Image source={{ uri: item.image }} style={cardStyles.image} />
+
+        {/* Gradient overlay */}
+        <LinearGradient
+          colors={["transparent", "rgba(0,0,0,0.7)"]}
+          style={cardStyles.gradient}
+        />
+
+        {/* Verified badge */}
+        {item.verified && (
+          <View style={cardStyles.verifiedBadge}>
+            <MaterialIcons name="verified" size={14} color="#3B82F6" />
+          </View>
+        )}
+
+        {/* Info overlay */}
+        <View style={cardStyles.infoOverlay}>
+          <Text style={cardStyles.name} numberOfLines={1}>
+            {item.name}
+          </Text>
+          <Text style={cardStyles.detail}>
+            {item.age} • {item.location}
+          </Text>
+        </View>
+
+        {/* Action buttons */}
+        <View style={cardStyles.actions}>
+          <TouchableOpacity style={cardStyles.actionBtn}>
+            <Ionicons name="heart-outline" size={18} color="#FFF" />
+          </TouchableOpacity>
+        </View>
+      </TouchableOpacity>
+    </Animated.View>
+  );
+}
+
+// --- Main Screen ---
 export default function NearbyScreen() {
   const router = useRouter();
 
@@ -145,163 +304,327 @@ export default function NearbyScreen() {
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <View style={styles.container}>
-        {/* Header */}
-        <View style={styles.header}>
-          <TouchableOpacity
-            style={styles.backButton}
-            onPress={() => router.back()}
-          >
-            <Ionicons name="arrow-back" size={24} color="#000" />
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>Nearby</Text>
-          <View style={styles.placeholder} />
-        </View>
+      <StatusBar barStyle="light-content" />
 
-        {/* Profile Grid */}
-        <FlatList
-          data={NEARBY_PROFILES}
-          keyExtractor={(item) => item.id}
-          renderItem={({ item }) => (
-            <ProfileCard
-              item={item}
-              onViewProfile={() => handleViewProfile(item.id)}
-            />
-          )}
-          numColumns={2}
-          columnWrapperStyle={styles.columnWrapper}
-          contentContainerStyle={styles.listContent}
-          showsVerticalScrollIndicator={false}
-        />
-      </View>
+      {/* Floating Back Button */}
+      <TouchableOpacity
+        style={styles.backButton}
+        onPress={() => router.back()}
+      >
+        <Ionicons name="arrow-back" size={22} color="#FFF" />
+      </TouchableOpacity>
+
+      <ScrollView
+        style={styles.scrollView}
+        showsVerticalScrollIndicator={false}
+        bounces={true}
+      >
+        {/* Map/Radar Section */}
+        <MapRadar />
+
+        {/* Content */}
+        <View style={styles.content}>
+          <Animated.View entering={FadeInUp.delay(200).duration(500)}>
+            <Text style={styles.mainTitle}>People Near You</Text>
+            <Text style={styles.mainSubtitle}>
+              Discover matches across different states and regions
+            </Text>
+          </Animated.View>
+
+          {/* State Sections */}
+          {STATES_DATA.map((stateData, stateIndex) => (
+            <Animated.View
+              key={stateData.state}
+              entering={FadeInDown.delay(300 + stateIndex * 150)
+                .duration(400)
+                .springify()}
+            >
+              <View style={styles.stateHeader}>
+                <View style={styles.stateLeft}>
+                  <Ionicons name="location-sharp" size={16} color={Colors.maroon} />
+                  <Text style={styles.stateName}>{stateData.state}</Text>
+                </View>
+                <Text style={styles.profileCount}>
+                  {stateData.profiles.length} profiles
+                </Text>
+              </View>
+
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.horizontalList}
+              >
+                {stateData.profiles.map((profile, pIndex) => (
+                  <NearbyProfileCard
+                    key={profile.id}
+                    item={profile}
+                    index={pIndex}
+                    onPress={() => handleViewProfile(profile.id)}
+                  />
+                ))}
+              </ScrollView>
+            </Animated.View>
+          ))}
+
+          {/* Bottom spacer */}
+          <View style={{ height: 100 }} />
+        </View>
+      </ScrollView>
     </SafeAreaView>
   );
 }
 
+// --- Styles ---
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: Colors.ivory,
+    backgroundColor: "#0D0505",
     paddingTop: Platform.OS === "android" ? StatusBar.currentHeight : 0,
   },
-  container: {
-    flex: 1,
-    backgroundColor: Colors.ivory,
+  backButton: {
+    position: "absolute",
+    top: Platform.OS === "android" ? (StatusBar.currentHeight || 0) + 16 : 56,
+    left: 20,
+    zIndex: 100,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: "rgba(128,0,0,0.7)",
+    justifyContent: "center",
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.2)",
   },
-  header: {
+  scrollView: {
+    flex: 1,
+  },
+  content: {
+    backgroundColor: "#FFFFF0",
+    borderTopLeftRadius: 30,
+    borderTopRightRadius: 30,
+    marginTop: -30,
+    paddingTop: 30,
+    paddingHorizontal: 20,
+    minHeight: 600,
+  },
+  mainTitle: {
+    fontSize: 26,
+    fontWeight: "800",
+    color: "#2D1406",
+    marginBottom: 4,
+  },
+  mainSubtitle: {
+    fontSize: 14,
+    color: "#8B7355",
+    marginBottom: 24,
+  },
+  stateHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 12,
+    marginTop: 8,
+  },
+  stateLeft: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 20,
-    paddingVertical: 15,
-    borderBottomWidth: 1,
-    borderBottomColor: "#E0E0E0",
-    backgroundColor: Colors.ivory,
-    zIndex: 10,
+    gap: 6,
   },
-  backButton: {
-    padding: 4,
+  stateName: {
+    fontSize: 18,
+    fontWeight: "700",
+    color: "#2D1406",
   },
-  headerTitle: {
-    fontSize: 20,
-    fontWeight: "bold",
-    color: "#000",
+  profileCount: {
+    fontSize: 13,
+    color: "#999",
+    fontWeight: "500",
   },
-  placeholder: {
-    width: 32,
+  horizontalList: {
+    gap: 12,
+    paddingBottom: 20,
+    paddingRight: 20,
   },
-  listContent: {
-    padding: 16,
-  },
-  columnWrapper: {
-    justifyContent: "space-between",
-    marginBottom: 16,
-  },
-  /* Card Styles */
-  card: {
-    width: CARD_WIDTH,
-    backgroundColor: "#FFF",
-    borderRadius: 12,
-    shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+});
+
+const mapStyles = StyleSheet.create({
+  container: {
+    height: 320,
+    justifyContent: "center",
+    alignItems: "center",
     overflow: "hidden",
-  },
-  imageContainer: {
-    width: "100%",
-    aspectRatio: 1, // Square image
     position: "relative",
   },
-  profileImage: {
+  gridH1: {
+    position: "absolute",
+    top: "35%",
+    left: 0,
+    right: 0,
+    height: 1,
+    backgroundColor: "rgba(128,0,0,0.08)",
+  },
+  gridH2: {
+    position: "absolute",
+    top: "65%",
+    left: 0,
+    right: 0,
+    height: 1,
+    backgroundColor: "rgba(128,0,0,0.08)",
+  },
+  gridV1: {
+    position: "absolute",
+    left: "35%",
+    top: 0,
+    bottom: 0,
+    width: 1,
+    backgroundColor: "rgba(128,0,0,0.08)",
+  },
+  gridV2: {
+    position: "absolute",
+    left: "65%",
+    top: 0,
+    bottom: 0,
+    width: 1,
+    backgroundColor: "rgba(128,0,0,0.08)",
+  },
+  ring1: {
+    position: "absolute",
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    borderWidth: 1,
+    borderColor: "rgba(200,50,50,0.15)",
+  },
+  ring2: {
+    position: "absolute",
+    width: 200,
+    height: 200,
+    borderRadius: 100,
+    borderWidth: 1,
+    borderColor: "rgba(200,50,50,0.1)",
+  },
+  ring3: {
+    position: "absolute",
+    width: 300,
+    height: 300,
+    borderRadius: 150,
+    borderWidth: 1,
+    borderColor: "rgba(200,50,50,0.06)",
+  },
+  pulse: {
+    position: "absolute",
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    backgroundColor: "rgba(180,30,30,0.12)",
+  },
+  centerDot: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: Colors.maroon,
+    justifyContent: "center",
+    alignItems: "center",
+    zIndex: 20,
+    borderWidth: 3,
+    borderColor: "rgba(255,255,255,0.3)",
+    shadowColor: Colors.maroon,
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.6,
+    shadowRadius: 12,
+    elevation: 8,
+  },
+  blip: {
+    position: "absolute",
+    width: 14,
+    height: 14,
+    borderRadius: 7,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  blipInner: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    borderWidth: 1.5,
+    borderColor: "rgba(255,255,255,0.5)",
+  },
+  labelContainer: {
+    position: "absolute",
+    bottom: 50,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    backgroundColor: "rgba(0,0,0,0.5)",
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: "rgba(255,100,100,0.2)",
+  },
+  labelText: {
+    color: "rgba(255,255,255,0.9)",
+    fontSize: 13,
+    fontWeight: "600",
+  },
+});
+
+const CARD_WIDTH = 160;
+
+const cardStyles = StyleSheet.create({
+  card: {
+    width: CARD_WIDTH,
+    height: 220,
+    borderRadius: 16,
+    overflow: "hidden",
+    position: "relative",
+    backgroundColor: "#2D1406",
+  },
+  image: {
     width: "100%",
     height: "100%",
     resizeMode: "cover",
   },
-  imageGradient: {
+  gradient: {
     ...StyleSheet.absoluteFillObject,
   },
-  overlayIcons: {
+  verifiedBadge: {
     position: "absolute",
-    top: 8,
-    right: 8,
-    gap: 8,
+    top: 10,
+    right: 10,
+    backgroundColor: "rgba(255,255,255,0.95)",
+    borderRadius: 12,
+    padding: 3,
   },
-  iconButtonBlur: {
+  infoOverlay: {
+    position: "absolute",
+    bottom: 10,
+    left: 10,
+    right: 10,
+  },
+  name: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: "#FFF",
+  },
+  detail: {
+    fontSize: 12,
+    color: "rgba(255,255,255,0.8)",
+    marginTop: 2,
+  },
+  actions: {
+    position: "absolute",
+    top: 10,
+    left: 10,
+  },
+  actionBtn: {
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: "rgba(0,0,0,0.2)", // Semi-transparent dark
+    backgroundColor: "rgba(0,0,0,0.3)",
     justifyContent: "center",
     alignItems: "center",
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.3)",
-  },
-  cardContent: {
-    padding: 12,
-  },
-  nameRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    marginBottom: 4,
-  },
-  nameText: {
-    fontSize: 16,
-    fontWeight: "bold",
-    color: "#1a1a1a",
-    flex: 1,
-    marginRight: 4,
-  },
-  detailsText: {
-    fontSize: 13,
-    color: "#666",
-    marginBottom: 2,
-  },
-  professionText: {
-    fontSize: 11,
-    color: "#999",
-    fontWeight: "600",
-    marginBottom: 12,
-    textTransform: "uppercase",
-    letterSpacing: 0.5,
-  },
-  connectButton: {
-    flexDirection: "row",
-    backgroundColor: "#4a0404", // Maroon
-    borderRadius: 20,
-    paddingVertical: 8,
-    justifyContent: "center",
-    alignItems: "center",
-    width: "100%",
-  },
-  connectButtonText: {
-    color: "#FFF",
-    fontSize: 14,
-    fontWeight: "600",
+    borderColor: "rgba(255,255,255,0.2)",
   },
 });

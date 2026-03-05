@@ -5,7 +5,7 @@ import * as authService from "@/services/authService";
 import { getPasswordError } from "@/utils/validators";
 import { useRouter } from "expo-router";
 import { Check, Lock, Mail } from "lucide-react-native";
-import React, { useRef, useState } from "react";
+import React, { useState } from "react";
 import {
   Alert,
   Dimensions,
@@ -16,7 +16,6 @@ import {
   ScrollView,
   StyleSheet,
   Text,
-  TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
@@ -26,60 +25,51 @@ const { width } = Dimensions.get("window");
 const ForgotPassword = () => {
   const router = useRouter();
   const [step, setStep] = useState("request");
-  const [identifier, setIdentifier] = useState("");
-  const [otp, setOtp] = useState(["", "", "", "", "", ""]);
+  const [email, setEmail] = useState("");
+  const [resetToken, setResetToken] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [errors, setErrors] = useState<Record<string, string | undefined>>({});
   const [isLoading, setIsLoading] = useState(false);
 
-  const otpInputs = useRef<(TextInput | null)[]>([]);
-
-  const handleSendOtp = async () => {
-    if (!identifier) {
-      Alert.alert("Error", "Please enter your email or mobile number.");
+  /**
+   * Step 1: POST /auth/forgot-password
+   * Backend sends a reset token/email. Returns { message, token }.
+   */
+  const handleForgotPassword = async () => {
+    if (!email.trim()) {
+      Alert.alert("Error", "Please enter your email address.");
       return;
     }
     setIsLoading(true);
     try {
-      await authService.forgotPassword(identifier.trim());
-      Alert.alert("OTP Sent", "Check your backend console for the OTP code.");
-      setStep("verify");
+      const result = await authService.forgotPassword(email.trim());
+      // Backend may return a reset token directly or send via email
+      if (result.token) {
+        setResetToken(result.token);
+      }
+      Alert.alert(
+        "Reset Email Sent",
+        result.message || "Check your email for the password reset link."
+      );
+      setStep("reset_input");
     } catch (error: any) {
       const msg =
         error.response?.data?.message ||
         error.response?.data ||
         error.message ||
-        "Failed to send OTP";
+        "Failed to send reset email";
       Alert.alert("Error", String(msg));
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleVerifyOtp = async () => {
-    const otpCode = otp.join("");
-    if (otpCode.length !== 6) {
-      Alert.alert("Error", "Please enter the complete 6-digit OTP.");
-      return;
-    }
-    setIsLoading(true);
-    try {
-      await authService.verifyResetOtp(identifier.trim(), otpCode);
-      setStep("verified_success");
-    } catch (error: any) {
-      const msg =
-        error.response?.data?.message ||
-        error.response?.data ||
-        error.message ||
-        "OTP verification failed";
-      Alert.alert("Error", String(msg));
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleSetNewPassword = async () => {
+  /**
+   * Step 2: POST /auth/reset-password
+   * Sends { token, newPassword } to reset the password.
+   */
+  const handleResetPassword = async () => {
     const passwordError = getPasswordError(newPassword);
     if (passwordError) {
       setErrors({ password: passwordError });
@@ -90,13 +80,16 @@ const ForgotPassword = () => {
       return;
     }
 
+    // Use the token from forgot-password response, or let user paste it
+    const token = resetToken.trim();
+    if (!token) {
+      Alert.alert("Error", "Reset token is missing. Please check your email for the reset link.");
+      return;
+    }
+
     setIsLoading(true);
     try {
-      await authService.resetPassword(
-        identifier.trim(),
-        newPassword,
-        confirmPassword,
-      );
+      await authService.resetPassword(token, newPassword);
       setStep("final_success");
     } catch (error: any) {
       const msg =
@@ -107,21 +100,6 @@ const ForgotPassword = () => {
       Alert.alert("Error", String(msg));
     } finally {
       setIsLoading(false);
-    }
-  };
-
-  const handleOtpChange = (value: string, index: number) => {
-    const newOtp = [...otp];
-    newOtp[index] = value;
-    setOtp(newOtp);
-    if (value && index < 5) {
-      otpInputs.current[index + 1]?.focus();
-    }
-  };
-
-  const handleOtpKeyPress = (e: any, index: number) => {
-    if (e.nativeEvent.key === "Backspace" && !otp[index] && index > 0) {
-      otpInputs.current[index - 1]?.focus();
     }
   };
 
@@ -155,23 +133,24 @@ const ForgotPassword = () => {
             {renderHeader()}
 
             <View style={styles.formSection}>
+              {/* ===== STEP 1: ENTER EMAIL ===== */}
               {step === "request" && (
                 <>
                   <View style={styles.textCenter}>
                     <Text style={styles.title}>Reset Password</Text>
                     <Text style={styles.subtitle}>
-                      Enter your registered email or mobile number
+                      Enter your registered email address
                     </Text>
                   </View>
                   <Input
-                    placeholder="Email / Mobile"
-                    value={identifier}
-                    onChangeText={setIdentifier}
+                    placeholder="Email"
+                    value={email}
+                    onChangeText={setEmail}
                     icon={<Mail size={20} color={Colors.subtext} />}
                   />
                   <Button
-                    title="Send OTP"
-                    onPress={handleSendOtp}
+                    title="Send Reset Link"
+                    onPress={handleForgotPassword}
                     isLoading={isLoading}
                     style={styles.actionBtn}
                   />
@@ -185,74 +164,26 @@ const ForgotPassword = () => {
                 </>
               )}
 
-              {step === "verify" && (
-                <>
-                  <View style={styles.textCenter}>
-                    <Text style={styles.title}>Verify OTP</Text>
-                    <Text style={styles.subtitle}>
-                      We have sent a 6-digit code to{"\n"}
-                      {identifier}
-                    </Text>
-                  </View>
-                  <View style={styles.otpContainer}>
-                    {otp.map((digit, index) => (
-                      <TextInput
-                        key={index}
-                        ref={(input) => {
-                          otpInputs.current[index] = input;
-                        }}
-                        style={styles.otpInput}
-                        keyboardType="number-pad"
-                        maxLength={1}
-                        value={digit}
-                        onChangeText={(value) => handleOtpChange(value, index)}
-                        onKeyPress={(e) => handleOtpKeyPress(e, index)}
-                      />
-                    ))}
-                  </View>
-                  <Button
-                    title="Verify"
-                    onPress={handleVerifyOtp}
-                    isLoading={isLoading}
-                    style={styles.actionBtn}
-                  />
-                  <TouchableOpacity style={styles.resendLink}>
-                    <Text style={styles.resendText}>Resend Code</Text>
-                  </TouchableOpacity>
-                </>
-              )}
-
-              {step === "verified_success" && (
-                <>
-                  <View style={styles.successIconContainer}>
-                    <View style={styles.circleCheck}>
-                      <Check size={40} color="#FFF" strokeWidth={3} />
-                    </View>
-                  </View>
-                  <View style={styles.textCenter}>
-                    <Text style={[styles.title, styles.boldTitle]}>
-                      OTP Verified Successfully
-                    </Text>
-                    <Text style={styles.subtitle}>
-                      You can now reset your password
-                    </Text>
-                  </View>
-                  <Button
-                    title="Continue"
-                    onPress={() => setStep("reset_input")}
-                    style={{ ...styles.actionBtn, width: "50%" }}
-                  />
-                </>
-              )}
-
+              {/* ===== STEP 2: NEW PASSWORD ===== */}
               {step === "reset_input" && (
                 <>
                   <View style={styles.textCenter}>
                     <Text style={styles.title}>Change Password</Text>
                     <Text style={styles.subtitle}>
-                      Please enter and confirm your new password below
+                      Enter the reset token from your email and set a new password
                     </Text>
                   </View>
+
+                  {/* Show token input only if we don't already have it */}
+                  {!resetToken && (
+                    <Input
+                      placeholder="Reset Token (from email)"
+                      value={resetToken}
+                      onChangeText={setResetToken}
+                      icon={<Lock size={20} color={Colors.subtext} />}
+                    />
+                  )}
+
                   <Input
                     placeholder="Enter new password"
                     value={newPassword}
@@ -277,7 +208,7 @@ const ForgotPassword = () => {
                   />
                   <Button
                     title="Change Password"
-                    onPress={handleSetNewPassword}
+                    onPress={handleResetPassword}
                     isLoading={isLoading}
                     style={styles.actionBtn}
                   />
@@ -291,6 +222,7 @@ const ForgotPassword = () => {
                 </>
               )}
 
+              {/* ===== STEP 3: SUCCESS ===== */}
               {step === "final_success" && (
                 <>
                   <View style={styles.successIconContainer}>
@@ -307,7 +239,7 @@ const ForgotPassword = () => {
                     </Text>
                   </View>
                   <Button
-                    title="Back to login"
+                    title="Back to Login"
                     onPress={() => router.push("/login" as any)}
                     style={{ ...styles.actionBtn, width: "50%" }}
                   />
@@ -373,23 +305,6 @@ const styles = StyleSheet.create({
     backgroundColor: "transparent",
   },
   backLinkText: { color: "#757575", fontSize: 14, fontWeight: "500" },
-  otpContainer: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    width: "100%",
-    marginVertical: 30,
-  },
-  otpInput: {
-    width: 45,
-    height: 50,
-    borderWidth: 1,
-    borderColor: "#E0E0E0",
-    borderRadius: 8,
-    textAlign: "center",
-    fontSize: 20,
-    fontWeight: "700",
-    color: "#333",
-  },
   successIconContainer: { marginBottom: 25, alignItems: "center" },
   circleCheck: {
     width: 75,
@@ -415,16 +330,6 @@ const styles = StyleSheet.create({
     width: "100%",
     alignItems: "center",
     paddingBottom: 15,
-  },
-  resendLink: {
-    marginTop: 10,
-    marginBottom: 20,
-    alignItems: "center",
-  },
-  resendText: {
-    color: Colors.primary,
-    fontSize: 14,
-    fontWeight: "600",
   },
 });
 

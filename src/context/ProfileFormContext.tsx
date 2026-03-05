@@ -30,7 +30,7 @@ interface ProfileFormData {
   highestEducation: string;
   employmentType: string;
   occupation: string;
-  annualIncome: number | null;
+  annualIncome: string | null;
 
   // Family Details
   fatherOccupation: string;
@@ -46,8 +46,8 @@ interface ProfileFormData {
   // Lifestyle
   eatingHabits: string;
   dietPreference: string;
-  drinking: boolean | null;
-  smoking: boolean | null;
+  drinking: string | null;
+  smoking: string | null;
   healthNotes: string;
   aboutMe: string;
 }

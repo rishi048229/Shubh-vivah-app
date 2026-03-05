@@ -35,9 +35,16 @@ const ProfileCompleted = () => {
       resetFormData();
       setIsSubmitting(false);
     } catch (err: any) {
+      const data = err.response?.data;
+      let detailedError = "";
+      if (data?.errors && Array.isArray(data.errors) && data.errors.length > 0) {
+        detailedError = data.errors.map((e: any) => e.defaultMessage || e.field).join("\n");
+      }
+
       const msg =
-        err.response?.data?.message ||
-        err.response?.data ||
+        detailedError ||
+        data?.message ||
+        data ||
         err.message ||
         "Failed to save profile. Please try again.";
       setError(String(msg));

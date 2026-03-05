@@ -99,9 +99,7 @@ const EducationCareerDetails = () => {
       highestEducation: formData.education,
       employmentType: formData.employmentType,
       occupation: formData.occupation,
-      annualIncome: formData.annualIncome
-        ? parseInt(formData.annualIncome.replace(/[^0-9]/g, ""))
-        : null,
+      annualIncome: formData.annualIncome || null,
     });
     router.push("/complete-profile/family-details" as any);
   };

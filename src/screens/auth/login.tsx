@@ -3,11 +3,10 @@ import Input from "@/components/auth/Input";
 import { FacebookIcon, GoogleIcon } from "@/components/auth/SocialIcons";
 import { Colors } from "@/constants/Colors";
 import { useAuth } from "@/context/AuthContext";
-import api from "@/services/api";
 import * as authService from "@/services/authService";
 import { useRouter } from "expo-router";
 import { Lock, Mail } from "lucide-react-native";
-import React, { useState } from "react";
+import React, { useRef, useState } from "react";
 import {
   Alert,
   Dimensions,
@@ -18,6 +17,7 @@ import {
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
@@ -28,41 +28,32 @@ const LoginPage = () => {
   const router = useRouter();
   const { login } = useAuth();
 
-  const [identifier, setIdentifier] = useState("");
+  const [step, setStep] = useState<"credentials" | "otp">("credentials");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState<{
-    identifier?: string;
+    email?: string;
     password?: string;
   }>({});
 
-  const handleTestConnection = async () => {
-    try {
-      const response = await api.get("/auth/health"); // Assuming this exists or similar public endpoint
-      Alert.alert(
-        "Connection Successful",
-        `Status: ${response.status}\nURL: ${api.defaults.baseURL}`,
-      );
-    } catch (error: any) {
-      let message = "Connection Failed";
-      if (error.code === "ERR_NETWORK") {
-        message = `Network Error. Cannot reach ${api.defaults.baseURL}`;
-      } else if (error.response) {
-        message = `Server Error: ${error.response.status}`;
-      }
-      Alert.alert(
-        "Connection Failed",
-        `${message}\n\nURL: ${api.defaults.baseURL}`,
-      );
-    }
-  };
+  // OTP state (in case backend requires login OTP verification)
+  const [userId, setUserId] = useState<number | null>(null);
+  const [otp, setOtp] = useState(["", "", "", "", "", ""]);
+  const otpInputs = useRef<(TextInput | null)[]>([]);
 
+  /**
+   * POST /auth/login — Authenticate with email + password.
+   * Backend returns { id, token, message }.
+   * If token is present → login success.
+   * If token is empty but id exists → OTP verification required.
+   */
   const handleLogin = async () => {
     let valid = true;
-    let newErrors: { identifier?: string; password?: string } = {};
+    let newErrors: { email?: string; password?: string } = {};
 
-    if (!identifier) {
-      newErrors.identifier = "Mobile number or Email is required";
+    if (!email) {
+      newErrors.email = "Email is required";
       valid = false;
     }
     if (!password) {
@@ -75,12 +66,19 @@ const LoginPage = () => {
     if (valid) {
       setIsLoading(true);
       try {
-        const result = await authService.login(identifier.trim(), password);
+        const result = await authService.login(email.trim(), password);
+
         if (result.token) {
-          await login(result.token);
+          // Direct login success — store token and navigate
+          await login(result.token, result.id);
           router.replace("/(tabs)");
+        } else if (result.id) {
+          // OTP verification needed for login
+          setUserId(result.id);
+          setStep("otp");
+          Alert.alert("OTP Sent", "Please check your email for the verification code.");
         } else {
-          Alert.alert("Login Failed", "No token received from server.");
+          Alert.alert("Login Failed", result.message || "No token received from server.");
         }
       } catch (error: any) {
         let message = "Login failed. Please check your credentials.";
@@ -97,7 +95,6 @@ const LoginPage = () => {
           typeof error.response?.data === "string" &&
           error.response.data.includes("<")
         ) {
-          // HTML error page — don't show raw HTML
           message = `Server error (${error.response.status}). Please try again later.`;
         } else {
           message =
@@ -115,6 +112,57 @@ const LoginPage = () => {
     }
   };
 
+  /**
+   * POST /auth/verify-login-otp — Verify OTP for login.
+   * Returns { id, token, message }.
+   */
+  const handleVerifyLoginOtp = async () => {
+    const otpCode = otp.join("");
+    if (otpCode.length !== 6) {
+      Alert.alert("Error", "Please enter the complete 6-digit OTP.");
+      return;
+    }
+    if (!userId) {
+      Alert.alert("Error", "User ID not found. Please try logging in again.");
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      const result = await authService.verifyLoginOtp(userId, otpCode);
+      if (result.token) {
+        await login(result.token, result.id);
+        router.replace("/(tabs)");
+      } else {
+        Alert.alert("Error", result.message || "OTP verification failed.");
+      }
+    } catch (error: any) {
+      const msg =
+        error.response?.data?.message ||
+        error.response?.data ||
+        error.message ||
+        "OTP verification failed";
+      Alert.alert("Error", String(msg));
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleOtpChange = (value: string, index: number) => {
+    const newOtp = [...otp];
+    newOtp[index] = value;
+    setOtp(newOtp);
+    if (value && index < 5) {
+      otpInputs.current[index + 1]?.focus();
+    }
+  };
+
+  const handleOtpKeyPress = (e: any, index: number) => {
+    if (e.nativeEvent.key === "Backspace" && !otp[index] && index > 0) {
+      otpInputs.current[index - 1]?.focus();
+    }
+  };
+
   return (
     <SafeAreaView style={styles.container}>
       <KeyboardAvoidingView
@@ -124,6 +172,7 @@ const LoginPage = () => {
         <ScrollView
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
         >
           <View style={styles.mainContent}>
             <View style={styles.logoSection}>
@@ -140,70 +189,118 @@ const LoginPage = () => {
             </View>
 
             <View style={styles.formSection}>
-              <Input
-                placeholder="Email or Phone Number"
-                value={identifier}
-                onChangeText={(text) => {
-                  setIdentifier(text);
-                  setErrors({ ...errors, identifier: undefined });
-                }}
-                icon={<Mail size={20} color={Colors.subtext} />}
-                error={errors.identifier}
-              />
+              {/* ===== CREDENTIALS STEP ===== */}
+              {step === "credentials" && (
+                <>
+                  <Input
+                    placeholder="Email"
+                    value={email}
+                    onChangeText={(text) => {
+                      setEmail(text);
+                      setErrors({ ...errors, email: undefined });
+                    }}
+                    icon={<Mail size={20} color={Colors.subtext} />}
+                    error={errors.email}
+                  />
 
-              <Input
-                placeholder="Password"
-                value={password}
-                onChangeText={(text) => {
-                  setPassword(text);
-                  errors.password = undefined; // Direct mutation fix or use setErrors
-                  setErrors({ ...errors, password: undefined });
-                }}
-                icon={<Lock size={20} color={Colors.subtext} />}
-                isPassword
-                error={errors.password}
-              />
+                  <Input
+                    placeholder="Password"
+                    value={password}
+                    onChangeText={(text) => {
+                      setPassword(text);
+                      setErrors({ ...errors, password: undefined });
+                    }}
+                    icon={<Lock size={20} color={Colors.subtext} />}
+                    isPassword
+                    error={errors.password}
+                  />
 
-              <TouchableOpacity
-                style={styles.forgotPass}
-                onPress={() => router.push("/forgot-password" as any)}
-              >
-                <Text style={styles.forgotPassText}>Forgot password?</Text>
-              </TouchableOpacity>
+                  <TouchableOpacity
+                    style={styles.forgotPass}
+                    onPress={() => router.push("/forgot-password" as any)}
+                  >
+                    <Text style={styles.forgotPassText}>Forgot password?</Text>
+                  </TouchableOpacity>
 
-              <Button
-                title="Log In"
-                onPress={handleLogin}
-                isLoading={isLoading}
-                style={styles.loginBtn}
-                paddingVertical={10}
-              />
+                  <Button
+                    title="Log In"
+                    onPress={handleLogin}
+                    isLoading={isLoading}
+                    style={styles.loginBtn}
+                    paddingVertical={10}
+                  />
 
-              {/* Decorative Divider */}
-              <Image
-                source={require("@/assets/auth/landing_divider.png")}
-                style={styles.dividerImage}
-                resizeMode="contain"
-              />
+                  {/* Decorative Divider */}
+                  <Image
+                    source={require("@/assets/auth/landing_divider.png")}
+                    style={styles.dividerImage}
+                    resizeMode="contain"
+                  />
 
-              {/* Social Login Separator */}
-              <View style={styles.socialSeparator}>
-                <View style={styles.separatorLine} />
-                <Text style={styles.separatorText}>Log In With</Text>
-                <View style={styles.separatorLine} />
-              </View>
+                  {/* Social Login Separator */}
+                  <View style={styles.socialSeparator}>
+                    <View style={styles.separatorLine} />
+                    <Text style={styles.separatorText}>Log In With</Text>
+                    <View style={styles.separatorLine} />
+                  </View>
 
-              {/* Social Buttons */}
-              <View style={styles.socialRow}>
-                <TouchableOpacity style={styles.socialBtn} activeOpacity={0.7}>
-                  <GoogleIcon size={22} />
-                  <Text style={styles.socialBtnText}>Google</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={styles.socialBtn} activeOpacity={0.7}>
-                  <FacebookIcon size={22} />
-                  <Text style={styles.socialBtnText}>Facebook</Text>
-                </TouchableOpacity>
-              </View>
+                  {/* Social Buttons */}
+                  <View style={styles.socialRow}>
+                    <TouchableOpacity style={styles.socialBtn} activeOpacity={0.7}>
+                      <GoogleIcon size={22} />
+                      <Text style={styles.socialBtnText}>Google</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity style={styles.socialBtn} activeOpacity={0.7}>
+                      <FacebookIcon size={22} />
+                      <Text style={styles.socialBtnText}>Facebook</Text>
+                    </TouchableOpacity>
+                  </View>
+                </>
+              )}
+
+              {/* ===== OTP STEP (if backend requires it for login) ===== */}
+              {step === "otp" && (
+                <>
+                  <View style={styles.otpHeader}>
+                    <Text style={styles.otpTitle}>Verify OTP</Text>
+                    <Text style={styles.otpSubtitle}>
+                      Enter the 6-digit code sent to{"\n"}{email}
+                    </Text>
+                  </View>
+                  <View style={styles.otpContainer}>
+                    {otp.map((digit, index) => (
+                      <TextInput
+                        key={index}
+                        ref={(input) => {
+                          otpInputs.current[index] = input;
+                        }}
+                        style={styles.otpInput}
+                        keyboardType="number-pad"
+                        maxLength={1}
+                        value={digit}
+                        onChangeText={(value) => handleOtpChange(value, index)}
+                        onKeyPress={(e) => handleOtpKeyPress(e, index)}
+                      />
+                    ))}
+                  </View>
+                  <Button
+                    title="Verify"
+                    onPress={handleVerifyLoginOtp}
+                    isLoading={isLoading}
+                    style={styles.loginBtn}
+                    paddingVertical={10}
+                  />
+                  <TouchableOpacity
+                    style={styles.backToLogin}
+                    onPress={() => {
+                      setStep("credentials");
+                      setOtp(["", "", "", "", "", ""]);
+                    }}
+                  >
+                    <Text style={styles.backToLoginText}>Back to login</Text>
+                  </TouchableOpacity>
+                </>
+              )}
             </View>
           </View>
 
@@ -211,22 +308,6 @@ const LoginPage = () => {
             <Text style={styles.footerText}>Don't have any account? </Text>
             <TouchableOpacity onPress={() => router.push("/register" as any)}>
               <Text style={styles.signUpText}>sign up</Text>
-            </TouchableOpacity>
-          </View>
-          <View style={{ alignItems: "center", marginBottom: 20 }}>
-            <Text style={{ fontSize: 10, color: "#999" }}>
-              API: {api.defaults.baseURL}
-            </Text>
-            <TouchableOpacity
-              onPress={handleTestConnection}
-              style={{
-                marginTop: 5,
-                padding: 10,
-                backgroundColor: "#eee",
-                borderRadius: 5,
-              }}
-            >
-              <Text style={{ fontSize: 10 }}>Test Connection</Text>
             </TouchableOpacity>
           </View>
         </ScrollView>
@@ -311,6 +392,40 @@ const styles = StyleSheet.create({
     color: "#333",
     fontWeight: "600",
   },
+  // OTP step styles
+  otpHeader: { alignItems: "center", marginBottom: 20 },
+  otpTitle: {
+    fontSize: 24,
+    fontWeight: "600",
+    color: Colors.text,
+    marginBottom: 8,
+  },
+  otpSubtitle: {
+    fontSize: 14,
+    color: "#757575",
+    textAlign: "center",
+    lineHeight: 20,
+  },
+  otpContainer: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    width: "100%",
+    marginVertical: 20,
+  },
+  otpInput: {
+    width: 45,
+    height: 50,
+    borderWidth: 1,
+    borderColor: "#E0E0E0",
+    borderRadius: 8,
+    textAlign: "center",
+    fontSize: 20,
+    fontWeight: "700",
+    color: "#333",
+  },
+  backToLogin: { alignSelf: "center", paddingVertical: 15 },
+  backToLoginText: { color: "#757575", fontSize: 14, fontWeight: "500" },
+  // Footer
   footer: {
     flexDirection: "row",
     justifyContent: "center",

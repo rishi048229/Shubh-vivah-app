@@ -35,11 +35,14 @@ export default function HomeHeader({ onOpenSidebar }: HomeHeaderProps) {
         <View style={styles.actions}>
           <TouchableOpacity
             style={styles.iconButton}
-            onPress={() => router.push("/search")}
+            onPress={() => router.push("/routes/search" as any)}
           >
             <Ionicons name="search-outline" size={24} color={Colors.maroon} />
           </TouchableOpacity>
-          <TouchableOpacity style={styles.iconButton}>
+          <TouchableOpacity 
+            style={styles.iconButton}
+            onPress={() => router.push("/routes/notifications" as any)}
+          >
             <View style={styles.notificationIconWrapper}>
               <Ionicons
                 name="notifications-outline"

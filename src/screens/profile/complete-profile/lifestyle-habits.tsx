@@ -41,18 +41,8 @@ const LifestyleHabits = () => {
         ...prev,
         eatingHabits: contextData.eatingHabits || prev.eatingHabits,
         dietPreference: contextData.dietPreference || prev.dietPreference,
-        drinking:
-          contextData.drinking === true
-            ? "Yes"
-            : contextData.drinking === false
-              ? "No"
-              : prev.drinking,
-        smoking:
-          contextData.smoking === true
-            ? "Yes"
-            : contextData.smoking === false
-              ? "No"
-              : prev.smoking,
+        drinking: (contextData.drinking as unknown as string) || prev.drinking,
+        smoking: (contextData.smoking as unknown as string) || prev.smoking,
         healthNotes: contextData.healthNotes || prev.healthNotes,
       }));
     }
@@ -82,18 +72,8 @@ const LifestyleHabits = () => {
     saveToContext({
       eatingHabits: formData.eatingHabits,
       dietPreference: formData.dietPreference,
-      drinking:
-        formData.drinking === "Yes"
-          ? true
-          : formData.drinking === "No"
-            ? false
-            : null,
-      smoking:
-        formData.smoking === "Yes"
-          ? true
-          : formData.smoking === "No"
-            ? false
-            : null,
+      drinking: formData.drinking,
+      smoking: formData.smoking,
       healthNotes: formData.healthNotes,
     });
     router.push("/complete-profile/profile-completed" as any);

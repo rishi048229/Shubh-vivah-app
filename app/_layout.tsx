@@ -23,7 +23,7 @@ import { ProfileFormProvider } from "@/context/ProfileFormContext";
 import { useColorScheme } from "@/hooks/use-color-scheme";
 
 export const unstable_settings = {
-  initialRouteName: "landing",
+  initialRouteName: "(auth)/landing",
 };
 
 // Prevent the splash screen from auto-hiding before asset loading is complete.
@@ -39,16 +39,31 @@ export default function RootLayout() {
   });
 
   useEffect(() => {
-    if (error) throw error;
+    if (error) {
+      console.error("Font loading error:", error);
+      // Even on error, we should hide the splash screen to show the error
+      SplashScreen.hideAsync();
+    }
   }, [error]);
 
   useEffect(() => {
     if (loaded) {
       SplashScreen.hideAsync();
+    } else {
+      // Emergency unhide, to prevent being stuck forever.
+      const timer = setTimeout(() => {
+        console.warn("Fonts still not loaded after 3 seconds, forcing splash screen to hide.");
+        SplashScreen.hideAsync();
+      }, 3000);
+      return () => clearTimeout(timer);
     }
   }, [loaded]);
 
-  if (!loaded) {
+  // If not loaded, we still want to render, but maybe the components using Outfit will error.
+  // Rendering null keeps the screen blank (which acts as an infinite splash screen if hideAsync isn't called).
+  // Still returning null is fine AFTER we called hideAsync, we will just see a blank white screen.
+  // We'll temporarily return the Rest of the app to see the error.
+  if (!loaded && !error) {
     return null;
   }
 

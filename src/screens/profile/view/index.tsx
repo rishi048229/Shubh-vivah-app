@@ -159,9 +159,10 @@ export default function ProfileScreen() {
           { justifyContent: "center", alignItems: "center" },
         ]}
       >
-        <Text>Failed to load profile</Text>
+        <Text>Loading profile...</Text>
         <TouchableOpacity
           onPress={loadProfile}
+
           style={{
             marginTop: 20,
             padding: 10,
@@ -332,16 +333,16 @@ export default function ProfileScreen() {
             <InfoRow label="Sub Caste" value="Not set" />
             <InfoRow
               label="Education"
-              value={profile.highestEducation || "Not set"}
+              value={profile.education ? profile.education.replace(/_/g, " ") : "Not set"}
             />
             <InfoRow
               label="Occupation"
-              value={profile.occupation || "Not set"}
+              value={profile.occupation ? profile.occupation.replace(/_/g, " ") : "Not set"}
             />
             <InfoRow
               label="Annual Income"
               value={
-                profile.annualIncome ? `${profile.annualIncome} LPA` : "Not set"
+                profile.annualIncome ? `${profile.annualIncome.replace(/_/g, " ")}` : "Not set"
               }
             />
           </View>

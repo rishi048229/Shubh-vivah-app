@@ -84,7 +84,7 @@ const SECTIONS = [
 const PreferencesSheet = forwardRef<BottomSheetModal, PreferencesSheetProps>(
   ({ onDismiss, onApply }, ref) => {
     // 90% height for a nice tall sheet
-    const snapPoints = useMemo(() => ["85%"], []);
+    const snapPoints = useMemo(() => ["92%"], []);
     const insets = useSafeAreaInsets();
 
     // State
@@ -224,9 +224,10 @@ const PreferencesSheet = forwardRef<BottomSheetModal, PreferencesSheetProps>(
             style={{ flex: 1 }}
             contentContainerStyle={[
               styles.scrollContent,
-              { paddingBottom: insets.bottom + 100 },
+              { paddingBottom: insets.bottom + 250 },
             ]}
             showsVerticalScrollIndicator={false}
+            nestedScrollEnabled={true}
           >
             <Text style={styles.mainTitle}>Refine Your Partner Search</Text>
 

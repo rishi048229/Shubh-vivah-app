@@ -2,6 +2,9 @@ const { getDefaultConfig } = require('expo/metro-config');
 
 const config = getDefaultConfig(__dirname);
 
+// Add support for framer-motion and tslib resolving
+config.resolver.sourceExts = ['mjs', ...config.resolver.sourceExts];
+
 // Add support for assets1 folder
 config.resolver.assetExts.push(
   // Images

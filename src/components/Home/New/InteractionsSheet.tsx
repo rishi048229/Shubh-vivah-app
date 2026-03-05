@@ -5,7 +5,6 @@ import {
   BottomSheetModal,
   BottomSheetScrollView,
 } from "@gorhom/bottom-sheet";
-import { MotiView } from "moti";
 import React, {
   forwardRef,
   useCallback,
@@ -13,7 +12,22 @@ import React, {
   useMemo,
   useState,
 } from "react";
-import { Image, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import {
+  Dimensions,
+  Image,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
+import Animated, {
+  useAnimatedStyle,
+  useSharedValue,
+  withTiming,
+  Easing,
+  FadeIn,
+  FadeInDown,
+} from "react-native-reanimated";
 
 interface InteractionsSheetProps {
   onDismiss?: () => void;
@@ -25,6 +39,10 @@ export interface InteractionsSheetRef extends BottomSheetModal {
   setTab: (tab: "likes" | "views") => void;
 }
 
+const SCREEN_WIDTH = Dimensions.get("window").width;
+const TAB_CONTAINER_PADDING = 4;
+const TAB_WIDTH = (SCREEN_WIDTH - 40 - TAB_CONTAINER_PADDING * 2) / 2; // 40 = container paddingHorizontal
+
 const InteractionsSheet = forwardRef<
   InteractionsSheetRef,
   InteractionsSheetProps
@@ -32,21 +50,29 @@ const InteractionsSheet = forwardRef<
   const snapPoints = useMemo(() => ["60%", "85%"], []);
   const [activeTab, setActiveTab] = useState<"likes" | "views">(initialTab);
 
+  // Smooth sliding indicator animation
+  const tabOffset = useSharedValue(initialTab === "likes" ? 0 : TAB_WIDTH);
+
+  const switchTab = useCallback(
+    (tab: "likes" | "views") => {
+      setActiveTab(tab);
+      tabOffset.value = withTiming(tab === "likes" ? 0 : TAB_WIDTH, {
+        duration: 250,
+        easing: Easing.bezier(0.4, 0.0, 0.2, 1),
+      });
+    },
+    [tabOffset],
+  );
+
+  const indicatorStyle = useAnimatedStyle(() => ({
+    transform: [{ translateX: tabOffset.value }],
+  }));
+
   // Expose method to change tab externally
   useImperativeHandle(
     ref,
     () =>
       ({
-        // We need to forward standard BottomSheetModal methods manually if we extend the type
-        // However, for simplicity in this ref pattern, we utilize the fact that the ref acts as the modal
-        // But since we are wrapping it, we might need a separate ref or just use state if controlled from parent.
-        // A cleaner way in Gorhom is to just pass props, but let's stick to the ref pattern requested.
-        // Actually, 'ref' here is forwarded to BottomSheetModal.
-        // We can't easily add methods to the external ref without breaking the type unless we cast.
-        // Instead, let's just rely on the parent creating the ref and calling methods on it,
-        // OR we use a state management approach.
-        // For now, let's keep it simple: The parent opens it.
-        // To allow changing tabs, we can add a custom method if we cast the ref.
         present: () => {
           // @ts-ignore
           innerRef.current?.present();
@@ -55,9 +81,9 @@ const InteractionsSheet = forwardRef<
           // @ts-ignore
           innerRef.current?.dismiss();
         },
-        setTab: (tab: "likes" | "views") => setActiveTab(tab),
+        setTab: (tab: "likes" | "views") => switchTab(tab),
       }) as any,
-    [],
+    [switchTab],
   );
 
   const innerRef = React.useRef<BottomSheetModal>(null);
@@ -89,6 +115,7 @@ const InteractionsSheet = forwardRef<
       enablePanDownToClose
       onDismiss={onDismiss}
       backgroundStyle={{ backgroundColor: "#FFF", borderRadius: 24 }}
+      handleIndicatorStyle={{ backgroundColor: "#D1D5DB", width: 40 }}
     >
       <View style={styles.container}>
         {/* Header & Tabs */}
@@ -96,18 +123,12 @@ const InteractionsSheet = forwardRef<
           <Text style={styles.title}>Activity Center</Text>
 
           <View style={styles.tabContainer}>
-            {/* Sliding Background */}
-            <MotiView
-              animate={{
-                translateX: activeTab === "likes" ? 0 : 155, // Approximate slide distance
-              }}
-              transition={{ type: "spring", damping: 15 }}
-              style={styles.slidingIndicator}
-            />
+            {/* Smooth Sliding Background */}
+            <Animated.View style={[styles.slidingIndicator, indicatorStyle]} />
 
             <TouchableOpacity
               style={styles.tab}
-              onPress={() => setActiveTab("likes")}
+              onPress={() => switchTab("likes")}
             >
               <Text
                 style={[
@@ -121,7 +142,7 @@ const InteractionsSheet = forwardRef<
 
             <TouchableOpacity
               style={styles.tab}
-              onPress={() => setActiveTab("views")}
+              onPress={() => switchTab("views")}
             >
               <Text
                 style={[
@@ -138,15 +159,17 @@ const InteractionsSheet = forwardRef<
         {/* List */}
         <BottomSheetScrollView contentContainerStyle={styles.listContent}>
           {data.map((profile, index) => (
-            <MotiView
-              key={profile.id}
-              from={{ opacity: 0, translateY: 10 }}
-              animate={{ opacity: 1, translateY: 0 }}
-              transition={{ delay: index * 100, type: "timing" }}
+            <Animated.View
+              key={`${activeTab}-${profile.id}`}
+              entering={FadeInDown.delay(index * 80)
+                .duration(300)
+                .springify()
+                .damping(18)}
             >
               <TouchableOpacity
                 style={styles.item}
                 onPress={() => onProfilePress?.(profile.id)}
+                activeOpacity={0.7}
               >
                 <Image
                   source={{ uri: profile.imageUri }}
@@ -165,11 +188,14 @@ const InteractionsSheet = forwardRef<
                   </Text>
                 </View>
 
-                <TouchableOpacity style={styles.actionBtn}>
+                <TouchableOpacity
+                  style={styles.actionBtn}
+                  onPress={() => onProfilePress?.(profile.id)}
+                >
                   <Text style={styles.actionBtnText}>View</Text>
                 </TouchableOpacity>
               </TouchableOpacity>
-            </MotiView>
+            </Animated.View>
           ))}
 
           {data.length === 0 && (
@@ -203,22 +229,22 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     backgroundColor: "#F5F5F4",
     borderRadius: 14,
-    padding: 4,
+    padding: TAB_CONTAINER_PADDING,
     position: "relative",
     height: 44,
   },
   slidingIndicator: {
     position: "absolute",
-    left: 4,
-    top: 4,
-    bottom: 4,
-    width: "48%",
+    left: TAB_CONTAINER_PADDING,
+    top: TAB_CONTAINER_PADDING,
+    bottom: TAB_CONTAINER_PADDING,
+    width: TAB_WIDTH,
     backgroundColor: "#FFF",
     borderRadius: 12,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
+    shadowOpacity: 0.08,
+    shadowRadius: 3,
     elevation: 2,
   },
   tab: {
@@ -228,8 +254,6 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     zIndex: 1,
   },
-  // removed activeTab style as Moti handles background
-  activeTab: {},
   tabText: {
     fontSize: 14,
     fontWeight: "600",

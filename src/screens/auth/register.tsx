@@ -4,7 +4,7 @@ import { Colors } from "@/constants/Colors";
 import * as authService from "@/services/authService";
 import { getPasswordError } from "@/utils/validators";
 import { useRouter } from "expo-router";
-import { Check, Lock, Mail } from "lucide-react-native";
+import { Check, Lock, Mail, Phone, User } from "lucide-react-native";
 import React, { useRef, useState } from "react";
 import {
   Alert,
@@ -25,48 +25,94 @@ const { width } = Dimensions.get("window");
 
 const RegisterPage = () => {
   const router = useRouter();
-  const [step, setStep] = useState("request");
-  const [identifier, setIdentifier] = useState("");
-  const [otp, setOtp] = useState(["", "", "", "", "", ""]);
+  const [step, setStep] = useState("register_form");
+
+  // Registration fields (matching backend RegisterRequestDto)
+  const [fullName, setFullName] = useState("");
+  const [email, setEmail] = useState("");
+  const [phoneNumber, setPhoneNumber] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+
+  // OTP verification
+  const [otp, setOtp] = useState(["", "", "", "", "", ""]);
+  const [userId, setUserId] = useState<number | null>(null);
+
   const [errors, setErrors] = useState<Record<string, string | undefined>>({});
   const [isLoading, setIsLoading] = useState(false);
 
   const otpInputs = useRef<(TextInput | null)[]>([]);
 
-  const handleSendOtp = async () => {
-    if (!identifier) {
-      Alert.alert("Error", "Please enter your email or mobile number.");
-      return;
-    }
+  /**
+   * Step 1: Register — POST /auth/register
+   * Sends fullName, email, phoneNumber, password to backend.
+   * Backend creates user + sends OTP. Returns { userId, message, isVerified }.
+   */
+  const handleRegister = async () => {
+    // Validate all fields
+    const newErrors: Record<string, string | undefined> = {};
+    if (!fullName.trim()) newErrors.fullName = "Full name is required";
+    if (!email.trim()) newErrors.email = "Email is required";
+    if (!phoneNumber.trim()) newErrors.phoneNumber = "Phone number is required";
+
+    const passwordError = getPasswordError(password);
+    if (passwordError) newErrors.password = passwordError;
+    if (password !== confirmPassword)
+      newErrors.confirmPassword = "Passwords don't match";
+
+    setErrors(newErrors);
+    if (Object.keys(newErrors).length > 0) return;
+
     setIsLoading(true);
     try {
-      await authService.sendOtp(identifier.trim());
-      Alert.alert("OTP Sent", "Check your backend console for the OTP code.");
-      setStep("verify");
+      const result = await authService.register({
+        fullName: fullName.trim(),
+        email: email.trim(),
+        phoneNumber: phoneNumber.trim(),
+        password,
+      });
+
+      setUserId(result.userId);
+
+      if (result.isVerified) {
+        // Already verified (unlikely but handle gracefully)
+        setStep("register_success");
+      } else {
+        // OTP sent, go to verification step
+        Alert.alert("OTP Sent", "Please check your email for the verification code.");
+        setStep("verify_otp");
+      }
     } catch (error: any) {
       const msg =
         error.response?.data?.message ||
         error.response?.data ||
         error.message ||
-        "Failed to send OTP";
+        "Registration failed";
       Alert.alert("Error", String(msg));
     } finally {
       setIsLoading(false);
     }
   };
 
+  /**
+   * Step 2: Verify OTP — POST /auth/verify-registration-otp
+   * Sends { userId, otp } to backend. Returns { userId, message, isVerified }.
+   */
   const handleVerifyOtp = async () => {
     const otpCode = otp.join("");
     if (otpCode.length !== 6) {
       Alert.alert("Error", "Please enter the complete 6-digit OTP.");
       return;
     }
+    if (!userId) {
+      Alert.alert("Error", "User ID not found. Please register again.");
+      return;
+    }
+
     setIsLoading(true);
     try {
-      await authService.verifyOtp(identifier.trim(), otpCode);
-      setStep("verified_success");
+      await authService.verifyRegistrationOtp(userId, otpCode);
+      setStep("register_success");
     } catch (error: any) {
       const msg =
         error.response?.data?.message ||
@@ -79,31 +125,20 @@ const RegisterPage = () => {
     }
   };
 
-  const handleRegister = async () => {
-    const passwordError = getPasswordError(password);
-    if (passwordError) {
-      setErrors({ password: passwordError });
-      return;
-    }
-    if (password !== confirmPassword) {
-      setErrors({ confirmPassword: "Passwords don't match" });
-      return;
-    }
-
+  /**
+   * Resend OTP — POST /otp/resend
+   */
+  const handleResendOtp = async () => {
     setIsLoading(true);
     try {
-      await authService.setPassword(
-        identifier.trim(),
-        password,
-        confirmPassword,
-      );
-      setStep("register_success");
+      await authService.resendOtp(email.trim());
+      Alert.alert("OTP Resent", "Please check your email for the new code.");
     } catch (error: any) {
       const msg =
         error.response?.data?.message ||
         error.response?.data ||
         error.message ||
-        "Failed to set password";
+        "Failed to resend OTP";
       Alert.alert("Error", String(msg));
     } finally {
       setIsLoading(false);
@@ -155,26 +190,80 @@ const RegisterPage = () => {
             {renderHeader()}
 
             <View style={styles.formSection}>
-              {step === "request" && (
+              {/* ===== STEP 1: REGISTRATION FORM ===== */}
+              {step === "register_form" && (
                 <>
                   <View style={styles.textCenter}>
                     <Text style={styles.title}>Create New Account</Text>
                     <Text style={styles.subtitle}>
-                      Enter your registered email or mobile number
+                      Fill in your details to get started
                     </Text>
                   </View>
+
                   <Input
-                    placeholder="Email / Mobile"
-                    value={identifier}
-                    onChangeText={setIdentifier}
-                    icon={<Mail size={20} color={Colors.subtext} />}
+                    placeholder="Full Name"
+                    value={fullName}
+                    onChangeText={(text) => {
+                      setFullName(text);
+                      setErrors({ ...errors, fullName: undefined });
+                    }}
+                    icon={<User size={20} color={Colors.subtext} />}
+                    error={errors.fullName}
                   />
+
+                  <Input
+                    placeholder="Email"
+                    value={email}
+                    onChangeText={(text) => {
+                      setEmail(text);
+                      setErrors({ ...errors, email: undefined });
+                    }}
+                    icon={<Mail size={20} color={Colors.subtext} />}
+                    error={errors.email}
+                  />
+
+                  <Input
+                    placeholder="Phone Number"
+                    value={phoneNumber}
+                    onChangeText={(text) => {
+                      setPhoneNumber(text);
+                      setErrors({ ...errors, phoneNumber: undefined });
+                    }}
+                    icon={<Phone size={20} color={Colors.subtext} />}
+                    error={errors.phoneNumber}
+                  />
+
+                  <Input
+                    placeholder="Password"
+                    value={password}
+                    onChangeText={(text) => {
+                      setPassword(text);
+                      setErrors({ ...errors, password: undefined });
+                    }}
+                    icon={<Lock size={20} color={Colors.subtext} />}
+                    isPassword
+                    error={errors.password}
+                  />
+
+                  <Input
+                    placeholder="Confirm Password"
+                    value={confirmPassword}
+                    onChangeText={(text) => {
+                      setConfirmPassword(text);
+                      setErrors({ ...errors, confirmPassword: undefined });
+                    }}
+                    icon={<Lock size={20} color={Colors.subtext} />}
+                    isPassword
+                    error={errors.confirmPassword}
+                  />
+
                   <Button
-                    title="Send OTP"
-                    onPress={handleSendOtp}
+                    title="Create Account"
+                    onPress={handleRegister}
                     isLoading={isLoading}
                     style={styles.actionBtn}
                   />
+
                   <View style={styles.footer}>
                     <Text style={styles.footerText}>
                       Already have an account?{" "}
@@ -188,13 +277,14 @@ const RegisterPage = () => {
                 </>
               )}
 
-              {step === "verify" && (
+              {/* ===== STEP 2: OTP VERIFICATION ===== */}
+              {step === "verify_otp" && (
                 <>
                   <View style={styles.textCenter}>
                     <Text style={styles.title}>Verify OTP</Text>
                     <Text style={styles.subtitle}>
                       We have sent a 6-digit code to{"\n"}
-                      {identifier}
+                      {email}
                     </Text>
                   </View>
                   <View style={styles.otpContainer}>
@@ -219,77 +309,16 @@ const RegisterPage = () => {
                     isLoading={isLoading}
                     style={styles.actionBtn}
                   />
-                  <TouchableOpacity style={styles.backLink}>
+                  <TouchableOpacity
+                    style={styles.backLink}
+                    onPress={handleResendOtp}
+                  >
                     <Text style={styles.backLinkText}>Resend Code</Text>
                   </TouchableOpacity>
                 </>
               )}
 
-              {step === "verified_success" && (
-                <>
-                  <View style={styles.successIconContainer}>
-                    <View style={styles.circleCheck}>
-                      <Check size={40} color="#FFF" strokeWidth={3} />
-                    </View>
-                  </View>
-                  <View style={styles.textCenter}>
-                    <Text style={[styles.title, styles.boldTitle]}>
-                      OTP Verified Successfully
-                    </Text>
-                    <Text style={styles.subtitle}>
-                      You can now set your account password
-                    </Text>
-                  </View>
-                  <Button
-                    title="Continue"
-                    onPress={() => setStep("register_password")}
-                    style={{ ...styles.actionBtn, width: "50%" }}
-                  />
-                </>
-              )}
-
-              {step === "register_password" && (
-                <>
-                  <View style={styles.textCenter}>
-                    <Text style={styles.title}>Create Password</Text>
-                  </View>
-                  <Input
-                    placeholder="Enter new password"
-                    value={password}
-                    onChangeText={(text) => {
-                      setPassword(text);
-                      setErrors({ ...errors, password: undefined });
-                    }}
-                    icon={<Lock size={20} color={Colors.subtext} />}
-                    isPassword
-                    error={errors.password}
-                  />
-                  <Input
-                    placeholder="Confirm new password"
-                    value={confirmPassword}
-                    onChangeText={(text) => {
-                      setConfirmPassword(text);
-                      setErrors({ ...errors, confirmPassword: undefined });
-                    }}
-                    icon={<Lock size={20} color={Colors.subtext} />}
-                    isPassword
-                    error={errors.confirmPassword}
-                  />
-                  <Button
-                    title="Create Account"
-                    onPress={handleRegister}
-                    isLoading={isLoading}
-                    style={styles.actionBtn}
-                  />
-                  <TouchableOpacity
-                    onPress={() => router.push("/login" as any)}
-                    style={styles.backLink}
-                  >
-                    <Text style={styles.backLinkText}>Back to login</Text>
-                  </TouchableOpacity>
-                </>
-              )}
-
+              {/* ===== STEP 3: SUCCESS ===== */}
               {step === "register_success" && (
                 <>
                   <View style={styles.successIconContainer}>
@@ -299,14 +328,14 @@ const RegisterPage = () => {
                   </View>
                   <View style={styles.textCenter}>
                     <Text style={[styles.title, styles.boldTitle]}>
-                      Account created successfully
+                      Account Created Successfully
                     </Text>
                     <Text style={styles.subtitle}>
-                      Log in now with your new password
+                      Your account has been verified. Log in now!
                     </Text>
                   </View>
                   <Button
-                    title="Back to login"
+                    title="Back to Login"
                     onPress={() => router.push("/login" as any)}
                     style={{ ...styles.actionBtn, width: "50%" }}
                   />
@@ -365,7 +394,7 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.primary,
   },
   backLink: { paddingVertical: 10, width: "100%", alignItems: "center" },
-  backLinkText: { color: "#757575", fontSize: 14, fontWeight: "500" },
+  backLinkText: { color: Colors.primary, fontSize: 14, fontWeight: "600" },
   otpContainer: {
     flexDirection: "row",
     justifyContent: "space-between",

@@ -75,7 +75,7 @@ export default function SideMenu({
   onClose: () => void;
 }) {
   const router = useRouter();
-  const { logout, userId } = useAuth();
+  const { logout, user } = useAuth();
   const [userName, setUserName] = useState("User");
   const [userImage, setUserImage] = useState(
     "https://randomuser.me/api/portraits/men/32.jpg",
@@ -93,7 +93,7 @@ export default function SideMenu({
     try {
       const profile = await profileService.getProfile();
       if (profile) {
-        setUserName(profile.fullName || "User");
+        setUserName(profile.fullName || "New User");
         if (profile.profilePhotoUrl) {
           setUserImage(profile.profilePhotoUrl);
         }

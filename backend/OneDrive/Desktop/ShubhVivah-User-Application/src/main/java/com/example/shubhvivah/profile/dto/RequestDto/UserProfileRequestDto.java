@@ -1,6 +1,7 @@
-package com.example.shubhvivah.profile.dto.ResponseDto;
+package com.example.shubhvivah.profile.dto.RequestDto;
 
 import com.example.shubhvivah.profile.enums.*;
+import jakarta.validation.constraints.*;
 import lombok.*;
 
 import java.math.BigDecimal;
@@ -11,30 +12,38 @@ import java.time.LocalDate;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class UserProfileResponseDto {
+public class UserProfileRequestDto {
 
-    private Long profileId;
+    @NotNull(message = "User ID is required")
     private Long userId;
-    private String fullName;
 
     /* -------- Basic Details -------- */
+    @NotNull(message = "Gender is required")
     private Gender gender;
+
+    @NotNull(message = "Date of birth is required")
+    @Past(message = "Date of birth must be in the past")
     private LocalDate dateOfBirth;
+
+    @DecimalMin(value = "100.0", message = "Height must be at least 100 cm")
+    @DecimalMax(value = "300.0", message = "Height must not exceed 300 cm")
     private BigDecimal height;
+
+    @DecimalMin(value = "30.0", message = "Weight must be at least 30 kg")
+    @DecimalMax(value = "300.0", message = "Weight must not exceed 300 kg")
     private BigDecimal weight;
 
     /* -------- Religious Details -------- */
     private Long religionId;
-    private String religion;
-
     private Long communityId;
-    private String community;
-
     private Long casteId;
-    private String caste;
-
     private Long gotraId;
-    private String gotra;
+
+    // String fields for frontend payload
+    private String religion;
+    private String community;
+    private String caste;
+    private String gothra;
 
     private ManglikStatus manglikStatus;
     private Nakshatra nakshatra;
@@ -69,12 +78,6 @@ public class UserProfileResponseDto {
     private String aboutMe;
     private ProfileCreatedBy profileCreatedBy;
     private String subCaste;
-
-    /* -------- Matchmaking Fields -------- */
     private String city;
-    private String profilePhotoUrl;
-    private Double latitude;
-    private Double longitude;
-    private java.util.List<String> photos;
 
 }

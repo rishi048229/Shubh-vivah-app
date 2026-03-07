@@ -30,68 +30,6 @@ import Animated, {
 } from "react-native-reanimated";
 import SideMenu from "@/components/SideMenu"; // Force refresh
 
-// --- Helper: Calculate profile completion ---
-function calcProfileCompletion(profile: any): {
-  percentage: number;
-  missingFields: string[];
-} {
-  const fields = [
-    { key: "fullName", label: "Full Name" },
-    { key: "gender", label: "Gender" },
-    { key: "dateOfBirth", label: "Date of Birth" },
-    { key: "height", label: "Height" },
-    { key: "weight", label: "Weight" },
-    { key: "city", label: "City" },
-    { key: "religion", label: "Religion" },
-    { key: "community", label: "Community" },
-    { key: "caste", label: "Caste" },
-    { key: "highestEducation", label: "Education" },
-    { key: "education", label: "Education" },
-    { key: "occupation", label: "Occupation" },
-    { key: "annualIncome", label: "Annual Income" },
-    { key: "familyType", label: "Family Type" },
-    { key: "aboutMe", label: "About Me" },
-    { key: "profilePhotoUrl", label: "Profile Photo" },
-    { key: "manglikStatus", label: "Manglik Status" },
-    { key: "rashi", label: "Rashi" },
-    { key: "nakshatra", label: "Nakshatra" },
-    { key: "eatingHabits", label: "Eating Habits" },
-  ];
-
-  if (!profile)
-    return {
-      percentage: 0,
-      missingFields: fields.map((f) => f.label),
-    };
-
-  let filled = 0;
-  const missing: string[] = [];
-
-  // Deduplicate education fields
-  const seen = new Set<string>();
-
-  fields.forEach((f) => {
-    if (seen.has(f.label)) return;
-
-    const val = profile[f.key];
-    if (
-      val !== null &&
-      val !== undefined &&
-      val !== "" &&
-      val !== 0
-    ) {
-      filled++;
-    } else {
-      missing.push(f.label);
-    }
-    seen.add(f.label);
-  });
-
-  const uniqueFieldCount = seen.size;
-  const pct = Math.round((filled / uniqueFieldCount) * 100);
-  return { percentage: pct, missingFields: missing };
-}
-
 export default function HomeScreen() {
   const router = useRouter();
 
@@ -149,7 +87,7 @@ export default function HomeScreen() {
 
       // Calculate profile completion
       const { percentage, missingFields: missing } =
-        calcProfileCompletion(profile);
+        profileService.calculateProfileCompletion(profile);
       setProfileCompletion(percentage);
       setMissingFields(missing);
 
@@ -314,7 +252,7 @@ export default function HomeScreen() {
       />
       <PreferencesSheet
         ref={preferencesRef}
-        onDismiss={() => {}}
+        onDismiss={() => { }}
         onApply={(filters) => {
           console.log("Applying filters:", filters);
           loadMatches(); // Reload matches with new filters (mock)
@@ -322,7 +260,7 @@ export default function HomeScreen() {
       />
       <InteractionsSheet
         ref={interactionsRef}
-        onDismiss={() => {}}
+        onDismiss={() => { }}
         onProfilePress={(id: string) => {
           interactionsRef.current?.dismiss();
           handleProfilePress({ id } as any);
@@ -330,7 +268,7 @@ export default function HomeScreen() {
       />
       <ShortlistedSheet
         ref={shortlistedRef}
-        onDismiss={() => {}}
+        onDismiss={() => { }}
         onProfilePress={(id: string) => {
           shortlistedRef.current?.dismiss();
           handleProfilePress({ id } as any);

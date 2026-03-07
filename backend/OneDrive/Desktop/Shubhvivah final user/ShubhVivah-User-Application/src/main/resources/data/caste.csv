@@ -1,0 +1,32 @@
+id,community_id,caste_name,active
+1,1,96 Kuli Maratha,TRUE
+2,1,Kunbi Maratha,TRUE
+3,1,Tirmal Maratha,TRUE
+4,2,Deshastha Brahmin,TRUE
+5,2,Chitpavan Brahmin,TRUE
+6,2,Karhade Brahmin,TRUE
+7,2,Saraswat Brahmin,TRUE
+8,3,Rajputana,TRUE
+9,3,Shekhawat,TRUE
+10,4,Ahir,TRUE
+11,4,Gawli,TRUE
+12,5,Srivastava,TRUE
+13,5,Saxena,TRUE
+14,6,Kunbi,TRUE
+15,7,Mahar,TRUE
+16,7,Matang,TRUE
+17,7,Chamar,TRUE
+18,8,Gond,TRUE
+19,8,Bhil,TRUE
+20,9,Kunbi OBC,TRUE
+21,9,Mali,TRUE
+22,9,Teli,TRUE
+23,9,Kumbhar,TRUE
+24,10,Lingayat Banajiga,TRUE
+25,10,Lingayat Panchamasali,TRUE
+26,11,Kshatriya,TRUE
+27,12,Sunni General,TRUE
+28,13,Shia General,TRUE
+29,14,Bohra Community,TRUE
+30,15,Syed Community,TRUE
+31,16,Roman Catholic,TRUE

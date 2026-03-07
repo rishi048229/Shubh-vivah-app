@@ -165,7 +165,7 @@ export default function NotificationsScreen() {
     connectWebSocket().then(() => {
       profileService.getProfile().then((p) => {
         if (p?.userId && mounted) {
-          subscribeToNotifications(p.userId, async (event) => {
+          subscribeToNotifications(p.userId, "notifications_screen", async (event) => {
             if (event.type === "NEW_MATCH_REQUEST") {
               console.log("Received real-time match request from:", event.fromUserId);
               // Fetch user details for the dynamic notification

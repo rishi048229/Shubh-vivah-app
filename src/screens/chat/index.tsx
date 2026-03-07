@@ -6,6 +6,7 @@ import { Colors } from "@/constants/Colors";
 import { ChatConversation, ChatUser } from "@/data/mockChatData";
 import api from "@/services/api";
 import { getCurrentUserId } from "@/services/chatService";
+import { getAvatarUrl } from "@/utils/avatar";
 import { StatusBar } from "expo-status-bar";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
@@ -88,9 +89,11 @@ export default function ChatScreen() {
         const chatUser: ChatUser = {
           id: otherUserId.toString(),
           name: userInfo.fullName || `User ${otherUserId}`,
-          avatar:
-            userInfo.profilePhotoUrl ||
-            `https://randomuser.me/api/portraits/lego/${(otherUserId % 9) + 1}.jpg`,
+          avatar: getAvatarUrl(
+            userInfo.profilePhotoUrl,
+            userInfo.gender,
+            userInfo.fullName || `User ${otherUserId}`
+          ),
           isVerified: true,
           isOnline: Math.random() > 0.5,
           matchPercentage: userInfo.matchScore || 80,

@@ -1,8 +1,10 @@
 import { Colors } from "@/constants/Colors";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { Image, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { getProfile } from "@/services/profileService";
+import { getAvatarUrl } from "@/utils/avatar";
 
 type HomeHeaderProps = {
   onOpenSidebar: () => void;
@@ -10,6 +12,31 @@ type HomeHeaderProps = {
 
 export default function HomeHeader({ onOpenSidebar }: HomeHeaderProps) {
   const router = useRouter();
+  const [userProfile, setUserProfile] = useState<{
+    fullName?: string;
+    profilePhotoUrl?: string;
+    gender?: string;
+    city?: string;
+  }>({});
+
+  useEffect(() => {
+    let mounted = true;
+    getProfile().then((p) => {
+      if (mounted && p) {
+        setUserProfile(p);
+      }
+    });
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  const avatarUri = getAvatarUrl(
+    userProfile.profilePhotoUrl,
+    userProfile.gender,
+    userProfile.fullName || "User"
+  );
+  const firstName = userProfile.fullName?.split(" ")[0] || "User";
 
   return (
     <View style={styles.container}>
@@ -18,16 +45,18 @@ export default function HomeHeader({ onOpenSidebar }: HomeHeaderProps) {
         <View style={styles.leftSection}>
           <TouchableOpacity onPress={onOpenSidebar} activeOpacity={0.8}>
             <Image
-              source={{ uri: "https://randomuser.me/api/portraits/men/32.jpg" }}
+              source={{ uri: avatarUri }}
               style={styles.avatar}
             />
           </TouchableOpacity>
           <View style={styles.greetingContainer}>
-            <Text style={styles.greetingText}>Rahul, 6 new matches</Text>
-            <View style={styles.locationRow}>
-              <Ionicons name="location-outline" size={14} color="#666" />
-              <Text style={styles.locationText}>Viman Nagar, Pune</Text>
-            </View>
+            <Text style={styles.greetingText}>{firstName}, find matches</Text>
+            {userProfile.city && (
+              <View style={styles.locationRow}>
+                <Ionicons name="location-outline" size={14} color="#666" />
+                <Text style={styles.locationText}>{userProfile.city}</Text>
+              </View>
+            )}
           </View>
         </View>
 

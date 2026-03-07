@@ -22,6 +22,8 @@ import { AuthProvider } from "@/context/AuthContext";
 import { ProfileFormProvider } from "@/context/ProfileFormContext";
 import { useColorScheme } from "@/hooks/use-color-scheme";
 
+import { GlobalNotificationToast } from "@/components/GlobalNotificationToast";
+
 export const unstable_settings = {
   initialRouteName: "(auth)/landing",
 };
@@ -390,6 +392,7 @@ export default function RootLayout() {
                     }}
                   />
                 </Stack>
+                <GlobalNotificationToast />
                 <StatusBar style="auto" />
               </ThemeProvider>
             </ProfileFormProvider>

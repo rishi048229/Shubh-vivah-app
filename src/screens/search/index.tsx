@@ -6,6 +6,7 @@ import { DEFAULT_FILTERS, FilterState } from "@/types/connections";
 import { Ionicons } from "@expo/vector-icons";
 import { BottomSheetModal } from "@gorhom/bottom-sheet";
 import { useRouter } from "expo-router";
+import { getAvatarUrl } from "@/utils/avatar";
 import React, { useRef, useState } from "react";
 import {
   FlatList,
@@ -72,26 +73,17 @@ export default function SearchScreen() {
           currentFilters.religions.length > 0
             ? currentFilters.religions[0]
             : undefined,
-        community:
-          currentFilters.communities.length > 0
-            ? currentFilters.communities[0]
-            : undefined,
-        maritalStatus:
-          currentFilters.maritalStatus.length > 0
-            ? currentFilters.maritalStatus[0]
-            : undefined,
       });
 
       const mapped: SearchResult[] = data.map((p) => ({
-        id: p.userId.toString(),
-        name: p.fullName,
+        id: p.id,
+        name: p.name,
         age: p.age.toString(),
-        location: p.city || "Unknown",
-        job: p.occupation || "Software Engineer",
-        matchPercentage: (p.matchScore || 75) + "%",
-        tags: [p.occupation || "Professional"],
-        img:
-          p.profilePhotoUrl || "https://randomuser.me/api/portraits/lego/1.jpg",
+        location: p.location || "Unknown",
+        job: p.profession || "Professional",
+        matchPercentage: p.matchPercentage + "%",
+        tags: [p.profession || "Professional"],
+        img: p.imageUri,
       }));
       setResults(mapped);
     } catch (e) {

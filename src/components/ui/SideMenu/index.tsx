@@ -2,7 +2,7 @@ import { Colors } from "@/constants/Colors";
 import { useAuth } from "@/context/AuthContext";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   Dimensions,
   Image,
@@ -23,6 +23,8 @@ import Animated, {
   SlideInLeft,
   SlideOutLeft,
 } from "react-native-reanimated";
+import { getProfile } from "@/services/profileService";
+import { getAvatarUrl } from "@/utils/avatar";
 
 if (
   Platform.OS === "android" &&
@@ -96,6 +98,33 @@ export default function SideMenu({
   const [expandedItem, setExpandedItem] = useState<string | null>(null);
   const router = useRouter();
   const { logout } = useAuth();
+  
+  const [userProfile, setUserProfile] = useState<{
+    fullName?: string;
+    profilePhotoUrl?: string;
+    gender?: string;
+  }>({});
+
+  useEffect(() => {
+    let mounted = true;
+    if (visible) {
+      getProfile().then((p) => {
+        if (mounted && p) {
+          setUserProfile(p);
+        }
+      });
+    }
+    return () => {
+      mounted = false;
+    };
+  }, [visible]);
+
+  const avatarUri = getAvatarUrl(
+    userProfile.profilePhotoUrl,
+    userProfile.gender,
+    userProfile.fullName || "User"
+  );
+  const fullName = userProfile.fullName || "User";
 
   const toggleItem = (label: string) => {
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
@@ -136,9 +165,7 @@ export default function SideMenu({
               <View style={styles.profileSection}>
                 <View style={styles.profileImageContainer}>
                   <Image
-                    source={{
-                      uri: "https://randomuser.me/api/portraits/men/32.jpg",
-                    }}
+                    source={{ uri: avatarUri }}
                     style={styles.profileImage}
                   />
                   <View style={styles.addIconBadge}>
@@ -146,7 +173,7 @@ export default function SideMenu({
                   </View>
                 </View>
 
-                <Text style={styles.profileName}>Rahul More</Text>
+                <Text style={styles.profileName}>{fullName}</Text>
 
                 <TouchableOpacity style={styles.editProfileButton}>
                   <Ionicons name="create-outline" size={16} color="#C21807" />

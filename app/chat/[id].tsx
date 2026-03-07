@@ -20,6 +20,7 @@ import {
   reportUser,
   viewFullProfile,
 } from "@/services/matchService";
+import { getAvatarUrl } from "@/utils/avatar";
 import { Ionicons } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useCallback, useEffect, useRef, useState } from "react";
@@ -105,10 +106,11 @@ export default function ChatDetailScreen() {
           if (mounted && profile) {
             setTargetUser({
               name: profile.fullName || paramName || `User ${id}`,
-              avatar:
-                profile.profilePhotoUrl ||
-                paramAvatar ||
-                "https://randomuser.me/api/portraits/lego/1.jpg",
+              avatar: getAvatarUrl(
+                profile.profilePhotoUrl || paramAvatar as string | undefined,
+                profile.gender,
+                profile.fullName || paramName as string | undefined
+              ),
               age: profile.age,
               city: profile.city,
               matchScore: profile.matchScore,
@@ -118,9 +120,11 @@ export default function ChatDetailScreen() {
           if (mounted) {
             setTargetUser({
               name: paramName || `User ${id}`,
-              avatar:
-                paramAvatar ||
-                "https://randomuser.me/api/portraits/lego/1.jpg",
+              avatar: getAvatarUrl(
+                paramAvatar as string | undefined,
+                null,
+                paramName as string | undefined
+              ),
             });
           }
         }
@@ -561,10 +565,49 @@ export default function ChatDetailScreen() {
       )}
 
       {/* Input */}
-      <KeyboardAvoidingView
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
-        keyboardVerticalOffset={Platform.OS === "ios" ? 90 : 0}
-      >
+      {Platform.OS === "ios" ? (
+        <KeyboardAvoidingView behavior="padding" keyboardVerticalOffset={90}>
+          <View style={styles.inputContainer}>
+            <TouchableOpacity
+              style={styles.attachButton}
+              onPress={() =>
+                Alert.alert("Coming Soon", "Image attachment will be available soon.")
+              }
+            >
+              <Ionicons name="add-circle-outline" size={26} color={Colors.maroon} />
+            </TouchableOpacity>
+
+            <TextInput
+              style={styles.input}
+              placeholder={
+                editingMessage ? "Edit your message..." : "Type a message..."
+              }
+              placeholderTextColor="#999"
+              value={message}
+              onChangeText={handleTextChange}
+              multiline
+              maxLength={1000}
+            />
+
+            {message.trim() ? (
+              <TouchableOpacity style={styles.sendButton} onPress={handleSend}>
+                <Ionicons
+                  name={editingMessage ? "checkmark" : "send"}
+                  size={20}
+                  color="#FFF"
+                />
+              </TouchableOpacity>
+            ) : (
+              <TouchableOpacity
+                style={[styles.sendButton, { backgroundColor: "#E5E5E5" }]}
+                disabled
+              >
+                <Ionicons name="send" size={20} color="#999" />
+              </TouchableOpacity>
+            )}
+          </View>
+        </KeyboardAvoidingView>
+      ) : (
         <View style={styles.inputContainer}>
           <TouchableOpacity
             style={styles.attachButton}
@@ -604,7 +647,7 @@ export default function ChatDetailScreen() {
             </TouchableOpacity>
           )}
         </View>
-      </KeyboardAvoidingView>
+      )}
     </View>
   );
 }

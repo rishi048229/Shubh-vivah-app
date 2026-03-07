@@ -1,5 +1,6 @@
 import api from "./api";
 import { MatchProfile as UIMatchProfile } from "@/types/connections";
+import { getAvatarUrl } from "@/utils/avatar";
 
 /**
  * Match profile DTO matching backend's MatchmakingDto / ExploreProfileDto
@@ -216,7 +217,7 @@ export async function searchProfiles(
       distance: p.distanceKm || 0,
       matchPercentage: p.matchScore || 0,
       matchReasons: p.religion ? [p.religion] : [],
-      imageUri: p.profilePhotoUrl || "https://randomuser.me/api/portraits/women/1.jpg",
+      imageUri: getAvatarUrl(p.profilePhotoUrl, p.gender, p.fullName),
       profession: p.occupation || "",
       education: p.education || "",
       religion: p.religion || "",

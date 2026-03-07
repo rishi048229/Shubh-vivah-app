@@ -223,11 +223,12 @@ export function subscribeToTyping(
  */
 export function subscribeToNotifications(
   userId: number,
+  componentId: string,
   onNotification: (event: any) => void
 ): void {
   if (!stompClient || !stompClient.connected) return;
 
-  const subKey = `notifications_${userId}`;
+  const subKey = `notifications_${userId}_${componentId}`;
   if (activeSubscriptions.has(subKey)) {
     activeSubscriptions.get(subKey).unsubscribe();
   }

@@ -29,6 +29,7 @@ import {
   ActivityIndicator,
   Alert,
   Image,
+  Keyboard,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -84,11 +85,28 @@ export default function ChatDetailScreen() {
   const [connected, setConnected] = useState(false);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [editingMessage, setEditingMessage] = useState<ChatMessage | null>(null);
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
 
   const scrollViewRef = useRef<ScrollView>(null);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const targetId = Number(id);
+
+  // Android keyboard listener (edgeToEdge breaks adjustResize)
+  useEffect(() => {
+    if (Platform.OS !== "android") return;
+    const showSub = Keyboard.addListener("keyboardDidShow", (e) => {
+      setKeyboardHeight(e.endCoordinates.height);
+      setTimeout(() => scrollViewRef.current?.scrollToEnd({ animated: true }), 100);
+    });
+    const hideSub = Keyboard.addListener("keyboardDidHide", () => {
+      setKeyboardHeight(0);
+    });
+    return () => {
+      showSub.remove();
+      hideSub.remove();
+    };
+  }, []);
 
   // --- Initialize: get user id, load profile, load history, connect WS ---
   useEffect(() => {
@@ -608,44 +626,46 @@ export default function ChatDetailScreen() {
           </View>
         </KeyboardAvoidingView>
       ) : (
-        <View style={styles.inputContainer}>
-          <TouchableOpacity
-            style={styles.attachButton}
-            onPress={() =>
-              Alert.alert("Coming Soon", "Image attachment will be available soon.")
-            }
-          >
-            <Ionicons name="add-circle-outline" size={26} color={Colors.maroon} />
-          </TouchableOpacity>
-
-          <TextInput
-            style={styles.input}
-            placeholder={
-              editingMessage ? "Edit your message..." : "Type a message..."
-            }
-            placeholderTextColor="#999"
-            value={message}
-            onChangeText={handleTextChange}
-            multiline
-            maxLength={1000}
-          />
-
-          {message.trim() ? (
-            <TouchableOpacity style={styles.sendButton} onPress={handleSend}>
-              <Ionicons
-                name={editingMessage ? "checkmark" : "send"}
-                size={20}
-                color="#FFF"
-              />
-            </TouchableOpacity>
-          ) : (
+        <View style={{ paddingBottom: keyboardHeight }}>
+          <View style={styles.inputContainer}>
             <TouchableOpacity
-              style={[styles.sendButton, { backgroundColor: "#E5E5E5" }]}
-              disabled
+              style={styles.attachButton}
+              onPress={() =>
+                Alert.alert("Coming Soon", "Image attachment will be available soon.")
+              }
             >
-              <Ionicons name="send" size={20} color="#999" />
+              <Ionicons name="add-circle-outline" size={26} color={Colors.maroon} />
             </TouchableOpacity>
-          )}
+
+            <TextInput
+              style={styles.input}
+              placeholder={
+                editingMessage ? "Edit your message..." : "Type a message..."
+              }
+              placeholderTextColor="#999"
+              value={message}
+              onChangeText={handleTextChange}
+              multiline
+              maxLength={1000}
+            />
+
+            {message.trim() ? (
+              <TouchableOpacity style={styles.sendButton} onPress={handleSend}>
+                <Ionicons
+                  name={editingMessage ? "checkmark" : "send"}
+                  size={20}
+                  color="#FFF"
+                />
+              </TouchableOpacity>
+            ) : (
+              <TouchableOpacity
+                style={[styles.sendButton, { backgroundColor: "#E5E5E5" }]}
+                disabled
+              >
+                <Ionicons name="send" size={20} color="#999" />
+              </TouchableOpacity>
+            )}
+          </View>
         </View>
       )}
     </View>

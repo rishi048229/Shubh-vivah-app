@@ -2,10 +2,13 @@ import React, { useEffect, useState } from "react";
 import { View, Text, StyleSheet, TouchableOpacity, Image, Platform } from "react-native";
 import Animated, { FadeInUp, FadeOutUp } from "react-native-reanimated";
 import { useRouter } from "expo-router";
-import { getCurrentUserId, subscribeToNotifications } from "@/services/chatService";
+import {
+  connectWebSocket,
+  getCurrentUserId,
+  subscribeToNotifications,
+} from "@/services/chatService";
 import { getAvatarUrl } from "@/utils/avatar";
 import { viewFullProfile } from "@/services/matchService";
-import { Colors } from "@/constants/Colors";
 
 interface ToastData {
   id: string;
@@ -21,49 +24,62 @@ export function GlobalNotificationToast() {
 
   useEffect(() => {
     let mounted = true;
+    let retryTimer: ReturnType<typeof setTimeout>;
 
     const init = async () => {
-      const uid = await getCurrentUserId();
-      if (!uid) return;
+      try {
+        const uid = await getCurrentUserId();
+        if (!uid || !mounted) return;
 
-      subscribeToNotifications(uid, "global_toast", async (event) => {
-        if (!mounted) return;
+        // *** KEY FIX: ensure STOMP is connected before subscribing ***
+        await connectWebSocket();
 
-        if (event.type === "NEW_MESSAGE") {
-          let reqName = "Someone";
-          let reqImage: string | undefined;
-          let reqGender: string | undefined;
+        subscribeToNotifications(uid, "global_toast", async (event) => {
+          if (!mounted) return;
 
-          try {
-            const fromProfile = await viewFullProfile(event.senderId);
-            if (fromProfile) {
-              reqName = fromProfile.fullName || "Someone";
-              reqImage = fromProfile.profilePhotoUrl;
-              reqGender = fromProfile.gender;
-            }
-          } catch (e) {}
+          if (event.type === "NEW_MESSAGE") {
+            let reqName = "Someone";
+            let reqImage: string | undefined;
+            let reqGender: string | undefined;
 
-          const avatar = getAvatarUrl(reqImage, reqGender, reqName);
+            try {
+              const fromProfile = await viewFullProfile(event.senderId);
+              if (fromProfile) {
+                reqName = fromProfile.fullName || "Someone";
+                reqImage = fromProfile.profilePhotoUrl;
+                reqGender = fromProfile.gender;
+              }
+            } catch (e) {}
 
-          setToast({
-            id: Date.now().toString(),
-            title: reqName,
-            message: event.content || "Sent you a message",
-            avatar,
-            senderId: event.senderId,
-          });
+            const avatar = getAvatarUrl(reqImage, reqGender, reqName);
 
-          // Auto-hide after 4 seconds
-          setTimeout(() => {
-            if (mounted) setToast(null);
-          }, 4000);
-        }
-      });
+            setToast({
+              id: Date.now().toString(),
+              title: reqName,
+              message: event.content || "Sent you a message",
+              avatar,
+              senderId: event.senderId,
+            });
+
+            // Auto-hide after 4 seconds
+            setTimeout(() => {
+              if (mounted) setToast(null);
+            }, 4000);
+          }
+        });
+      } catch (err) {
+        console.warn("[GlobalToast] STOMP connect failed, retrying in 5s:", err);
+        // Retry after 5 seconds if connection fails
+        retryTimer = setTimeout(() => {
+          if (mounted) init();
+        }, 5000);
+      }
     };
 
     init();
     return () => {
       mounted = false;
+      if (retryTimer) clearTimeout(retryTimer);
     };
   }, []);
 
@@ -104,6 +120,7 @@ const styles = StyleSheet.create({
     left: 16,
     right: 16,
     zIndex: 9999,
+    elevation: 9999,
   },
   toastCard: {
     backgroundColor: "#FFF",

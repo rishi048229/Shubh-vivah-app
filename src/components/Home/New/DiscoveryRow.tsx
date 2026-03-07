@@ -31,16 +31,24 @@ export default function DiscoveryRow({
         </TouchableOpacity>
       </View>
 
-      <FlatList
-        horizontal
-        data={profiles}
-        renderItem={({ item }) => (
-          <QuickViewCard profile={item} onPress={() => onProfilePress(item)} />
-        )}
-        keyExtractor={(item) => item.id}
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.listContent}
-      />
+      {profiles.length === 0 ? (
+        <View style={styles.emptyContainer}>
+          <Text style={styles.emptyText}>
+            As our user base grows, we will show up our users accordingly.
+          </Text>
+        </View>
+      ) : (
+        <FlatList
+          horizontal
+          data={profiles}
+          renderItem={({ item }) => (
+            <QuickViewCard profile={item} onPress={() => onProfilePress(item)} />
+          )}
+          keyExtractor={(item) => item.id}
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.listContent}
+        />
+      )}
     </View>
   );
 }
@@ -68,5 +76,20 @@ const styles = StyleSheet.create({
   },
   listContent: {
     paddingHorizontal: 20,
+  },
+  emptyContainer: {
+    paddingVertical: 20,
+    paddingHorizontal: 30,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#F8F8F8",
+    marginHorizontal: 20,
+    borderRadius: 12,
+  },
+  emptyText: {
+    fontSize: 14,
+    color: "#666",
+    textAlign: "center",
+    lineHeight: 20,
   },
 });

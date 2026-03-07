@@ -96,10 +96,17 @@ export default function NearbyRadarSection({
           <Ionicons name="navigate" size={16} color="#FFF" />
         </View>
 
-        {/* Profiles "Popping" on Radar */}
-        {profiles.slice(0, 5).map((profile, index) => (
-          <RadarBlip key={profile.id} profile={profile} index={index} />
-        ))}
+        {/* Empty State / Profiles "Popping" on Radar */}
+        {profiles.length === 0 ? (
+          <View style={styles.emptyOverlay}>
+            <Text style={styles.emptyTitle}>Searching...</Text>
+            <Text style={styles.emptyText}>As our user base grows, we will show up our users accordingly.</Text>
+          </View>
+        ) : (
+          profiles.slice(0, 5).map((profile, index) => (
+            <RadarBlip key={profile.id} profile={profile} index={index} />
+          ))
+        )}
       </View>
 
       <TouchableOpacity style={styles.ctaButton} onPress={onExplorePress}>
@@ -306,5 +313,29 @@ const styles = StyleSheet.create({
     color: "#FFF",
     fontSize: 14,
     fontWeight: "bold",
+  },
+  emptyOverlay: {
+    position: "absolute",
+    bottom: 40,
+    backgroundColor: "rgba(255, 255, 255, 0.9)",
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 20,
+    alignItems: "center",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  emptyTitle: {
+    fontSize: 14,
+    fontWeight: "bold",
+    color: Colors.maroon,
+    marginBottom: 2,
+  },
+  emptyText: {
+    fontSize: 12,
+    color: "#666",
   },
 });

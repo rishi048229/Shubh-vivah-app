@@ -42,6 +42,12 @@ public class SettingsServiceImpl implements SettingsService {
         s.setMinAge(dto.getMinAge());
         s.setMaxAge(dto.getMaxAge());
         s.setMaxDistanceKm(dto.getMaxDistanceKm());
+        s.setMaritalStatus(dto.getMaritalStatus());
+        s.setReligions(dto.getReligions());
+        s.setCommunities(dto.getCommunities());
+        s.setProfessions(dto.getProfessions());
+        s.setEducationLevels(dto.getEducationLevels());
+        s.setLifestylePreferences(dto.getLifestylePreferences());
 
         /* Notifications */
         s.setNotifyNewMessage(dto.isNotifyNewMessage());

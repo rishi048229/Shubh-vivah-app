@@ -31,53 +31,59 @@ import Animated, {
 
 const { width } = Dimensions.get("window");
 
-// --- State-grouped profile data ---
-const STATES_DATA = [
-  {
-    state: "Maharashtra",
-    profiles: [
-      { id: "1", name: "Kavya Yadav", age: "24", location: "Mumbai", image: "https://randomuser.me/api/portraits/women/65.jpg", verified: true },
-      { id: "2", name: "Sneha Kulkarni", age: "23", location: "Pune", image: "https://randomuser.me/api/portraits/women/32.jpg", verified: true },
-      { id: "3", name: "Riya Joshi", age: "22", location: "Nagpur", image: "https://randomuser.me/api/portraits/women/44.jpg", verified: false },
-    ],
+import { getNearbyMatches } from "@/services/matchService";
+import { MatchProfile } from "@/types/connections";
+
+// --- Empty State Component ---
+function EmptyState() {
+  const router = useRouter();
+  return (
+    <View style={emptyStyles.container}>
+      <Ionicons name="location-outline" size={60} color={Colors.maroon} />
+      <Text style={emptyStyles.title}>No Matches Nearby</Text>
+      <Text style={emptyStyles.subtitle}>
+        We couldn't currently find any compatible profiles in your immediate area. Adjust your preferences or complete your profile to improve matches!
+      </Text>
+      <TouchableOpacity style={emptyStyles.ctaButton} onPress={() => router.push("/complete-profile" as any)}>
+        <Text style={emptyStyles.ctaText}>Complete Your Profile</Text>
+      </TouchableOpacity>
+    </View>
+  );
+}
+
+const emptyStyles = StyleSheet.create({
+  container: {
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 60,
+    paddingHorizontal: 30,
   },
-  {
-    state: "Karnataka",
-    profiles: [
-      { id: "4", name: "Myra Reddy", age: "21", location: "Bangalore", image: "https://randomuser.me/api/portraits/women/12.jpg", verified: true },
-      { id: "5", name: "Ananya Rao", age: "25", location: "Mysore", image: "https://randomuser.me/api/portraits/women/10.jpg", verified: true },
-    ],
+  title: {
+    fontSize: 20,
+    fontWeight: "bold",
+    color: "#2D1406",
+    marginTop: 16,
+    marginBottom: 8,
   },
-  {
-    state: "Delhi NCR",
-    profiles: [
-      { id: "6", name: "Priya Sharma", age: "24", location: "New Delhi", image: "https://randomuser.me/api/portraits/women/55.jpg", verified: true },
-      { id: "7", name: "Neha Gupta", age: "22", location: "Gurgaon", image: "https://randomuser.me/api/portraits/women/22.jpg", verified: false },
-      { id: "8", name: "Sakshi Verma", age: "23", location: "Noida", image: "https://randomuser.me/api/portraits/women/33.jpg", verified: true },
-    ],
+  subtitle: {
+    fontSize: 14,
+    color: "#666",
+    textAlign: "center",
+    marginBottom: 24,
+    lineHeight: 20,
   },
-  {
-    state: "Tamil Nadu",
-    profiles: [
-      { id: "9", name: "Divya Subramanian", age: "24", location: "Chennai", image: "https://randomuser.me/api/portraits/women/40.jpg", verified: true },
-      { id: "10", name: "Lakshmi Iyer", age: "26", location: "Coimbatore", image: "https://randomuser.me/api/portraits/women/48.jpg", verified: true },
-    ],
+  ctaButton: {
+    backgroundColor: Colors.maroon,
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 8,
   },
-  {
-    state: "Gujarat",
-    profiles: [
-      { id: "11", name: "Meera Patel", age: "23", location: "Ahmedabad", image: "https://randomuser.me/api/portraits/women/16.jpg", verified: true },
-      { id: "12", name: "Kruti Shah", age: "24", location: "Surat", image: "https://randomuser.me/api/portraits/women/28.jpg", verified: false },
-    ],
+  ctaText: {
+    color: "#FFF",
+    fontWeight: "bold",
+    fontSize: 15,
   },
-  {
-    state: "Rajasthan",
-    profiles: [
-      { id: "13", name: "Pooja Rathore", age: "22", location: "Jaipur", image: "https://randomuser.me/api/portraits/women/58.jpg", verified: true },
-      { id: "14", name: "Nisha Shekhawat", age: "25", location: "Udaipur", image: "https://randomuser.me/api/portraits/women/62.jpg", verified: true },
-    ],
-  },
-];
+});
 
 // --- Radar Map Component ---
 function MapRadar() {
@@ -239,14 +245,17 @@ function BlinkingDot({ x, y, delay, index }: { x: number; y: number; delay: numb
 }
 
 // --- Profile Card ---
-type ProfileType = (typeof STATES_DATA)[0]["profiles"][0];
+type ProfileGroup = {
+  state: string;
+  profiles: MatchProfile[];
+};
 
 function NearbyProfileCard({
   item,
   index,
   onPress,
 }: {
-  item: ProfileType;
+  item: MatchProfile;
   index: number;
   onPress: () => void;
 }) {
@@ -258,7 +267,7 @@ function NearbyProfileCard({
         .damping(15)}
     >
       <TouchableOpacity style={cardStyles.card} onPress={onPress} activeOpacity={0.85}>
-        <Image source={{ uri: item.image }} style={cardStyles.image} />
+        <Image source={{ uri: item.imageUri }} style={cardStyles.image} />
 
         {/* Gradient overlay */}
         <LinearGradient
@@ -297,6 +306,57 @@ function NearbyProfileCard({
 // --- Main Screen ---
 export default function NearbyScreen() {
   const router = useRouter();
+  const [groupedProfiles, setGroupedProfiles] = React.useState<ProfileGroup[]>([]);
+  const [loading, setLoading] = React.useState(true);
+
+  useEffect(() => {
+    fetchNearby();
+  }, []);
+
+  const fetchNearby = async () => {
+    setLoading(true);
+    try {
+      const data = await getNearbyMatches();
+      // Group by city dynamically
+      const groups: Record<string, MatchProfile[]> = {};
+      data.forEach((p: any) => {
+        // Just mocking backend DTO to MatchProfile properties here
+        const locationStr = p.city || "Unknown";
+        if (!groups[locationStr]) groups[locationStr] = [];
+        
+        // MatchProfile wrapper mapping
+        groups[locationStr].push({
+          id: String(p.userId),
+          name: p.fullName,
+          age: p.age,
+          location: locationStr,
+          city: locationStr,
+          state: "Unknown", // Can be removed if not needed 
+          distance: p.distanceKm || 0,
+          matchPercentage: p.matchScore || 0,
+          matchReasons: [],
+          imageUri: p.profilePhotoUrl || "https://randomuser.me/api/portraits/women/1.jpg",
+          profession: p.occupation || "",
+          education: p.education || "",
+          religion: p.religion || "",
+          caste: p.caste || "",
+          verified: true,
+          onlineStatus: "recently_active",
+          maritalStatus: "Never Married",
+        });
+      });
+
+      const formatted = Object.keys(groups).map((key) => ({
+        state: key,
+        profiles: groups[key].slice(0, 10), // Take max 10 per group
+      }));
+      setGroupedProfiles(formatted);
+    } catch (e) {
+      console.log("Error fetching nearby matches:", e);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleViewProfile = (id: string) => {
     router.push(`/profile/${id}`);
@@ -332,39 +392,47 @@ export default function NearbyScreen() {
           </Animated.View>
 
           {/* State Sections */}
-          {STATES_DATA.map((stateData, stateIndex) => (
-            <Animated.View
-              key={stateData.state}
-              entering={FadeInDown.delay(300 + stateIndex * 150)
-                .duration(400)
-                .springify()}
-            >
-              <View style={styles.stateHeader}>
-                <View style={styles.stateLeft}>
-                  <Ionicons name="location-sharp" size={16} color={Colors.maroon} />
-                  <Text style={styles.stateName}>{stateData.state}</Text>
-                </View>
-                <Text style={styles.profileCount}>
-                  {stateData.profiles.length} profiles
-                </Text>
-              </View>
-
-              <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                contentContainerStyle={styles.horizontalList}
+          {loading ? (
+            <View style={{ paddingTop: 40, alignItems: "center" }}>
+              <Text style={{ color: "#666" }}>Locating matches near you...</Text>
+            </View>
+          ) : groupedProfiles.length === 0 ? (
+            <EmptyState />
+          ) : (
+            groupedProfiles.map((stateData, stateIndex) => (
+              <Animated.View
+                key={stateData.state}
+                entering={FadeInDown.delay(300 + stateIndex * 150)
+                  .duration(400)
+                  .springify()}
               >
-                {stateData.profiles.map((profile, pIndex) => (
-                  <NearbyProfileCard
-                    key={profile.id}
-                    item={profile}
-                    index={pIndex}
-                    onPress={() => handleViewProfile(profile.id)}
-                  />
-                ))}
-              </ScrollView>
-            </Animated.View>
-          ))}
+                <View style={styles.stateHeader}>
+                  <View style={styles.stateLeft}>
+                    <Ionicons name="location-sharp" size={16} color={Colors.maroon} />
+                    <Text style={styles.stateName}>{stateData.state}</Text>
+                  </View>
+                  <Text style={styles.profileCount}>
+                    {stateData.profiles.length} profiles
+                  </Text>
+                </View>
+
+                <ScrollView
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  contentContainerStyle={styles.horizontalList}
+                >
+                  {stateData.profiles.map((profile, pIndex) => (
+                    <NearbyProfileCard
+                      key={profile.id}
+                      item={profile}
+                      index={pIndex}
+                      onPress={() => handleViewProfile(profile.id)}
+                    />
+                  ))}
+                </ScrollView>
+              </Animated.View>
+            ))
+          )}
 
           {/* Bottom spacer */}
           <View style={{ height: 100 }} />

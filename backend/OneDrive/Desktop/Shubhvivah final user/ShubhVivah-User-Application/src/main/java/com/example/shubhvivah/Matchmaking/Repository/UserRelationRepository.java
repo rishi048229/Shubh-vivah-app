@@ -50,6 +50,10 @@ public interface UserRelationRepository
                         Long userId,
                         RelationType type);
 
+        List<UserRelation> findByToUserIdAndType(
+                        Long toUserId,
+                        RelationType type);
+
         @Modifying
         @Transactional
         @Query("DELETE FROM UserRelation r " +

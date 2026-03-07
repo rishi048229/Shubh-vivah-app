@@ -1,11 +1,14 @@
 import { Ionicons } from "@expo/vector-icons";
 import React from "react";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { MotiView } from "moti";
 
 export default function KundaliCard() {
   return (
     <View style={styles.container}>
-      {/* Header */}
+      {/* Disabled Content */}
+      <View style={styles.content} pointerEvents="none">
+        {/* Header */}
       <View style={styles.header}>
         <View style={styles.iconCircle}>
           <Ionicons name="planet" size={24} color="#5D4037" />
@@ -67,6 +70,27 @@ export default function KundaliCard() {
         <TouchableOpacity style={styles.checkNowButton}>
           <Text style={styles.checkNowText}>Check Now</Text>
         </TouchableOpacity>
+      </View>
+      </View>
+
+      {/* Coming Soon Overlay */}
+      <View style={styles.overlay}>
+        <MotiView
+          from={{ opacity: 0.7, translateY: -5 }}
+          animate={{ opacity: 1, translateY: 0 }}
+          transition={{
+            type: "timing",
+            duration: 1500,
+            loop: true,
+          }}
+          style={styles.lockContainer}
+        >
+          <View style={styles.lockCircle}>
+            <Ionicons name="lock-closed" size={24} color="#FFF" />
+          </View>
+          <Text style={styles.comingSoonTitle}>Premium Feature</Text>
+          <Text style={styles.comingSoonText}>Coming Soon</Text>
+        </MotiView>
       </View>
     </View>
   );
@@ -227,5 +251,49 @@ const styles = StyleSheet.create({
     color: "#4E342E",
     fontWeight: "bold",
     fontSize: 12,
+  },
+  content: {
+    opacity: 0.4,
+  },
+  overlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "rgba(255, 251, 234, 0.6)",
+    borderRadius: 24,
+    justifyContent: "center",
+    alignItems: "center",
+    zIndex: 10,
+  },
+  lockContainer: {
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "rgba(255, 255, 255, 0.95)",
+    paddingHorizontal: 24,
+    paddingVertical: 20,
+    borderRadius: 20,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 5,
+  },
+  lockCircle: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: "#2D1406",
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: 12,
+  },
+  comingSoonTitle: {
+    fontSize: 18,
+    fontWeight: "bold",
+    color: "#2D1406",
+    marginBottom: 4,
+  },
+  comingSoonText: {
+    fontSize: 14,
+    color: "#666",
+    fontWeight: "500",
   },
 });

@@ -13,6 +13,7 @@ import {
   RefreshControl,
   StyleSheet,
   Text,
+  TextInput,
   View,
 } from "react-native";
 import { FlatList } from "react-native-gesture-handler";
@@ -23,6 +24,8 @@ export default function ChatScreen() {
   const [chats, setChats] = useState<ChatConversation[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [showSearch, setShowSearch] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
 
   useEffect(() => {
     loadChatList();
@@ -126,17 +129,28 @@ export default function ChatScreen() {
   }, [chats]);
 
   const filteredChats = useMemo(() => {
-    if (selectedFilter === "All") return chats;
+    let result = chats;
+    
+    // 1. Text Search Filter
+    if (searchQuery.trim().length > 0) {
+      result = result.filter((c) => 
+        c.user.name.toLowerCase().includes(searchQuery.toLowerCase())
+      );
+    }
+
+    // 2. Tab Filter
+    if (selectedFilter === "All") return result;
     if (selectedFilter === "Unread")
-      return chats.filter((c) => c.unreadCount > 0);
+      return result.filter((c) => c.unreadCount > 0);
     if (selectedFilter === "Mutual Interest")
-      return chats.filter((c) => c.tags.includes("Mutual Interest"));
+      return result.filter((c) => c.tags.includes("Mutual Interest"));
     if (selectedFilter === "Verified")
-      return chats.filter((c) => c.user.isVerified);
+      return result.filter((c) => c.user.isVerified);
     if (selectedFilter === "New")
-      return chats.filter((c) => c.tags.includes("New"));
-    return chats;
-  }, [selectedFilter, chats]);
+      return result.filter((c) => c.tags.includes("New"));
+      
+    return result;
+  }, [selectedFilter, chats, searchQuery]);
 
   if (loading) {
     return (
@@ -153,7 +167,20 @@ export default function ChatScreen() {
     <SafeAreaView style={styles.safeArea}>
       <StatusBar style="dark" backgroundColor={Colors.ivory} />
 
-      <ChatHeader />
+      <ChatHeader onSearchPress={() => setShowSearch(!showSearch)} />
+
+      {showSearch && (
+        <View style={styles.searchBarContainer}>
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Search connections..."
+            placeholderTextColor="#999"
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+            autoFocus
+          />
+        </View>
+      )}
 
       <View style={styles.container}>
         <FilterTabs
@@ -161,11 +188,15 @@ export default function ChatScreen() {
           onSelectFilter={setSelectedFilter}
         />
 
-        {chats.length === 0 ? (
+        {filteredChats.length === 0 ? (
           <View style={styles.emptyState}>
-            <Text style={styles.emptyTitle}>No conversations yet</Text>
+            <Text style={styles.emptyTitle}>
+              {searchQuery ? "No matches found" : "No conversations yet"}
+            </Text>
             <Text style={styles.emptyText}>
-              Connect with people from the Connections tab to start chatting!
+              {searchQuery
+                ? "Try a different name"
+                : "Connect with people from the Connections tab to start chatting!"}
             </Text>
           </View>
         ) : (
@@ -243,5 +274,20 @@ const styles = StyleSheet.create({
     color: "#9CA3AF",
     textAlign: "center",
     lineHeight: 20,
+  },
+  searchBarContainer: {
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    backgroundColor: Colors.ivory,
+  },
+  searchInput: {
+    backgroundColor: "#FFF",
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
+    fontSize: 16,
+    color: "#374151",
   },
 });

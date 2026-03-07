@@ -25,6 +25,8 @@ import {
   View,
 } from "react-native";
 
+import { getSettings } from "@/services/settingsService";
+
 export default function ConnectionsScreen() {
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState("");
@@ -41,7 +43,20 @@ export default function ConnectionsScreen() {
 
   // Initial Fetch
   useEffect(() => {
-    fetchMatches();
+    const initialize = async () => {
+      try {
+        const settings = await getSettings();
+        setFilters((prev) => ({
+          ...prev,
+          ageRange: [settings.minAge || 18, settings.maxAge || 40],
+          religions: settings.religions && settings.religions.length > 0 ? [settings.religions[0]] : [],
+        }));
+      } catch (err) {
+        console.error("Failed to load settings on connections feed", err);
+      }
+      fetchMatches();
+    };
+    initialize();
   }, []);
 
   const fetchMatches = async () => {
@@ -58,29 +73,7 @@ export default function ConnectionsScreen() {
           filters.religions.length > 0 ? filters.religions[0] : undefined,
       });
 
-      // Map API response to UI MatchProfile
-      const mappedMatches: MatchProfile[] = data.map((p) => ({
-        id: p.userId.toString(),
-        name: p.fullName,
-        age: p.age,
-        location: p.city || "Unknown",
-        city: p.city || "Unknown",
-        state: "Unknown",
-        distance: p.distanceKm || 0,
-        matchPercentage: p.matchScore || 75,
-        matchReasons: [p.religion, p.caste].filter(Boolean) as string[],
-        imageUri:
-          p.profilePhotoUrl || "https://randomuser.me/api/portraits/lego/1.jpg",
-        profession: p.occupation || "Not Specified",
-        education: p.education || "Not Specified",
-        religion: p.religion || "Hindu",
-        caste: p.caste || "",
-        verified: true,
-        onlineStatus: "recently_active",
-        maritalStatus: p.maritalStatus || "Never Married",
-      }));
-
-      setMatches(mappedMatches);
+      setMatches(data);
     } catch (error) {
       console.log("Error fetching matches:", error);
     } finally {
@@ -137,11 +130,36 @@ export default function ConnectionsScreen() {
     </View>
   );
 
-  const renderFooter = () => (
-    <View style={styles.footerContainer}>
-      <ExploreAllButton />
-    </View>
-  );
+  const renderFooter = () => {
+    if (loading || matches.length === 0) return null;
+    return (
+      <View style={styles.footerContainer}>
+        <ExploreAllButton />
+      </View>
+    );
+  };
+
+  const renderEmptyState = () => {
+    if (loading) {
+      return (
+        <View style={styles.emptyContainer}>
+          <Text style={{ color: "#666" }}>Looking for matches...</Text>
+        </View>
+      );
+    }
+    return (
+      <View style={styles.emptyContainer}>
+        <Ionicons name="search-outline" size={60} color={Colors.maroon} />
+        <Text style={styles.emptyTitle}>No Matches Found</Text>
+        <Text style={styles.emptySubtitle}>
+          We couldn't find anyone matching your current preferences. Try adjusting your filters or complete your profile to improve matches!
+        </Text>
+        <TouchableOpacity style={styles.emptyButton} onPress={() => router.push("/complete-profile" as any)}>
+          <Text style={styles.emptyButtonText}>Complete Your Profile</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  };
 
   const renderItem = ({
     item,
@@ -197,6 +215,7 @@ export default function ConnectionsScreen() {
         showsVerticalScrollIndicator={false}
         ListHeaderComponent={renderHeader}
         ListFooterComponent={renderFooter}
+        ListEmptyComponent={renderEmptyState}
         onEndReached={() => {
           // Infinite scroll placeholder
           console.log("End reached - fetch more");
@@ -296,5 +315,36 @@ const styles = StyleSheet.create({
   },
   footerContainer: {
     alignItems: "center",
+  },
+  emptyContainer: {
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 60,
+    paddingHorizontal: 30,
+  },
+  emptyTitle: {
+    fontSize: 20,
+    fontWeight: "bold",
+    color: "#2D1406",
+    marginTop: 16,
+    marginBottom: 8,
+  },
+  emptySubtitle: {
+    fontSize: 14,
+    color: "#666",
+    textAlign: "center",
+    marginBottom: 24,
+    lineHeight: 20,
+  },
+  emptyButton: {
+    backgroundColor: Colors.maroon,
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 8,
+  },
+  emptyButtonText: {
+    color: "#FFF",
+    fontWeight: "bold",
+    fontSize: 15,
   },
 });

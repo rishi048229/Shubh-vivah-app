@@ -16,6 +16,7 @@ import com.example.shubhvivah.Matchmaking.Repository.UserRelationRepository;
 import com.example.shubhvivah.Matchmaking.Dto.MatchmakingDto;
 import com.example.shubhvivah.Matchmaking.enums.RelationType;
 
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import jakarta.transaction.Transactional;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
@@ -30,6 +31,7 @@ public class MatchmakingService {
     private final UserRepository userRepo;
     private final UserRelationRepository relationRepository;
     private final ExploreHistoryRepository historyRepository;
+    private final SimpMessagingTemplate messagingTemplate;
 
     /* ================= DISTANCE ================= */
 
@@ -122,18 +124,120 @@ public class MatchmakingService {
 
     /* ================= SEARCH ================= */
 
-    public List<MatchmakingDto> searchUsersByName(String name) {
+    public List<MatchmakingDto> searchUsers(String query, Integer minAge, Integer maxAge, String religion,
+            String city) {
         Long currentUserId = getCurrentUserId();
-        List<UserProfile> matches = profileRepo.searchByName(name);
+        List<UserProfile> matches = (query == null || query.trim().isEmpty())
+                ? profileRepo.findAll()
+                : profileRepo.searchGlobal(query);
 
         return matches.stream()
                 .filter(p -> p.getUser() != null)
                 .filter(p -> !p.getUser().getUserId().equals(currentUserId))
                 .filter(p -> !isBlocked(currentUserId, p.getUser().getUserId()))
+                .filter(p -> {
+                    if (city != null && !city.isEmpty()) {
+                        return p.getCity() != null && p.getCity().equalsIgnoreCase(city);
+                    }
+                    return true;
+                })
+                .filter(p -> {
+                    if (religion != null && !religion.isEmpty()) {
+                        return p.getReligion() != null && p.getReligion().toString().equalsIgnoreCase(religion);
+                    }
+                    return true;
+                })
                 .map(p -> {
                     int age = p.getDateOfBirth() != null ? calculateAge(p.getDateOfBirth()) : 0;
-                    return buildDto(p, age);
+                    return new Object[] { p, age };
                 })
+                .filter(arr -> {
+                    int age = (int) arr[1];
+                    if (minAge != null && age < minAge)
+                        return false;
+                    if (maxAge != null && age > maxAge)
+                        return false;
+                    return true;
+                })
+                .map(arr -> buildDto((UserProfile) arr[0], (int) arr[1]))
+                .toList();
+    }
+
+    public List<String> getSearchSuggestions(String query) {
+        if (query == null || query.trim().isEmpty())
+            return java.util.List.of();
+        Long currentUserId = getCurrentUserId();
+
+        List<UserProfile> profiles = profileRepo.searchGlobal(query).stream()
+                .filter(p -> p.getUser() != null)
+                .filter(p -> !p.getUser().getUserId().equals(currentUserId))
+                .filter(p -> !isBlocked(currentUserId, p.getUser().getUserId()))
+                .toList();
+
+        List<String> suggestions = new java.util.ArrayList<>();
+        String lowerQuery = query.toLowerCase();
+
+        for (UserProfile p : profiles) {
+            if (p.getUser().getFullName() != null && p.getUser().getFullName().toLowerCase().contains(lowerQuery)) {
+                suggestions.add(p.getUser().getFullName());
+            }
+            if (p.getCity() != null && p.getCity().toLowerCase().contains(lowerQuery)) {
+                suggestions.add(p.getCity());
+            }
+        }
+
+        return suggestions.stream()
+                .distinct()
+                .limit(10)
+                .toList();
+    }
+
+    /* ================= HOME SCREEN WIDGETS ================= */
+
+    public List<MatchmakingDto> getNearbyMatches(Long currentUserId) {
+        UserProfile me = profileRepo.findByUser_UserId(currentUserId).orElse(null);
+        if (me == null || me.getCity() == null)
+            return List.of();
+
+        return profileRepo.findAll().stream()
+                .filter(p -> p.getUser() != null)
+                .filter(p -> !p.getUser().getUserId().equals(currentUserId))
+                .filter(p -> !isBlocked(currentUserId, p.getUser().getUserId()))
+                .filter(p -> p.getGender() != null && me.getGender() != null && p.getGender() != me.getGender())
+                .filter(p -> me.getCity().equalsIgnoreCase(p.getCity()))
+                .limit(10)
+                .map(p -> buildDto(p, p.getDateOfBirth() != null ? calculateAge(p.getDateOfBirth()) : 0))
+                .toList();
+    }
+
+    public List<MatchmakingDto> getBestMatches(Long currentUserId) {
+        UserProfile me = profileRepo.findByUser_UserId(currentUserId).orElse(null);
+        if (me == null)
+            return List.of();
+
+        return profileRepo.findAll().stream()
+                .filter(p -> p.getUser() != null)
+                .filter(p -> !p.getUser().getUserId().equals(currentUserId))
+                .filter(p -> !isBlocked(currentUserId, p.getUser().getUserId()))
+                .filter(p -> p.getGender() != null && me.getGender() != null && p.getGender() != me.getGender())
+                .limit(10)
+                .map(p -> buildDto(p, p.getDateOfBirth() != null ? calculateAge(p.getDateOfBirth()) : 0))
+                .toList();
+    }
+
+    public List<MatchmakingDto> getNewMatches(Long currentUserId) {
+        UserProfile me = profileRepo.findByUser_UserId(currentUserId).orElse(null);
+        if (me == null)
+            return List.of();
+
+        return profileRepo.findAll().stream()
+                .filter(p -> p.getUser() != null)
+                .filter(p -> !p.getUser().getUserId().equals(currentUserId))
+                .filter(p -> !isBlocked(currentUserId, p.getUser().getUserId()))
+                .filter(p -> p.getGender() != null && me.getGender() != null && p.getGender() != me.getGender())
+                .sorted((p1, p2) -> p2.getUser().getUserId().compareTo(p1.getUser().getUserId()))
+                .limit(10)
+                .map(p -> buildDto(p, p.getDateOfBirth() != null ? calculateAge(p.getDateOfBirth()) : 0))
                 .toList();
     }
 
@@ -317,6 +421,23 @@ public class MatchmakingService {
         return relationRepository.findByFromUserIdAndType(userId, RelationType.BLOCK);
     }
 
+    /* ================= GET MATCHED USERS ================= */
+
+    public List<UserRelation> getMatchedUsers(Long userId) {
+        // Find relations where this user is the "toUser" or "fromUser" and type is
+        // MATCH
+        List<UserRelation> matches = relationRepository.findByFromUserIdAndType(userId, RelationType.MATCH);
+        return matches;
+    }
+
+    /* ================= GET RECEIVED REQUESTS ================= */
+
+    public List<UserRelation> getReceivedRequests(Long userId) {
+        return relationRepository.findByToUserIdAndType(userId, RelationType.REQUEST);
+    }
+
+    /* ================= REQUESTS ================= */
+
     public void sendRequest(Long from, Long to) {
 
         if (relationRepository.existsByFromUserIdAndToUserIdAndType(from, to, RelationType.REQUEST))
@@ -328,6 +449,25 @@ public class MatchmakingService {
         r.setType(RelationType.REQUEST);
 
         relationRepository.save(r);
+
+        // Notify recipient in real-time
+        try {
+            java.util.Map<String, Object> payload = new java.util.HashMap<>();
+            payload.put("type", "NEW_MATCH_REQUEST");
+            payload.put("fromUserId", from);
+            payload.put("toUserId", to);
+
+            messagingTemplate.convertAndSend("/topic/notifications/" + to, payload);
+        } catch (Exception e) {
+            System.err.println("Failed to send real-time notification: " + e.getMessage());
+        }
+    }
+
+    @Transactional
+    public void rejectRequest(Long from, Long to) {
+        // A rejected request means we just delete the pending REQUEST relation
+        relationRepository.deleteBetweenUsers(from, to, RelationType.REQUEST);
+        relationRepository.deleteBetweenUsers(to, from, RelationType.REQUEST);
     }
 
 }

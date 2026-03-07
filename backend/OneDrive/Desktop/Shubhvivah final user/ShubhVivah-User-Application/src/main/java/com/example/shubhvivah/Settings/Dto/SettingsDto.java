@@ -21,6 +21,13 @@ public class SettingsDto {
     private Integer maxAge;
     private Integer maxDistanceKm;
 
+    private java.util.List<String> maritalStatus;
+    private java.util.List<String> religions;
+    private java.util.List<String> communities;
+    private java.util.List<String> professions;
+    private java.util.List<String> educationLevels;
+    private java.util.List<String> lifestylePreferences;
+
     /* ================= NOTIFICATIONS ================= */
 
     private boolean notifyNewMessage;

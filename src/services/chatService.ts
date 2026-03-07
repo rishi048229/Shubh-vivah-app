@@ -123,23 +123,33 @@ export async function connectWebSocket(): Promise<Client> {
       reconnectDelay: 5000,
       heartbeatIncoming: 4000,
       heartbeatOutgoing: 4000,
+      forceBinaryWSFrames: true,
+      appendMissingNULLonIncoming: true,
       // Use native WebSocket directly without SockJS wrapper
       webSocketFactory: () => new WebSocket(wsUrl),
     });
 
+    let timeoutId = setTimeout(() => {
+      reject(new Error("WebSocket connection timeout"));
+    }, 10000);
+
     client.onConnect = () => {
+      clearTimeout(timeoutId);
       console.log("[STOMP] Connected to", wsUrl);
       stompClient = client;
       resolve(client);
     };
 
     client.onStompError = (frame) => {
+      clearTimeout(timeoutId);
       console.error("[STOMP] Error:", frame.headers["message"]);
       reject(new Error(frame.headers["message"]));
     };
 
     client.onWebSocketError = (event) => {
+      clearTimeout(timeoutId);
       console.error("[STOMP] WebSocket error:", event);
+      reject(new Error("WebSocket error"));
     };
 
     client.activate();
@@ -148,7 +158,7 @@ export async function connectWebSocket(): Promise<Client> {
 
 /**
  * Subscribe to chat messages (Step 3)
- * /topic/messages/{chatKey}
+ * /topic/chat/{chatKey}
  */
 export function subscribeToMessages(
   chatKey: string,
@@ -159,14 +169,14 @@ export function subscribeToMessages(
     return;
   }
 
-  const subKey = `messages_${chatKey}`;
+  const subKey = `chat_${chatKey}`;
   // Unsubscribe if already subscribed
   if (activeSubscriptions.has(subKey)) {
     activeSubscriptions.get(subKey).unsubscribe();
   }
 
   const subscription = stompClient.subscribe(
-    `/topic/messages/${chatKey}`,
+    `/topic/chat/${chatKey}`,
     (message: IMessage) => {
       try {
         const parsed = JSON.parse(message.body);
@@ -202,6 +212,35 @@ export function subscribeToTyping(
         onTyping(JSON.parse(message.body));
       } catch (e) {}
     },
+  );
+
+  activeSubscriptions.set(subKey, subscription);
+}
+
+/**
+ * Subscribe to notifications (e.g. New Match Requests)
+ * /topic/notifications/{userId}
+ */
+export function subscribeToNotifications(
+  userId: number,
+  onNotification: (event: any) => void
+): void {
+  if (!stompClient || !stompClient.connected) return;
+
+  const subKey = `notifications_${userId}`;
+  if (activeSubscriptions.has(subKey)) {
+    activeSubscriptions.get(subKey).unsubscribe();
+  }
+
+  const subscription = stompClient.subscribe(
+    `/topic/notifications/${userId}`,
+    (message: IMessage) => {
+      try {
+        onNotification(JSON.parse(message.body));
+      } catch (e) {
+        console.error("[STOMP] Failed to parse notification:", e);
+      }
+    }
   );
 
   activeSubscriptions.set(subKey, subscription);

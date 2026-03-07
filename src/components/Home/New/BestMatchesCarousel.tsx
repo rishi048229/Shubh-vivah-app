@@ -1,6 +1,6 @@
 import { MatchProfile } from "@/types/connections";
 import React, { useRef, useState } from "react";
-import { Dimensions, StyleSheet, View } from "react-native";
+import { Dimensions, StyleSheet, View, Text } from "react-native";
 import Animated, {
   Extrapolation,
   interpolate,
@@ -132,23 +132,30 @@ export default function BestMatchesCarousel({
 
   return (
     <View style={styles.container}>
-      <Animated.FlatList
-        data={data}
-        renderItem={({ item, index }) => (
-          <RenderItem item={item} index={index} />
-        )}
-        keyExtractor={(item, index) => index.toString()}
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        snapToInterval={ITEM_SIZE}
-        decelerationRate="fast"
-        bounces={false}
-        onScroll={onScroll}
-        scrollEventThrottle={16}
-        contentContainerStyle={styles.contentContainer}
-        // viewabilityConfig={{ itemVisiblePercentThreshold: 50 }}
-        // onViewableItemsChanged={onViewableItemsChanged}
-      />
+      {matches.length === 0 ? (
+        <View style={styles.emptyContainer}>
+          <Text style={styles.emptyTitle}>No Matches Yet</Text>
+          <Text style={styles.emptyText}>
+            As our user base grows, we will show up our users accordingly.
+          </Text>
+        </View>
+      ) : (
+        <Animated.FlatList
+          data={data}
+          renderItem={({ item, index }) => (
+            <RenderItem item={item} index={index} />
+          )}
+          keyExtractor={(item, index) => index.toString()}
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          snapToInterval={ITEM_SIZE}
+          decelerationRate="fast"
+          bounces={false}
+          onScroll={onScroll}
+          scrollEventThrottle={16}
+          contentContainerStyle={styles.contentContainer}
+        />
+      )}
     </View>
   );
 }
@@ -164,5 +171,27 @@ const styles = StyleSheet.create({
     width: ITEM_SIZE,
     alignItems: "center",
     justifyContent: "center",
+  },
+  emptyContainer: {
+    padding: 30,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#FDFDFD",
+    borderRadius: 16,
+    marginHorizontal: 20,
+    borderWidth: 1,
+    borderColor: "#EAEAEA",
+  },
+  emptyTitle: {
+    fontSize: 18,
+    fontWeight: "bold",
+    color: "#2D1406",
+    marginBottom: 8,
+  },
+  emptyText: {
+    fontSize: 14,
+    color: "#666",
+    textAlign: "center",
+    lineHeight: 20,
   },
 });

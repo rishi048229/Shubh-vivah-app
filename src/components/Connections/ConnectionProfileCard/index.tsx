@@ -35,11 +35,16 @@ export default function ConnectionProfileCard({
   const [liked, setLiked] = useState(false);
   const [shortlisted, setShortlisted] = useState(false);
 
+  const [requested, setRequested] = useState(false);
+
   const handleConnect = async () => {
+    if (requested) return;
     try {
+      setRequested(true);
       await matchService.sendRequest(parseInt(profile.id));
     } catch (e) {
       console.log(e);
+      setRequested(false);
     }
   };
 
@@ -142,11 +147,18 @@ export default function ConnectionProfileCard({
           </View>
 
           <TouchableOpacity
-            style={styles.connectButton}
+            style={[styles.connectButton, requested && { backgroundColor: "#10B981" }]}
             onPress={handleConnect}
+            disabled={requested}
           >
-            <UserPlus size={16} color="#FFF" />
-            <Text style={styles.connectText}>Connect</Text>
+            {requested ? (
+              <CheckCircle2 size={16} color="#FFF" />
+            ) : (
+              <UserPlus size={16} color="#FFF" />
+            )}
+            <Text style={styles.connectText}>
+              {requested ? "Requested" : "Connect"}
+            </Text>
           </TouchableOpacity>
         </View>
       </TouchableOpacity>

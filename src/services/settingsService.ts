@@ -18,6 +18,12 @@ export interface UserSettings {
   minAge?: number;
   maxAge?: number;
   maxDistanceKm?: number;
+  maritalStatus?: string[];
+  religions?: string[];
+  communities?: string[];
+  professions?: string[];
+  educationLevels?: string[];
+  lifestylePreferences?: string[];
 
   // Notifications
   notifyNewMessage: boolean;

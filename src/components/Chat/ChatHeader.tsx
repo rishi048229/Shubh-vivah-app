@@ -3,14 +3,14 @@ import { Ionicons } from "@expo/vector-icons";
 import React from "react";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 
-export default function ChatHeader() {
+export default function ChatHeader({ onSearchPress }: { onSearchPress?: () => void }) {
   return (
     <View style={styles.container}>
       <View>
         <Text style={styles.title}>Messages</Text>
         <Text style={styles.subtitle}>Your conversations</Text>
       </View>
-      <TouchableOpacity style={styles.searchButton}>
+      <TouchableOpacity style={styles.searchButton} onPress={onSearchPress}>
         <Ionicons name="search" size={24} color={Colors.maroon} />
       </TouchableOpacity>
     </View>

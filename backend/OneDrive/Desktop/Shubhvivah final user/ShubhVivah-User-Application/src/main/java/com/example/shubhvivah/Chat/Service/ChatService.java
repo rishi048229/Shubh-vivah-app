@@ -34,15 +34,7 @@ public class ChatService {
 
     public void sendMessage(ChatMessage msg) {
 
-        /* ===== AUTH USER CHECK ===== */
-        Long authUserId = Long.valueOf(
-                SecurityContextHolder.getContext()
-                        .getAuthentication()
-                        .getName());
-
-        if (!authUserId.equals(msg.getSenderId())) {
-            throw new RuntimeException("Invalid sender. Unauthorized message attempt.");
-        }
+        /* Note: Auth check is handled by ChatSocketController using STOMP Principal */
 
         /* ===== BLOCK MEDIA ===== */
         if (msg.getType() != null &&
@@ -131,6 +123,19 @@ public class ChatService {
         messagingTemplate.convertAndSend(
                 "/topic/chat/" + getChatKey(msg.getSenderId(), msg.getReceiverId()),
                 msg);
+
+        /* ===== NOTIFICATION ===== */
+        try {
+            messagingTemplate.convertAndSend(
+                    "/topic/notifications/" + msg.getReceiverId(),
+                    java.util.Map.of(
+                            "type", "NEW_MESSAGE",
+                            "senderId", msg.getSenderId(),
+                            "content", msg.getContent(),
+                            "timestamp", java.time.LocalDateTime.now().toString()));
+        } catch (Exception e) {
+            System.err.println("Failed to send chat notification: " + e.getMessage());
+        }
     }
 
     /*

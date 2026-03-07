@@ -26,6 +26,6 @@ public interface UserProfileRepository extends JpaRepository<UserProfile, Long> 
     @Query("DELETE FROM UserProfile p WHERE p.user.userId = :userId")
     void deleteByUserId(@Param("userId") Long userId);
 
-    @Query("SELECT p FROM UserProfile p WHERE LOWER(p.user.fullName) LIKE LOWER(CONCAT('%', :name, '%'))")
-    List<UserProfile> searchByName(@Param("name") String name);
+    @Query("SELECT p FROM UserProfile p WHERE LOWER(p.user.fullName) LIKE LOWER(CONCAT('%', :query, '%')) OR LOWER(p.city) LIKE LOWER(CONCAT('%', :query, '%')) OR LOWER(p.aboutMe) LIKE LOWER(CONCAT('%', :query, '%'))")
+    List<UserProfile> searchGlobal(@Param("query") String query);
 }

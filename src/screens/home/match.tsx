@@ -97,6 +97,8 @@ type MatchItem = {
   imageUri: string;
 };
 
+import { getSettings } from "@/services/settingsService";
+
 export default function MatchScreen() {
   const router = useRouter();
   const [filters, setFilters] = useState(DEFAULT_FILTERS);
@@ -110,7 +112,6 @@ export default function MatchScreen() {
   const loadMatches = useCallback(async (currentFilters = filters) => {
     setIsLoading(true);
     try {
-      // Use searchProfiles to get batch matches with filters
       const results = await matchService.searchProfiles("", {
         minAge: currentFilters.ageRange[0],
         maxAge: currentFilters.ageRange[1],
@@ -122,40 +123,46 @@ export default function MatchScreen() {
           currentFilters.religions[0] === "Any"
             ? undefined
             : currentFilters.religions[0],
-        community:
-          currentFilters.communities[0] === "Any"
-            ? undefined
-            : currentFilters.communities[0],
-        maritalStatus:
-          currentFilters.maritalStatus[0] === "Any"
-            ? undefined
-            : currentFilters.maritalStatus[0],
       });
 
       const profiles: MatchItem[] = results.map((p, index) => ({
-        id: String(p.userId),
-        userId: p.userId,
-        name: p.fullName,
+        id: p.id,
+        userId: parseInt(p.id) || 0, // Fallback for numeric ID if needed
+        name: p.name,
         age: String(p.age),
-        location: p.city || "Unknown",
-        profession: p.occupation || "Not Specified",
+        location: p.location || "Unknown",
+        profession: p.profession || "Not Specified",
         education: p.education || "Not Specified",
-        matchPercentage: `${p.matchScore}%`,
+        matchPercentage: `${p.matchPercentage}%`,
         tags: [p.religion, p.caste].filter(Boolean) as string[],
-        // FORCE OVERWRITE IMAGE with high-quality mocks cyclically
-        imageUri: MOCK_MATCHES[index % MOCK_MATCHES.length].imageUri,
+        // Use real image mostly, fallback to random avatar
+        imageUri: p.imageUri || "https://randomuser.me/api/portraits/lego/1.jpg",
       }));
 
-      setMatches(profiles.length > 0 ? profiles : MOCK_MATCHES);
+      setMatches(profiles);
     } catch {
-      setMatches(MOCK_MATCHES);
+      setMatches([]);
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [filters]);
 
   useEffect(() => {
-    loadMatches();
+    const init = async () => {
+      try {
+        const settings = await getSettings();
+        const initialFilters = {
+          ...DEFAULT_FILTERS,
+          ageRange: [settings.minAge || 18, settings.maxAge || 40] as [number, number],
+          religions: settings.religions && settings.religions.length > 0 ? [settings.religions[0]] : ["Any"],
+        };
+        setFilters(initialFilters);
+        loadMatches(initialFilters);
+      } catch {
+        loadMatches(DEFAULT_FILTERS);
+      }
+    };
+    init();
   }, [loadMatches]);
 
   const handleApplyFilters = (newFilters: any) => {
@@ -327,18 +334,35 @@ export default function MatchScreen() {
           </TouchableOpacity>
         </View>
 
-        <FlatList
-          ref={flatListRef}
-          data={matches}
-          renderItem={renderItem}
-          keyExtractor={(item) => item.id}
-          horizontal
-          pagingEnabled
-          showsHorizontalScrollIndicator={false}
-          onViewableItemsChanged={onViewableItemsChanged}
-          viewabilityConfig={viewabilityConfig}
-          contentContainerStyle={styles.listContent}
-        />
+        {isLoading ? (
+          <View style={[styles.listContent, { paddingVertical: 40 }]}>
+            <Text style={{ color: "#666" }}>Finding matches...</Text>
+          </View>
+        ) : matches.length === 0 ? (
+          <View style={styles.emptyContainer}>
+            <Ionicons name="search-outline" size={60} color={Colors.maroon} />
+            <Text style={styles.emptyTitle}>No Matches Found</Text>
+            <Text style={styles.emptySubtitle}>
+              We couldn't find anyone matching your current preferences. Try adjusting your filters to see more people.
+            </Text>
+            <TouchableOpacity style={styles.emptyButton} onPress={() => preferencesRef.current?.present()}>
+              <Text style={styles.emptyButtonText}>Adjust Preferences</Text>
+            </TouchableOpacity>
+          </View>
+        ) : (
+          <FlatList
+            ref={flatListRef}
+            data={matches}
+            renderItem={renderItem}
+            keyExtractor={(item) => item.id}
+            horizontal
+            pagingEnabled
+            showsHorizontalScrollIndicator={false}
+            onViewableItemsChanged={onViewableItemsChanged}
+            viewabilityConfig={viewabilityConfig}
+            contentContainerStyle={styles.listContent}
+          />
+        )}
 
         <View style={styles.footer}>
           <TouchableOpacity
@@ -392,6 +416,37 @@ const styles = StyleSheet.create({
   },
   filterButton: {
     padding: 8,
+  },
+  emptyContainer: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 40,
+  },
+  emptyTitle: {
+    fontSize: 22,
+    fontWeight: "bold",
+    color: "#2D1406",
+    marginTop: 20,
+    marginBottom: 8,
+  },
+  emptySubtitle: {
+    fontSize: 15,
+    color: "#666",
+    textAlign: "center",
+    lineHeight: 22,
+    marginBottom: 30,
+  },
+  emptyButton: {
+    backgroundColor: Colors.maroon,
+    paddingHorizontal: 24,
+    paddingVertical: 14,
+    borderRadius: 8,
+  },
+  emptyButtonText: {
+    color: "#FFF",
+    fontWeight: "bold",
+    fontSize: 16,
   },
   listContent: {
     alignItems: "center",

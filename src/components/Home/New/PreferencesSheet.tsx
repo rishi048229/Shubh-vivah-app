@@ -18,6 +18,8 @@ import {
 import React, { forwardRef, useCallback, useMemo, useState } from "react";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { getSettings, updateSettings } from "@/services/settingsService";
+import { useEffect } from "react";
 
 interface PreferencesSheetProps {
   onDismiss: () => void;
@@ -98,8 +100,8 @@ const PreferencesSheet = forwardRef<BottomSheetModal, PreferencesSheetProps>(
     const [selectedFilters, setSelectedFilters] = useState<
       Record<string, string>
     >({
-      marital: "Divorced",
-      religion: "Hindu",
+      marital: "Any",
+      religion: "Any",
       profession: "Any",
       community: "Any",
       education: "Any",
@@ -107,6 +109,29 @@ const PreferencesSheet = forwardRef<BottomSheetModal, PreferencesSheetProps>(
       diet: "Any",
       height: "Any",
     });
+
+    useEffect(() => {
+      // Load current preferences
+      const loadPrefs = async () => {
+        try {
+          const settings = await getSettings();
+          if (settings.maxAge) setMaxAge(settings.maxAge);
+
+          setSelectedFilters((prev) => ({
+            ...prev,
+            marital: settings.maritalStatus?.[0] || "Any",
+            religion: settings.religions?.[0] || "Any",
+            profession: settings.professions?.[0] || "Any",
+            community: settings.communities?.[0] || "Any",
+            education: settings.educationLevels?.[0] || "Any",
+            diet: settings.lifestylePreferences?.[0] || "Any",
+          }));
+        } catch (error) {
+          console.error("Failed to load preferences:", error);
+        }
+      };
+      loadPrefs();
+    }, []);
 
     const handleSelect = (sectionId: string, option: string) => {
       setSelectedFilters((prev) => ({
@@ -133,7 +158,7 @@ const PreferencesSheet = forwardRef<BottomSheetModal, PreferencesSheetProps>(
           <View style={[styles.footer, { paddingBottom: insets.bottom + 20 }]}>
             <TouchableOpacity
               style={styles.applyButton}
-              onPress={() => {
+              onPress={async () => {
                 const mappedFilters: any = {
                   ...selectedFilters,
                   ageRange: [18, maxAge],
@@ -170,6 +195,21 @@ const PreferencesSheet = forwardRef<BottomSheetModal, PreferencesSheetProps>(
                       ? [selectedFilters.diet]
                       : [],
                 };
+
+                // Save to backend
+                try {
+                  await updateSettings({
+                    maxAge: Math.round(maxAge),
+                    maritalStatus: mappedFilters.maritalStatus,
+                    religions: mappedFilters.religions,
+                    communities: mappedFilters.communities,
+                    professions: mappedFilters.professions,
+                    educationLevels: mappedFilters.educationLevels,
+                    lifestylePreferences: mappedFilters.lifestylePreferences,
+                  });
+                } catch (error) {
+                  console.error("Failed to save preferences:", error);
+                }
 
                 onApply?.(mappedFilters);
                 (ref as any)?.current?.dismiss();

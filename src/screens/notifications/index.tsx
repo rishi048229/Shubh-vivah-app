@@ -1,6 +1,11 @@
 import { Colors } from "@/constants/Colors";
 import * as profileService from "@/services/profileService";
-import { acceptRequest } from "@/services/matchService";
+import {
+  acceptRequest,
+  getReceivedRequests,
+  rejectRequest,
+  viewFullProfile,
+} from "@/services/matchService";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
@@ -141,6 +146,8 @@ const renderRightActions = (
   );
 };
 
+import { connectWebSocket, subscribeToNotifications } from "@/services/chatService";
+
 // --- Main Screen ---
 export default function NotificationsScreen() {
   const router = useRouter();
@@ -152,134 +159,159 @@ export default function NotificationsScreen() {
 
   // Load user profile and generate personalized notifications
   useEffect(() => {
+    let mounted = true;
+    
+    // Connect to WebSocket to receive real-time match requests
+    connectWebSocket().then(() => {
+      profileService.getProfile().then((p) => {
+        if (p?.userId && mounted) {
+          subscribeToNotifications(p.userId, async (event) => {
+            if (event.type === "NEW_MATCH_REQUEST") {
+              console.log("Received real-time match request from:", event.fromUserId);
+              // Fetch user details for the dynamic notification
+              let reqName = "Someone";
+              let reqImage = `https://ui-avatars.com/api/?name=User&background=random`;
+              try {
+                const fromProfile = await viewFullProfile(event.fromUserId);
+                if (fromProfile) {
+                  reqName = fromProfile.fullName || "Someone";
+                  if (fromProfile.profilePhotoUrl) {
+                    reqImage = fromProfile.profilePhotoUrl;
+                  } else {
+                    reqImage = `https://ui-avatars.com/api/?name=${encodeURIComponent(reqName)}&background=random`;
+                  }
+                }
+              } catch(e) {}
+              
+              const newNotif: NotificationItem = {
+                id: `req-${Date.now()}`,
+                type: "request",
+                title: "New Match Request! 💌",
+                description: `${reqName} wants to connect with you. Accept to start chatting!`,
+                time: "Just now",
+                date: new Date(),
+                read: false,
+                image: reqImage,
+                fromUserId: event.fromUserId,
+              };
+              
+              setNotifications(prev => [newNotif, ...prev.filter(n => n.id !== "system-welcome")]);
+            } else if (event.type === "NEW_MESSAGE") {
+              console.log("Received real-time message notification from:", event.senderId);
+              let reqName = "Someone";
+              let reqImage = `https://ui-avatars.com/api/?name=User&background=random`;
+              try {
+                const fromProfile = await viewFullProfile(event.senderId);
+                if (fromProfile) {
+                  reqName = fromProfile.fullName || "Someone";
+                  if (fromProfile.profilePhotoUrl) {
+                    reqImage = fromProfile.profilePhotoUrl;
+                  } else {
+                    reqImage = `https://ui-avatars.com/api/?name=${encodeURIComponent(reqName)}&background=random`;
+                  }
+                }
+              } catch(e) {}
+              
+              const newNotif: NotificationItem = {
+                id: `msg-${Date.now()}`,
+                type: "message",
+                title: `${reqName} sent you a message 💬`,
+                description: event.content || "You have a new message.",
+                time: "Just now",
+                date: new Date(),
+                read: false,
+                image: reqImage,
+                fromUserId: event.senderId,
+              };
+              
+              setNotifications(prev => [newNotif, ...prev.filter(n => n.id !== "system-welcome")]);
+            }
+          });
+        }
+      });
+    }).catch(console.error);
+
     loadNotifications();
+    
+    return () => { mounted = false; };
   }, []);
 
   const loadNotifications = async () => {
     let fullName = "User";
+    let currentUserId: number | null = null;
     try {
       const profile = await profileService.getProfile();
-      if (profile && profile.fullName) {
-        fullName = profile.fullName;
-        setUserName(fullName);
+      if (profile) {
+        if (profile.fullName) {
+          fullName = profile.fullName;
+          setUserName(fullName);
+        }
+        if (profile.userId) {
+          currentUserId = profile.userId;
+        }
       }
     } catch (e) {
       console.log("Could not load profile for notifications", e);
     }
 
-    const NOW = new Date();
-    const YESTERDAY = new Date(NOW);
-    YESTERDAY.setDate(NOW.getDate() - 1);
-    const EARLIER = new Date(NOW);
-    EARLIER.setDate(NOW.getDate() - 3);
+    try {
+      const requests = await getReceivedRequests();
+      
+      const realNotifications: NotificationItem[] = await Promise.all(
+        requests.map(async (req) => {
+          let reqName = "Someone";
+          let reqImage = `https://ui-avatars.com/api/?name=User&background=random`;
+          try {
+            const fromProfile = await viewFullProfile(req.fromUserId);
+            if (fromProfile) {
+              reqName = fromProfile.fullName || "Someone";
+              if (fromProfile.profilePhotoUrl) {
+                // If the backend returned a bare filename, make it full URL here if needed.
+                // Assuming it returns a valid full URL or relative path.
+                reqImage = fromProfile.profilePhotoUrl;
+              } else {
+                reqImage = `https://ui-avatars.com/api/?name=${encodeURIComponent(
+                  reqName
+                )}&background=random`;
+              }
+            }
+          } catch(e) {
+             console.log("Error fetching profile for notification", e);
+          }
 
-    const firstName = fullName.split(" ")[0];
+          return {
+            id: `req-${req.id}`,
+            type: "request",
+            title: "New Match Request! 💌",
+            description: `${reqName} wants to connect with you. Accept to start chatting!`,
+            time: "Just now", // Ideally calculate from relation creation date
+            date: new Date(),
+            read: false,
+            image: reqImage,
+            fromUserId: req.fromUserId,
+          };
+        })
+      );
 
-    // Generate personalized notifications
-    const generated: NotificationItem[] = [
-      // Welcome & onboarding
-      {
-        id: "welcome-1",
-        type: "system",
-        title: `Welcome, ${firstName}! 🎉`,
-        description: `We're thrilled to have you on Shubh Vivah. Complete your profile now to start finding your perfect match.`,
-        time: "Just now",
-        date: NOW,
-        read: false,
-      },
-      {
-        id: "profile-reminder",
-        type: "system",
-        title: "Complete Your Profile",
-        description: `${firstName}, profiles with photos and details get 10x more responses. Add your photo and bio to stand out!`,
-        time: "1h ago",
-        date: NOW,
-        read: false,
-      },
-      // Sample interaction notifications
-      {
-        id: "match-1",
-        type: "match",
-        title: "New Match Found!",
-        description: "Priya Sharma matches 94% with your profile.",
-        time: "2h ago",
-        date: NOW,
-        read: false,
-        image: "https://randomuser.me/api/portraits/women/65.jpg",
-      },
-      {
-        id: "view-1",
-        type: "view",
-        title: "Profile Viewed",
-        description: "Anjali Gupta viewed your profile.",
-        time: "3h ago",
-        date: NOW,
-        read: false,
-        image: "https://randomuser.me/api/portraits/women/12.jpg",
-      },
-      {
-        id: "msg-1",
-        type: "message",
-        title: "New Message",
-        description: "Sneha: 'Hi, I liked your profile...'",
-        time: "5h ago",
-        date: NOW,
-        read: true,
-        image: "https://randomuser.me/api/portraits/women/44.jpg",
-      },
-      {
-        id: "shortlist-1",
-        type: "shortlist",
-        title: "You were Shortlisted",
-        description: "Rohan Mehta shortlisted your profile.",
-        time: "Yesterday",
-        date: YESTERDAY,
-        read: true,
-        image: "https://randomuser.me/api/portraits/men/32.jpg",
-      },
-      {
-        id: "tip-1",
-        type: "system",
-        title: "Pro Tip 💡",
-        description: `${firstName}, users who add their horoscope details get 40% better match recommendations!`,
-        time: "Yesterday",
-        date: YESTERDAY,
-        read: true,
-      },
-      {
-        id: "like-1",
-        type: "match",
-        title: "Someone Liked You! ❤️",
-        description: "A new person has liked your profile. Check who it is!",
-        time: "2d ago",
-        date: EARLIER,
-        read: true,
-      },
-      {
-        id: "system-welcome",
-        type: "system",
-        title: "Welcome to Shubh Vivah",
-        description:
-          "Your journey to finding a life partner starts here. We wish you all the best!",
-        time: "2d ago",
-        date: EARLIER,
-        read: true,
-      },
-      // Match request notification
-      {
-        id: "request-1",
-        type: "request",
-        title: "New Match Request! 💌",
-        description: "Neha Patel wants to connect with you. Accept to start chatting!",
-        time: "1d ago",
-        date: YESTERDAY,
-        read: false,
-        image: "https://randomuser.me/api/portraits/women/28.jpg",
-        fromUserId: 5,
-      },
-    ];
+      // We can also add default system notification for new users
+      if (realNotifications.length === 0) {
+        realNotifications.push({
+          id: "system-welcome",
+          type: "system",
+          title: `Welcome, ${fullName.split(" ")[0]}! 🎉`,
+          description: `We're thrilled to have you on Shubh Vivah. You have no pending match requests yet.`,
+          time: "Just now",
+          date: new Date(),
+          read: true,
+        });
+      }
 
-    setNotifications(generated);
+      setNotifications(realNotifications);
+    } catch (e) {
+      console.log("Could not load match requests", e);
+      setNotifications([]);
+    }
+
     setIsLoaded(true);
   };
 
@@ -375,9 +407,16 @@ export default function NotificationsScreen() {
     }
   };
 
-  const handleDeclineRequest = (item: NotificationItem) => {
-    setSelectedNotification(null);
-    setNotifications((prev) => prev.filter((n) => n.id !== item.id));
+  const handleDeclineRequest = async (item: NotificationItem) => {
+    if (!item.fromUserId) return;
+    try {
+      await rejectRequest(item.fromUserId);
+      setSelectedNotification(null);
+      setNotifications((prev) => prev.filter((n) => n.id !== item.id));
+    } catch (e: any) {
+      setSelectedNotification(null);
+      Alert.alert("Error", "Could not decline request.");
+    }
   };
 
   const unreadCount = notifications.filter((n) => !n.read).length;
@@ -397,7 +436,7 @@ export default function NotificationsScreen() {
           <View style={styles.modalOverlay}>
             <TouchableWithoutFeedback>
               <Animated.View
-                entering={FadeInDown.duration(300).springify().damping(18)}
+                entering={FadeInDown.duration(300)}
                 style={styles.modalContent}
               >
                 {/* Close button */}
@@ -556,10 +595,7 @@ export default function NotificationsScreen() {
           )}
           renderItem={({ item, index }) => (
             <Animated.View
-              entering={FadeInDown.delay(index * 60)
-                .duration(300)
-                .springify()
-                .damping(18)}
+              entering={FadeInDown.delay(index * 60).duration(300)}
               style={{ marginBottom: 12 }}
             >
               <Swipeable
@@ -572,7 +608,7 @@ export default function NotificationsScreen() {
                 }
                 containerStyle={{ overflow: "visible" }}
               >
-                <Animated.View layout={Layout.springify()}>
+                <Animated.View layout={Layout.duration(300)}>
                   <TouchableOpacity
                     style={[styles.card, !item.read && styles.unreadCard]}
                     activeOpacity={0.9}

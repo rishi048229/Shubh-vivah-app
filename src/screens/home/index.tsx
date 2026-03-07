@@ -105,7 +105,9 @@ export default function HomeScreen() {
   const hasAutoPromptedLocation = useRef(false);
 
   // Data State
-  const [allMatches, setAllMatches] = useState<MatchProfile[]>([]);
+  const [primaryMatches, setPrimaryMatches] = useState<MatchProfile[]>([]);
+  const [nearbyMatches, setNearbyMatches] = useState<MatchProfile[]>([]);
+  const [newMatches, setNewMatches] = useState<MatchProfile[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   // Profile completion state
@@ -167,50 +169,44 @@ export default function HomeScreen() {
   const loadMatches = async () => {
     setIsLoading(true);
     try {
-      const profiles: MatchProfile[] = [];
-      // Fetch up to 10 profiles
-      for (let i = 0; i < 10; i++) {
-        const p = await matchService.exploreNext();
-        if (!p) break;
+      const [bestRes, nearbyRes, newRes] = await Promise.all([
+        matchService.getBestMatches(),
+        matchService.getNearbyMatches(),
+        matchService.getNewMatches(),
+      ]);
 
-        // Map backend DTO to frontend MatchProfile
-        profiles.push({
-          id: String(p.userId),
-          name: p.fullName,
-          age: p.age,
-          location: p.distanceText ? `${p.city}, ${p.distanceText}` : p.city,
-          city: p.city,
-          state: "", // Not in DTO
-          distance: p.distanceKm || 0,
-          matchPercentage: p.matchScore,
-          matchReasons: p.religion ? [p.religion] : [],
-          imageUri:
-            p.profilePhotoUrl ||
-            "https://randomuser.me/api/portraits/women/1.jpg",
-          profession: "", // Not in DTO
-          education: "", // Not in DTO
-          religion: p.religion || "",
-          caste: "", // Not in DTO
-          verified: true,
-          onlineStatus: "recently_active",
-          maritalStatus: "Never Married",
-        } as MatchProfile);
-      }
+      const mapProfile = (p: matchService.MatchProfile): MatchProfile => ({
+        id: String(p.userId),
+        name: p.fullName,
+        age: p.age,
+        location: p.distanceText ? `${p.city}, ${p.distanceText}` : p.city,
+        city: p.city,
+        state: "", // Not in DTO
+        distance: p.distanceKm || 0,
+        matchPercentage: p.matchScore || 0,
+        matchReasons: p.religion ? [p.religion] : [],
+        imageUri: p.profilePhotoUrl || "https://randomuser.me/api/portraits/women/1.jpg",
+        profession: p.occupation || "",
+        education: p.education || "",
+        religion: p.religion || "",
+        caste: p.caste || "",
+        verified: true,
+        onlineStatus: "recently_active",
+        maritalStatus: "Never Married",
+      });
 
-      // Fallback to mock data if API returns empty
-      setAllMatches(profiles.length > 0 ? profiles : MOCK_MATCHES);
+      setPrimaryMatches(bestRes.length > 0 ? bestRes.map(mapProfile) : []);
+      setNearbyMatches(nearbyRes.length > 0 ? nearbyRes.map(mapProfile) : []);
+      setNewMatches(newRes.length > 0 ? newRes.map(mapProfile) : []);
     } catch (error) {
       console.log("Failed to fetch matches:", error);
-      setAllMatches(MOCK_MATCHES);
+      setPrimaryMatches([]);
+      setNearbyMatches([]);
+      setNewMatches([]);
     } finally {
       setIsLoading(false);
     }
   };
-
-  // Slices for different sections
-  const primaryMatches = allMatches.slice(0, 5);
-  const nearbyMatches = allMatches.slice(5, 10);
-  const newMatches = allMatches.slice(3, 8); // Just random slice for new
 
   // Handlers
   const handleProfilePress = (profile: MatchProfile) => {
@@ -277,7 +273,7 @@ export default function HomeScreen() {
         <CollapsibleHero
           userName={userName}
           userAvatar={userImage}
-          contextText={`${allMatches.length} matches waiting for you`}
+          contextText={`${primaryMatches.length} matches waiting for you`}
           location={userLocation}
           scrollY={scrollY}
           onAvatarPress={() => setSideMenuVisible(true)}

@@ -220,19 +220,6 @@ export default function ChatDetailScreen() {
 
     // Send new message (Step 4)
     sendMessage(currentUserId, targetId, message.trim());
-
-    // Optimistic update
-    const optimistic: ChatMessage = {
-      id: Date.now(),
-      senderId: currentUserId,
-      receiverId: targetId,
-      content: message.trim(),
-      sentAt: new Date().toISOString(),
-      deleted: false,
-      delivered: false,
-      seen: false,
-    };
-    setMessages((prev) => [...prev, optimistic]);
     setMessage("");
     setShowSuggestions(false);
 
@@ -417,14 +404,17 @@ export default function ChatDetailScreen() {
           style={styles.headerProfile}
           onPress={() => router.push(`/profile/${targetId}`)}
         >
-          <Image
-            source={{
-              uri:
-                targetUser?.avatar ||
-                "https://randomuser.me/api/portraits/lego/1.jpg",
-            }}
-            style={styles.avatar}
-          />
+          <View style={styles.avatarContainer}>
+            <Image
+              source={{
+                uri:
+                  targetUser?.avatar ||
+                  "https://randomuser.me/api/portraits/lego/1.jpg",
+              }}
+              style={styles.avatar}
+            />
+            {connected && <View style={styles.onlineBadge} />}
+          </View>
           <View style={styles.headerInfo}>
             <Text style={styles.name} numberOfLines={1}>
               {targetUser?.name || `User ${id}`}
@@ -483,14 +473,7 @@ export default function ChatDetailScreen() {
         )}
 
         {messages.map((msg, index) => (
-          <Animated.View
-            key={msg.id}
-            entering={
-              index >= messages.length - 1
-                ? SlideInDown.duration(200).springify().damping(18)
-                : undefined
-            }
-          >
+          <View key={msg.id}>
             <TouchableOpacity
               activeOpacity={0.8}
               onLongPress={() => handleMessageLongPress(msg)}
@@ -532,7 +515,7 @@ export default function ChatDetailScreen() {
                 )}
               </View>
             </TouchableOpacity>
-          </Animated.View>
+          </View>
         ))}
 
         {/* Typing Indicator */}
@@ -579,7 +562,7 @@ export default function ChatDetailScreen() {
 
       {/* Input */}
       <KeyboardAvoidingView
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
         keyboardVerticalOffset={Platform.OS === "ios" ? 90 : 0}
       >
         <View style={styles.inputContainer}>
@@ -659,13 +642,27 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
   },
+  avatarContainer: {
+    position: "relative",
+    marginRight: 10,
+  },
   avatar: {
     width: 42,
     height: 42,
     borderRadius: 21,
-    marginRight: 10,
     borderWidth: 2,
     borderColor: "#FFF1F2",
+  },
+  onlineBadge: {
+    position: "absolute",
+    bottom: 0,
+    right: 0,
+    width: 12,
+    height: 12,
+    backgroundColor: "#10B981", // Green dot
+    borderRadius: 6,
+    borderWidth: 2,
+    borderColor: "#FFF",
   },
   headerInfo: {
     flex: 1,

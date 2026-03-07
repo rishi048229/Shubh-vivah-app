@@ -48,6 +48,23 @@ export async function explorePrevious(): Promise<MatchProfile | null> {
   return res.data;
 }
 
+/* ================= HOME WIDGETS ================= */
+
+export async function getNearbyMatches(): Promise<MatchProfile[]> {
+  const res = await api.get("/matches/home/nearby");
+  return res.data;
+}
+
+export async function getBestMatches(): Promise<MatchProfile[]> {
+  const res = await api.get("/matches/home/best");
+  return res.data;
+}
+
+export async function getNewMatches(): Promise<MatchProfile[]> {
+  const res = await api.get("/matches/home/new");
+  return res.data;
+}
+
 /* ================= FULL PROFILE ================= */
 
 /**
@@ -109,6 +126,13 @@ export async function acceptRequest(fromUserId: number): Promise<void> {
 }
 
 /**
+ * POST /matches/reject/:fromUserId — Reject connection request
+ */
+export async function rejectRequest(fromUserId: number): Promise<void> {
+  await api.post(`/matches/reject/${fromUserId}`);
+}
+
+/**
  * POST /matches/report/:userId?reason= — Report user
  */
 export async function reportUser(
@@ -122,6 +146,14 @@ export async function reportUser(
 }
 
 /* ================= LISTS ================= */
+
+/**
+ * GET /matches/matched — Get matched users list
+ */
+export async function getMatchedUsers(): Promise<UserRelation[]> {
+  const res = await api.get("/matches/matched");
+  return res.data;
+}
 
 /**
  * GET /matches/liked — Get liked users list
@@ -147,6 +179,14 @@ export async function getBlockedUsers(): Promise<UserRelation[]> {
   return res.data;
 }
 
+/**
+ * GET /matches/requests/received — Get pending received requests
+ */
+export async function getReceivedRequests(): Promise<UserRelation[]> {
+  const res = await api.get("/matches/requests/received");
+  return res.data;
+}
+
 /* ================= SEARCH ================= */
 
 /**
@@ -154,11 +194,16 @@ export async function getBlockedUsers(): Promise<UserRelation[]> {
  */
 export async function searchProfiles(
   query: string,
+  filters?: { minAge?: number; maxAge?: number; city?: string; religion?: string }
 ): Promise<UIMatchProfile[]> {
   try {
-    const res = await api.get(`/matches/explore/search`, {
-      params: { query },
-    });
+    const params: any = { query };
+    if (filters?.minAge) params.minAge = filters.minAge;
+    if (filters?.maxAge) params.maxAge = filters.maxAge;
+    if (filters?.city && filters.city !== "Any" && filters.city !== "") params.city = filters.city;
+    if (filters?.religion && filters.religion !== "Any" && filters.religion !== "") params.religion = filters.religion;
+
+    const res = await api.get(`/matches/explore/search`, { params });
     
     // Map DTO to frontend MatchProfile
     return res.data.map((p: any) => ({
@@ -186,7 +231,22 @@ export async function searchProfiles(
   }
 }
 
-export async function getSearchSuggestions(_query: string): Promise<string[]> {
-  // Backend has no suggestions endpoint — return empty for now
-  return [];
+export async function getSearchSuggestions(query: string): Promise<string[]> {
+  try {
+    const profiles = await searchProfiles(query);
+    const suggestions = new Set<string>();
+    profiles.forEach((p) => {
+      // Suggest the name if it matches
+      if (p.name && p.name.toLowerCase().includes(query.toLowerCase())) {
+        suggestions.add(p.name);
+      }
+      // Suggest the city if it matches
+      if (p.city && p.city.toLowerCase().includes(query.toLowerCase())) {
+        suggestions.add(p.city);
+      }
+    });
+    return Array.from(suggestions).slice(0, 5); // Return top 5 unique suggestions
+  } catch (error) {
+    return [];
+  }
 }

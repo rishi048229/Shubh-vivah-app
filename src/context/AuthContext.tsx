@@ -7,6 +7,7 @@ import React, {
 } from "react";
 import * as SecureStore from "expo-secure-store";
 import { Platform } from "react-native";
+import { connectWebSocket, disconnectWebSocket } from "@/services/chatService";
 
 interface AuthContextType {
   user: { id: number; token: string } | null;
@@ -74,6 +75,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         const userId = await tokenStore.getUserId();
         if (token && userId) {
           setUser({ id: parseInt(userId, 10), token });
+          connectWebSocket().catch((err) => console.log("WebSocket connect error on load:", err));
         }
       } catch (e) {
         console.log("Auth check failed:", e);
@@ -90,12 +92,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       await tokenStore.setUserId(String(userId));
     }
     setUser({ id: userId ?? 0, token });
+    connectWebSocket().catch((err) => console.log("WebSocket connect error on login:", err));
   };
 
   const logout = async () => {
     await tokenStore.remove();
     await tokenStore.removeUserId();
     setUser(null);
+    disconnectWebSocket();
   };
 
   return (

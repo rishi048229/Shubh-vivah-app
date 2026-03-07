@@ -42,8 +42,35 @@ public class MatchmakingController {
     }
 
     @GetMapping("/explore/search")
-    public List<MatchmakingDto> searchProfiles(@RequestParam String query) {
-        return service.searchUsersByName(query);
+    public List<MatchmakingDto> searchProfiles(
+            @RequestParam(required = false, defaultValue = "") String query,
+            @RequestParam(required = false) Integer minAge,
+            @RequestParam(required = false) Integer maxAge,
+            @RequestParam(required = false) String religion,
+            @RequestParam(required = false) String city) {
+        return service.searchUsers(query, minAge, maxAge, religion, city);
+    }
+
+    @GetMapping("/explore/suggestions")
+    public List<String> getSearchSuggestions(@RequestParam(required = false, defaultValue = "") String query) {
+        return service.getSearchSuggestions(query);
+    }
+
+    /* ================= HOME SCREEN WIDGETS ================= */
+
+    @GetMapping("/home/nearby")
+    public List<MatchmakingDto> getNearbyMatches() {
+        return service.getNearbyMatches(service.getCurrentUserId());
+    }
+
+    @GetMapping("/home/best")
+    public List<MatchmakingDto> getBestMatches() {
+        return service.getBestMatches(service.getCurrentUserId());
+    }
+
+    @GetMapping("/home/new")
+    public List<MatchmakingDto> getNewMatches() {
+        return service.getNewMatches(service.getCurrentUserId());
     }
 
     /* ================= ACTIONS ================= */
@@ -104,6 +131,28 @@ public class MatchmakingController {
     @GetMapping("/blocked")
     public List<UserRelation> blockedUsers() {
         return service.getBlockedUsers(service.getCurrentUserId());
+    }
+
+    /* ================= GET MATCHED USERS ================= */
+
+    @GetMapping("/matched")
+    public List<UserRelation> matchedUsers() {
+        return service.getMatchedUsers(service.getCurrentUserId());
+    }
+
+    /* ================= GET RECEIVED REQUESTS ================= */
+
+    @GetMapping("/requests/received")
+    public List<UserRelation> receivedRequests() {
+        return service.getReceivedRequests(service.getCurrentUserId());
+    }
+
+    /* ================= REJECT MATCH REQUEST ================= */
+
+    @PostMapping("/reject/{fromUserId}")
+    public void rejectRequest(@PathVariable Long fromUserId) {
+        Long me = service.getCurrentUserId();
+        service.rejectRequest(fromUserId, me);
     }
 
     /* ================= REPORT USER ================= */

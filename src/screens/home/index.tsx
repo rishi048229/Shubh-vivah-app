@@ -311,7 +311,10 @@ export default function HomeScreen() {
       />
       <HomeSearchOverlay
         ref={searchSheetRef}
-        onSearch={(query) => console.log("Search query:", query)}
+        onSearch={(query) => {
+          console.log("Search query:", query);
+          router.push(`/routes/search-results?query=${encodeURIComponent(query)}` as any);
+        }}
       />
       <PreferencesSheet
         ref={preferencesRef}

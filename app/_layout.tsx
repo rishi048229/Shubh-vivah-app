@@ -38,6 +38,8 @@ export default function RootLayout() {
     Outfit_700Bold,
   });
 
+  console.log("RootLayout: loaded =", loaded, "error =", error);
+
   useEffect(() => {
     if (error) {
       console.error("Font loading error:", error);
@@ -48,6 +50,7 @@ export default function RootLayout() {
 
   useEffect(() => {
     if (loaded) {
+      console.log("RootLayout: Fonts loaded, hiding splash screen");
       SplashScreen.hideAsync();
     } else {
       // Emergency unhide, to prevent being stuck forever.

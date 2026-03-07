@@ -15,7 +15,7 @@ import {
 } from "react-native";
 
 const EATING_HABITS = ["Vegetarian", "Eggetarian", "Non Vegetarian"];
-const DIET_PREFERENCES = ["Vegan", "Jain"];
+const DIET_PREFERENCES = ["Vegan", "Jain", "Not Specified"];
 const DRINKING_OPTIONS = ["No", "Yes", "Occasionally"];
 const SMOKING_OPTIONS = ["No", "Yes", "Occasionally"];
 

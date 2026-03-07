@@ -20,6 +20,8 @@ import {
   Text,
   TouchableOpacity,
   View,
+  Modal,
+  TextInput,
 } from "react-native";
 
 const { width } = Dimensions.get("window");
@@ -34,6 +36,9 @@ export default function ProfileScreen() {
   const [isLoading, setIsLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
 
+  const [activeModal, setActiveModal] = useState<string | null>(null);
+  const [editedAboutMe, setEditedAboutMe] = useState("");
+
   // Fetch profile whenever screen comes into focus
   useFocusEffect(
     useCallback(() => {
@@ -45,6 +50,7 @@ export default function ProfileScreen() {
     try {
       const data = await profileService.getProfile();
       setProfile(data);
+      setEditedAboutMe(data.aboutMe || "");
       // Seed the form context for editing
       updateFormData(data as any);
     } catch (error) {
@@ -116,7 +122,7 @@ export default function ProfileScreen() {
         router.push("/complete-profile/basic-details");
         break;
       case "about":
-        router.push("/complete-profile/lifestyle-habits"); // Assuming 'About Me' is in lifestyle or basic
+        setActiveModal("aboutMe");
         break;
       case "personal":
         router.push("/complete-profile/basic-details");
@@ -129,6 +135,9 @@ export default function ProfileScreen() {
         break;
       case "lifestyle":
         router.push("/complete-profile/lifestyle-habits");
+        break;
+      case "about_me_modal":
+        setActiveModal("aboutMe");
         break;
       case "partner":
         // Partner preferences might be a separate screen or part of lifestyle/basic
@@ -194,24 +203,50 @@ export default function ProfileScreen() {
     );
   }
 
-  // Calculate completion percentage (simple heuristic)
+  // Calculate completion percentage with a robust list of required fields
   const calculateCompletion = () => {
-    let fields = 0;
-    let filled = 0;
     if (!profile) return 0;
-    const keys = Object.keys(profile) as (keyof profileService.ProfileData)[];
-    keys.forEach((k) => {
-      // @ts-ignore
-      if (
-        profile[k] !== null &&
-        profile[k] !== "" &&
-        k !== "additionalPhotos"
-      ) {
+    
+    // Core profile fields that SHOULD be filled for 100% completion
+    const requiredFields: (keyof profileService.ProfileData)[] = [
+      "fullName", "gender", "dateOfBirth", "height", "weight", "city",
+      "religion", "community", "caste", "subCaste", 
+      "education", "occupation", "employmentType", "annualIncome",
+      "fatherName", "motherName", "fatherOccupation", "motherOccupation", 
+      "brothers", "sisters", "familyType", "familyStatus", "familyValues",
+      "aboutMe", "dietPreference", "profileCreatedBy"
+    ];
+
+    // Some fields might be mapped differently between form and response
+    let filled = 0;
+    requiredFields.forEach(field => {
+      let val: any = profile[field];
+      
+      // Check both mapped and unmapped properties if needed (e.g. eatingHabit vs eatingHabits)
+      if (field === "eatingHabits") val = val || (profile as any).eatingHabit;
+      if (field === "dietPreference") val = val || (profile as any).dietPreference;
+      
+      if (val !== null && val !== undefined && val !== "" && val !== "NOT_SPECIFIED") {
         filled++;
       }
-      fields++;
     });
-    return Math.round((filled / fields) * 100);
+
+    const percent = Math.round((filled / requiredFields.length) * 100);
+    return percent > 100 ? 100 : percent;
+  };
+
+  const saveAboutMe = async () => {
+    try {
+      setUploading(true);
+      await profileService.saveProfile({ aboutMe: editedAboutMe });
+      setProfile((prev) => (prev ? { ...prev, aboutMe: editedAboutMe } : null));
+      setActiveModal(null);
+      Alert.alert("Success", "About Me section updated!");
+    } catch (error) {
+      Alert.alert("Error", "Failed to update About Me. Please try again.");
+    } finally {
+      setUploading(false);
+    }
   };
 
   const completion = calculateCompletion();
@@ -330,7 +365,7 @@ export default function ProfileScreen() {
             <InfoRow label="Mother Tongue" value="Hindi" />
             <InfoRow label="Religion" value={profile.religion || "Not set"} />
             <InfoRow label="Caste" value={profile.caste || "Not set"} />
-            <InfoRow label="Sub Caste" value="Not set" />
+            <InfoRow label="Sub Caste" value={profile.subCaste || "Not set"} />
             <InfoRow
               label="Education"
               value={profile.education ? profile.education.replace(/_/g, " ") : "Not set"}
@@ -359,11 +394,15 @@ export default function ProfileScreen() {
           <View style={styles.infoGrid}>
             <InfoRow
               label="Father"
-              value={profile.fatherOccupation || "Not set"}
+              value={profile.fatherName ? `${profile.fatherName} (${profile.fatherOccupation?.replace(/_/g, " ") || "N/A"})` : (profile.fatherOccupation?.replace(/_/g, " ") || "Not set")}
             />
             <InfoRow
               label="Mother"
-              value={profile.motherOccupation || "Not set"}
+              value={profile.motherName ? `${profile.motherName} (${profile.motherOccupation?.replace(/_/g, " ") || "N/A"})` : (profile.motherOccupation?.replace(/_/g, " ") || "Not set")}
+            />
+            <InfoRow
+              label="Profile Created By"
+              value={profile.profileCreatedBy?.replace(/_/g, " ") || "Self"}
             />
             <InfoRow
               label="Siblings"
@@ -415,11 +454,11 @@ export default function ProfileScreen() {
           <View style={styles.infoGrid}>
             <InfoRow
               label="Eating Habits"
-              value={profile.eatingHabits || "Not set"}
+              value={profile.eatingHabits?.replace(/_/g, " ") || (profile as any).eatingHabit?.replace(/_/g, " ") || "Not set"}
             />
-            <InfoRow label="Diet" value={profile.dietPreference || "Not set"} />
-            <InfoRow label="Drinking" value={profile.drinking ? "Yes" : "No"} />
-            <InfoRow label="Smoking" value={profile.smoking ? "Yes" : "No"} />
+            <InfoRow label="Diet" value={profile.dietPreference?.replace(/_/g, " ") || "Not set"} />
+            <InfoRow label="Drinking" value={profile.drinking || (profile as any).drinkingHabit || "No"} />
+            <InfoRow label="Smoking" value={profile.smoking || (profile as any).smokingHabit || "No"} />
           </View>
         </View>
 
@@ -493,6 +532,47 @@ export default function ProfileScreen() {
         {/* Bottom Spacer */}
         <View style={{ height: 100 }} />
       </ScrollView>
+
+      {/* About Me Modal */}
+      <Modal
+        visible={activeModal === "aboutMe"}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setActiveModal(null)}
+      >
+        <View style={modalStyles.overlay}>
+          <View style={modalStyles.content}>
+            <View style={modalStyles.header}>
+              <Text style={modalStyles.title}>Edit About Me</Text>
+              <TouchableOpacity onPress={() => setActiveModal(null)}>
+                <Ionicons name="close" size={24} color="#333" />
+              </TouchableOpacity>
+            </View>
+            
+            <TextInput
+              style={modalStyles.input}
+              multiline
+              numberOfLines={6}
+              placeholder="Tell us about yourself, your hobbies, interests, and what you are looking for in a partner..."
+              value={editedAboutMe}
+              onChangeText={setEditedAboutMe}
+              textAlignVertical="top"
+            />
+            
+            <TouchableOpacity 
+              style={[modalStyles.saveButton, uploading && { opacity: 0.7 }]}
+              onPress={saveAboutMe}
+              disabled={uploading}
+            >
+              {uploading ? (
+                <ActivityIndicator color="#FFF" />
+              ) : (
+                <Text style={modalStyles.saveButtonText}>Save Changes</Text>
+              )}
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -744,5 +824,55 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: Colors.maroon,
     fontWeight: "600",
+  },
+});
+
+const modalStyles = StyleSheet.create({
+  overlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.5)",
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 20,
+  },
+  content: {
+    backgroundColor: "#FFF",
+    width: "100%",
+    borderRadius: 20,
+    padding: 20,
+    maxHeight: "80%",
+  },
+  header: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 20,
+  },
+  title: {
+    fontSize: 18,
+    fontWeight: "bold",
+    color: "#2D1406",
+  },
+  input: {
+    borderWidth: 1,
+    borderColor: "#E0E0E0",
+    borderRadius: 12,
+    padding: 15,
+    fontSize: 14,
+    color: "#333",
+    height: 150,
+    marginBottom: 20,
+    backgroundColor: "#F9F9F9",
+  },
+  saveButton: {
+    backgroundColor: Colors.maroon,
+    borderRadius: 12,
+    paddingVertical: 15,
+    alignItems: "center",
+  },
+  saveButtonText: {
+    color: "#FFF",
+    fontSize: 16,
+    fontWeight: "bold",
   },
 });

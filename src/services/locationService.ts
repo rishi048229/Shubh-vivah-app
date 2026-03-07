@@ -30,7 +30,7 @@ const updateBackendLocation = async (
       params.append("city", city);
     }
 
-    await api.put(`/profile/location?${params.toString()}`);
+    await api.put(`/api/user-profiles/location?${params.toString()}`);
     console.log("Location updated in backend:", { lat, lng, city });
     return true;
   } catch (error) {

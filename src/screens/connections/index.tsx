@@ -4,7 +4,7 @@ import ModernSearchBar from "@/components/Connections/ModernSearchBar";
 import QuickViewModal from "@/components/Connections/QuickViewModal";
 import PreferencesSheet from "@/components/Home/New/PreferencesSheet";
 import { Colors } from "@/constants/Colors";
-import { searchProfiles } from "@/services/matchService";
+import { exploreNext } from "@/services/matchService";
 import {
   DEFAULT_FILTERS,
   FilterState,
@@ -47,40 +47,48 @@ export default function ConnectionsScreen() {
   const fetchMatches = async () => {
     setLoading(true);
     try {
-      // For "Connections", we might want to search with current filters
-      // OR just show explore suggestions. Let's use searchProfiles for the grid.
-      // If no filters, it returns broad matches.
-      const data = await searchProfiles(searchQuery, {
-        minAge: filters.ageRange[0],
-        maxAge: filters.ageRange[1],
-        city: filters.cities.length > 0 ? filters.cities[0] : undefined,
-        religion:
-          filters.religions.length > 0 ? filters.religions[0] : undefined,
-      });
-
-      // Map API response to UI MatchProfile
-      const mappedMatches: MatchProfile[] = data.map((p) => ({
-        id: p.userId.toString(),
-        name: p.fullName,
-        age: p.age,
-        location: p.city || "Unknown",
-        city: p.city || "Unknown",
-        state: "Unknown",
-        distance: p.distanceKm || 0,
-        matchPercentage: p.matchScore || 75,
-        matchReasons: [p.religion, p.caste].filter(Boolean) as string[],
-        imageUri:
-          p.profilePhotoUrl || "https://randomuser.me/api/portraits/lego/1.jpg",
-        profession: p.occupation || "Not Specified",
-        education: p.education || "Not Specified",
-        religion: p.religion || "Hindu",
-        caste: p.caste || "",
-        verified: true,
-        onlineStatus: "recently_active",
-        maritalStatus: p.maritalStatus || "Never Married",
-      }));
-
-      setMatches(mappedMatches);
+      // Use exploreNext to get real profiles from backend DB
+      const profiles: MatchProfile[] = [];
+      const maxProfiles = 20;
+      
+      for (let i = 0; i < maxProfiles; i++) {
+        try {
+          const p = await exploreNext();
+          if (!p) break; // No more profiles
+          
+          // Check for duplicates
+          const alreadyAdded = profiles.some(
+            (existing) => existing.id === p.userId.toString(),
+          );
+          if (alreadyAdded) break; // Wrapped around
+          
+          profiles.push({
+            id: p.userId.toString(),
+            name: p.fullName,
+            age: p.age,
+            location: p.city || "Unknown",
+            city: p.city || "Unknown",
+            state: "Unknown",
+            distance: p.distanceKm || 0,
+            matchPercentage: p.matchScore || 75,
+            matchReasons: [p.religion, p.caste].filter(Boolean) as string[],
+            imageUri:
+              p.profilePhotoUrl ||
+              "https://randomuser.me/api/portraits/lego/1.jpg",
+            profession: p.occupation || "Not Specified",
+            education: p.education || "Not Specified",
+            religion: p.religion || "Hindu",
+            caste: p.caste || "",
+            verified: true,
+            onlineStatus: "recently_active",
+            maritalStatus: p.maritalStatus || "Never Married",
+          });
+        } catch (e) {
+          break; // API error, stop fetching
+        }
+      }
+      
+      setMatches(profiles);
     } catch (error) {
       console.log("Error fetching matches:", error);
     } finally {

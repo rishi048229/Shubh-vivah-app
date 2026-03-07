@@ -50,6 +50,7 @@ interface ProfileFormData {
   smoking: string | null;
   healthNotes: string;
   aboutMe: string;
+  subCaste: string;
 }
 
 const defaultFormData: ProfileFormData = {
@@ -67,6 +68,7 @@ const defaultFormData: ProfileFormData = {
   religion: "",
   community: "",
   caste: "",
+  subCaste: "",
   manglikStatus: "",
   gothra: "",
   nakshatra: "",
@@ -134,6 +136,12 @@ export function ProfileFormProvider({
             ({
               ...prev,
               ...data,
+              // Map eatingHabit (backend) to eatingHabits (form)
+              eatingHabits: data.eatingHabits ?? (data as any).eatingHabit ?? "",
+              // Map drinkingHabit (backend) to drinking (form)
+              drinking: data.drinking ?? (data as any).drinkingHabit ?? null,
+              // Map smokingHabit (backend) to smoking (form)
+              smoking: data.smoking ?? (data as any).smokingHabit ?? null,
               // Ensure nulls are handled if API returns undefined
               height: data.height ?? null,
               weight: data.weight ?? null,

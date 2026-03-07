@@ -1,7 +1,17 @@
 import * as SecureStore from "expo-secure-store";
 import { Platform } from "react-native";
+import { Client, IMessage } from "@stomp/stompjs";
 import api from "./api";
+import Constants from "expo-constants";
 
+// Polyfill for React Native (STOMP needs TextEncoder)
+if (typeof global.TextEncoder === "undefined") {
+  const encoding = require("text-encoding");
+  global.TextEncoder = encoding.TextEncoder;
+  global.TextDecoder = encoding.TextDecoder;
+}
+
+// --- Types ---
 export interface ChatMessage {
   id: number;
   senderId: number;
@@ -17,9 +27,57 @@ export interface ChatMessage {
   type?: string;
 }
 
+export interface TypingEvent {
+  senderId: number;
+  receiverId: number;
+  chatKey: string;
+  typing: boolean;
+}
+
+// --- Helpers ---
+
 /**
- * GET /chat/history?otherUserId= — Fetch chat history between current user and other user.
- * Backend uses Principal to identify current user from JWT, so we only pass otherUserId.
+ * Get current user's ID from SecureStore
+ */
+export async function getCurrentUserId(): Promise<number> {
+  let userId: string | null = null;
+  if (Platform.OS === "web") {
+    userId = localStorage.getItem("user_id");
+  } else {
+    userId = await SecureStore.getItemAsync("user_id");
+  }
+  return userId ? parseInt(userId, 10) : 0;
+}
+
+/**
+ * Get chat key (used for STOMP topic subscriptions)
+ * Topic: /topic/messages/{min}_{max}
+ */
+export function getChatKey(u1: number, u2: number): string {
+  const min = Math.min(u1, u2);
+  const max = Math.max(u1, u2);
+  return `${min}_${max}`;
+}
+
+/**
+ * Build WebSocket URL dynamically using same IP as REST API
+ */
+function getWsBaseUrl(): string {
+  const debuggerHost = Constants.expoConfig?.hostUri;
+  if (debuggerHost) {
+    const ip = debuggerHost.split(":")[0];
+    return `ws://${ip}:8085`;
+  }
+  if (Platform.OS === "android") {
+    return "ws://10.0.2.2:8085";
+  }
+  return "ws://localhost:8085";
+}
+
+// --- REST Endpoints ---
+
+/**
+ * GET /chat/history?otherUserId= — Fetch chat history (Step 1)
  */
 export async function getChatHistory(
   otherUserId: number,
@@ -28,36 +86,232 @@ export async function getChatHistory(
   return res.data;
 }
 
-/**
- * Get WebSocket base URL for STOMP connection
- */
-function getWsBaseUrl(): string {
-  if (Platform.OS === "android") {
-    return "ws://10.0.2.2:8080";
-  }
-  return "ws://localhost:8080";
-}
+// --- STOMP WebSocket Client ---
+
+let stompClient: Client | null = null;
+let activeSubscriptions: Map<string, any> = new Map();
 
 /**
- * Build the WebSocket connection URL with JWT token
- * Backend WebSocket endpoint: /ws-chat
+ * Connect to WebSocket (Step 2)
+ * Connects to ws://host:port/ws-chat with JWT auth
  */
-export async function getWsUrl(): Promise<string> {
+export async function connectWebSocket(): Promise<Client> {
+  if (stompClient && stompClient.connected) {
+    return stompClient;
+  }
+
   let token: string | null = null;
   if (Platform.OS === "web") {
     token = localStorage.getItem("auth_token");
   } else {
     token = await SecureStore.getItemAsync("auth_token");
   }
-  return `${getWsBaseUrl()}/ws-chat?token=${token}`;
+
+  // Since we removed .withSockJS() from the backend for better compatibility,
+  // we use the raw endpoint URL directly.
+  const wsUrl = `${getWsBaseUrl()}/ws-chat?token=${token || ""}`;
+
+  return new Promise((resolve, reject) => {
+    const client = new Client({
+      brokerURL: wsUrl,
+      connectHeaders: {
+        Authorization: `Bearer ${token || ""}`,
+      },
+      debug: (str) => {
+        if (__DEV__) console.log("[STOMP]", str);
+      },
+      reconnectDelay: 5000,
+      heartbeatIncoming: 4000,
+      heartbeatOutgoing: 4000,
+      // Use native WebSocket directly without SockJS wrapper
+      webSocketFactory: () => new WebSocket(wsUrl),
+    });
+
+    client.onConnect = () => {
+      console.log("[STOMP] Connected to", wsUrl);
+      stompClient = client;
+      resolve(client);
+    };
+
+    client.onStompError = (frame) => {
+      console.error("[STOMP] Error:", frame.headers["message"]);
+      reject(new Error(frame.headers["message"]));
+    };
+
+    client.onWebSocketError = (event) => {
+      console.error("[STOMP] WebSocket error:", event);
+    };
+
+    client.activate();
+  });
 }
 
 /**
- * Get chat key (used for STOMP topic subscriptions)
- * Topic: /topic/chat/{min}_{max}
+ * Subscribe to chat messages (Step 3)
+ * /topic/messages/{chatKey}
  */
-export function getChatKey(u1: number, u2: number): string {
-  const min = Math.min(u1, u2);
-  const max = Math.max(u1, u2);
-  return `${min}_${max}`;
+export function subscribeToMessages(
+  chatKey: string,
+  onMessage: (msg: ChatMessage) => void,
+): void {
+  if (!stompClient || !stompClient.connected) {
+    console.warn("[STOMP] Not connected, cannot subscribe");
+    return;
+  }
+
+  const subKey = `messages_${chatKey}`;
+  // Unsubscribe if already subscribed
+  if (activeSubscriptions.has(subKey)) {
+    activeSubscriptions.get(subKey).unsubscribe();
+  }
+
+  const subscription = stompClient.subscribe(
+    `/topic/messages/${chatKey}`,
+    (message: IMessage) => {
+      try {
+        const parsed = JSON.parse(message.body);
+        onMessage(parsed);
+      } catch (e) {
+        console.error("[STOMP] Failed to parse message:", e);
+      }
+    },
+  );
+
+  activeSubscriptions.set(subKey, subscription);
+}
+
+/**
+ * Subscribe to typing events
+ * /topic/typing/{chatKey}
+ */
+export function subscribeToTyping(
+  chatKey: string,
+  onTyping: (event: TypingEvent) => void,
+): void {
+  if (!stompClient || !stompClient.connected) return;
+
+  const subKey = `typing_${chatKey}`;
+  if (activeSubscriptions.has(subKey)) {
+    activeSubscriptions.get(subKey).unsubscribe();
+  }
+
+  const subscription = stompClient.subscribe(
+    `/topic/typing/${chatKey}`,
+    (message: IMessage) => {
+      try {
+        onTyping(JSON.parse(message.body));
+      } catch (e) {}
+    },
+  );
+
+  activeSubscriptions.set(subKey, subscription);
+}
+
+// --- STOMP Send Endpoints ---
+
+/**
+ * Send message (Step 4) → /app/chat.send
+ */
+export function sendMessage(
+  senderId: number,
+  receiverId: number,
+  content: string,
+): void {
+  if (!stompClient || !stompClient.connected) {
+    console.warn("[STOMP] Not connected, cannot send");
+    return;
+  }
+
+  stompClient.publish({
+    destination: "/app/chat.send",
+    body: JSON.stringify({
+      senderId,
+      receiverId,
+      content,
+    }),
+  });
+}
+
+/**
+ * Send typing indicator → /app/chat.typing
+ */
+export function sendTyping(
+  senderId: number,
+  receiverId: number,
+  typing: boolean,
+): void {
+  if (!stompClient || !stompClient.connected) return;
+
+  const chatKey = getChatKey(senderId, receiverId);
+  stompClient.publish({
+    destination: "/app/chat.typing",
+    body: JSON.stringify({
+      senderId,
+      receiverId,
+      chatKey,
+      typing,
+    }),
+  });
+}
+
+/**
+ * Mark messages as seen → /app/chat.seen
+ */
+export function markSeen(senderId: number, receiverId: number): void {
+  if (!stompClient || !stompClient.connected) return;
+
+  stompClient.publish({
+    destination: "/app/chat.seen",
+    body: JSON.stringify({
+      senderId,
+      receiverId,
+    }),
+  });
+}
+
+/**
+ * Delete a message → /app/chat.delete
+ */
+export function deleteMessage(messageId: number): void {
+  if (!stompClient || !stompClient.connected) return;
+
+  stompClient.publish({
+    destination: "/app/chat.delete",
+    body: JSON.stringify({ messageId }),
+  });
+}
+
+/**
+ * Edit a message → /app/chat.edit
+ */
+export function editMessage(messageId: number, newContent: string): void {
+  if (!stompClient || !stompClient.connected) return;
+
+  stompClient.publish({
+    destination: "/app/chat.edit",
+    body: JSON.stringify({ messageId, content: newContent }),
+  });
+}
+
+/**
+ * Disconnect from WebSocket
+ */
+export function disconnectWebSocket(): void {
+  if (stompClient) {
+    activeSubscriptions.forEach((sub) => {
+      try {
+        sub.unsubscribe();
+      } catch (e) {}
+    });
+    activeSubscriptions.clear();
+    stompClient.deactivate();
+    stompClient = null;
+  }
+}
+
+/**
+ * Check if currently connected
+ */
+export function isConnected(): boolean {
+  return stompClient?.connected ?? false;
 }

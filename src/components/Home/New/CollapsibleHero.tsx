@@ -8,6 +8,7 @@ import {
   Text,
   TouchableOpacity,
   View,
+  Image,
 } from "react-native";
 import Animated, {
   Extrapolation,
@@ -126,11 +127,22 @@ export default function CollapsibleHero({
 
       {/* Header Row (Always Visible) */}
       <View style={styles.headerRow}>
-        <TouchableOpacity onPress={onAvatarPress} style={styles.avatarBtn}>
-          {/* Placeholder for Avatar Image if needed, or just keep it minimal */}
-          <View style={styles.avatarPlaceholder}>
-            <Text style={styles.avatarText}>{userName.charAt(0)}</Text>
-          </View>
+        <TouchableOpacity 
+          onPress={onAvatarPress} 
+          style={styles.avatarBtn}
+          activeOpacity={0.8}
+          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+        >
+          {userAvatar && userAvatar.includes('http') ? (
+            <Image 
+              source={{ uri: userAvatar }} 
+              style={styles.avatarImage} 
+            />
+          ) : (
+            <View style={styles.avatarPlaceholder}>
+              <Text style={styles.avatarText}>{userName ? userName.charAt(0) : 'U'}</Text>
+            </View>
+          )}
         </TouchableOpacity>
 
         {/* Collapsed Title (Visible only when scrolled up) */}
@@ -222,6 +234,13 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(255,255,255,0.2)",
     justifyContent: "center",
     alignItems: "center",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.3)",
+  },
+  avatarImage: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     borderWidth: 1,
     borderColor: "rgba(255,255,255,0.3)",
   },

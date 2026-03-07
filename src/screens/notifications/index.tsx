@@ -1,10 +1,12 @@
 import { Colors } from "@/constants/Colors";
 import * as profileService from "@/services/profileService";
+import { acceptRequest } from "@/services/matchService";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import React, { useEffect, useMemo, useState } from "react";
 import {
+  Alert,
   Image,
   Modal,
   SectionList,
@@ -22,7 +24,7 @@ import Animated, {
 import { SafeAreaView } from "react-native-safe-area-context";
 
 // --- Types ---
-type NotificationType = "match" | "view" | "shortlist" | "system" | "message";
+type NotificationType = "match" | "view" | "shortlist" | "system" | "message" | "request";
 
 interface NotificationItem {
   id: string;
@@ -33,6 +35,7 @@ interface NotificationItem {
   date: Date;
   read: boolean;
   image?: string;
+  fromUserId?: number; // For request type
 }
 
 interface NotificationSection {
@@ -70,6 +73,11 @@ const NotificationIcon = ({ type }: { type: NotificationType }) => {
       iconName = "chatbubble";
       color = "#059669";
       bgColor = "#ECFDF5";
+      break;
+    case "request":
+      iconName = "person-add";
+      color = "#7C3AED";
+      bgColor = "#F5F3FF";
       break;
     case "system":
       iconName = "information-circle";
@@ -257,6 +265,18 @@ export default function NotificationsScreen() {
         date: EARLIER,
         read: true,
       },
+      // Match request notification
+      {
+        id: "request-1",
+        type: "request",
+        title: "New Match Request! 💌",
+        description: "Neha Patel wants to connect with you. Accept to start chatting!",
+        time: "1d ago",
+        date: YESTERDAY,
+        read: false,
+        image: "https://randomuser.me/api/portraits/women/28.jpg",
+        fromUserId: 5,
+      },
     ];
 
     setNotifications(generated);
@@ -328,6 +348,38 @@ export default function NotificationsScreen() {
     }
   };
 
+  const handleAcceptRequest = async (item: NotificationItem) => {
+    if (!item.fromUserId) return;
+    try {
+      await acceptRequest(item.fromUserId);
+      setSelectedNotification(null);
+      // Update notification
+      setNotifications((prev) =>
+        prev.map((n) =>
+          n.id === item.id
+            ? {
+                ...n,
+                title: "Request Accepted! ✅",
+                description: `You and ${item.title.includes("Neha") ? "Neha" : "this user"} are now connected! Start chatting.`,
+                type: "match" as NotificationType,
+                read: true,
+              }
+            : n,
+        ),
+      );
+      // Navigate to chat
+      router.push({ pathname: "/chat/[id]", params: { id: item.fromUserId.toString() } });
+    } catch (e: any) {
+      setSelectedNotification(null);
+      Alert.alert("Error", e?.response?.data || "Could not accept request.");
+    }
+  };
+
+  const handleDeclineRequest = (item: NotificationItem) => {
+    setSelectedNotification(null);
+    setNotifications((prev) => prev.filter((n) => n.id !== item.id));
+  };
+
   const unreadCount = notifications.filter((n) => !n.read).length;
 
   return (
@@ -385,7 +437,7 @@ export default function NotificationsScreen() {
                   </Text>
                 </View>
 
-                {/* Action Button */}
+                {/* Action Button — Profile Completion */}
                 {(selectedNotification?.id === "profile-reminder" ||
                   selectedNotification?.id === "welcome-1") && (
                   <TouchableOpacity
@@ -395,6 +447,26 @@ export default function NotificationsScreen() {
                     <Text style={styles.modalActionText}>Complete Profile</Text>
                     <Ionicons name="arrow-forward" size={16} color="#FFF" />
                   </TouchableOpacity>
+                )}
+
+                {/* Action Buttons — Match Request Accept/Decline */}
+                {selectedNotification?.type === "request" && selectedNotification?.fromUserId && (
+                  <View style={styles.modalRequestActions}>
+                    <TouchableOpacity
+                      style={[styles.modalActionBtn, { flex: 1, backgroundColor: "#10B981" }]}
+                      onPress={() => handleAcceptRequest(selectedNotification!)}
+                    >
+                      <Ionicons name="checkmark" size={18} color="#FFF" />
+                      <Text style={styles.modalActionText}>Accept</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={[styles.modalActionBtn, { flex: 1, backgroundColor: "#EF4444" }]}
+                      onPress={() => handleDeclineRequest(selectedNotification!)}
+                    >
+                      <Ionicons name="close" size={18} color="#FFF" />
+                      <Text style={styles.modalActionText}>Decline</Text>
+                    </TouchableOpacity>
+                  </View>
                 )}
 
                 {/* Dismiss */}
@@ -836,5 +908,11 @@ const styles = StyleSheet.create({
     color: "#9CA3AF",
     fontSize: 14,
     fontWeight: "600",
+  },
+  modalRequestActions: {
+    flexDirection: "row",
+    gap: 10,
+    width: "100%",
+    marginBottom: 12,
   },
 });

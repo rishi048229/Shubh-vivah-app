@@ -1,4 +1,5 @@
 import api from "./api";
+import { MatchProfile as UIMatchProfile } from "@/types/connections";
 
 /**
  * Match profile DTO matching backend's MatchmakingDto / ExploreProfileDto
@@ -146,27 +147,43 @@ export async function getBlockedUsers(): Promise<UserRelation[]> {
   return res.data;
 }
 
-/* ================= SEARCH (stub — backend has no search endpoint yet) ================= */
+/* ================= SEARCH ================= */
 
 /**
- * Search profiles — currently returns empty array since backend
- * MatchmakingController has no search endpoint.
- * TODO: Add search endpoint to backend when needed.
+ * Search profiles by name
  */
 export async function searchProfiles(
-  _query?: string,
-  _filters?: {
-    minAge?: number;
-    maxAge?: number;
-    city?: string;
-    religion?: string;
-    community?: string;
-    maritalStatus?: string;
-  },
-): Promise<MatchProfile[]> {
-  // Backend has no /matches/search endpoint — return empty for now
-  console.warn("searchProfiles: Backend search endpoint not yet implemented");
-  return [];
+  query: string,
+): Promise<UIMatchProfile[]> {
+  try {
+    const res = await api.get(`/matches/explore/search`, {
+      params: { query },
+    });
+    
+    // Map DTO to frontend MatchProfile
+    return res.data.map((p: any) => ({
+      id: String(p.userId),
+      name: p.fullName,
+      age: p.age,
+      location: p.distanceText ? `${p.city}, ${p.distanceText}` : p.city,
+      city: p.city,
+      state: "",
+      distance: p.distanceKm || 0,
+      matchPercentage: p.matchScore || 0,
+      matchReasons: p.religion ? [p.religion] : [],
+      imageUri: p.profilePhotoUrl || "https://randomuser.me/api/portraits/women/1.jpg",
+      profession: p.occupation || "",
+      education: p.education || "",
+      religion: p.religion || "",
+      caste: p.caste || "",
+      verified: true,
+      onlineStatus: "recently_active",
+      maritalStatus: "Never Married",
+    }));
+  } catch (error) {
+    console.error("Failed to search profiles:", error);
+    return [];
+  }
 }
 
 export async function getSearchSuggestions(_query: string): Promise<string[]> {

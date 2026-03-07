@@ -14,16 +14,16 @@ const getBaseUrl = (): string => {
   // If running in Expo Go (physical or emulator), dynamically get the host IP
   if (debuggerHost) {
     const ip = debuggerHost.split(':')[0];
-    return `http://${ip}:8081`; // Backend runs on 8081
+    return `http://${ip}:8085`; // Backend runs on 8085
   }
 
   // If emulator or web, fallback to standard local proxies
   if (Platform.OS === "android") {
     // Android emulator -> host machine
-    return "http://10.0.2.2:8081";
+    return "http://10.0.2.2:8085";
   }
   // iOS simulator / web
-  return "http://localhost:8081";
+  return "http://localhost:8085";
 };
 
 const api = axios.create({

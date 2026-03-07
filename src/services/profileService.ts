@@ -49,6 +49,10 @@ export interface ProfileData {
   smoking?: string | null;
   healthNotes?: string;
   aboutMe?: string;
+  subCaste?: string;
+  fatherName?: string;
+  motherName?: string;
+  profileCreatedBy?: string;
 
   // Read-only (from server)
   profilePhotoUrl?: string;
@@ -140,6 +144,8 @@ export async function saveProfile(data: Partial<ProfileData>): Promise<ProfileDa
     "familyType",
     "familyStatus",
     "familyValues",
+    "dietPreference",
+    "profileCreatedBy",
   ];
 
   simpleEnumFields.forEach((field) => {

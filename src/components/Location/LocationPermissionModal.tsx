@@ -80,8 +80,8 @@ export default function LocationPermissionModal({
 
     setLoading(true);
     try {
-      // Save to backend with the city name (coords 0,0 as placeholder)
-      await api.put(`/profile/location?lat=0&lng=0&city=${encodeURIComponent(city)}`);
+      // Hit backend API to update location with lat=0&lng=0
+      await api.put(`/api/user-profiles/location?lat=0&lng=0&city=${encodeURIComponent(city)}`);
       console.log("Manual city saved to backend:", city);
       onLocationDetected(city);
       setShowManualInput(false);

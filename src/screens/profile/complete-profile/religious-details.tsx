@@ -91,6 +91,7 @@ const ReligiousDetails = () => {
     religion: "Hindu",
     community: "",
     caste: "",
+    subCaste: "",
     manglikStatus: "",
     gothra: "",
     nakshatra: "",
@@ -104,6 +105,7 @@ const ReligiousDetails = () => {
         religion: contextData.religion || prev.religion,
         community: contextData.community || prev.community,
         caste: contextData.caste || prev.caste,
+        subCaste: contextData.subCaste || prev.subCaste,
         manglikStatus: contextData.manglikStatus || prev.manglikStatus,
         gothra: contextData.gothra || prev.gothra,
         nakshatra: contextData.nakshatra || prev.nakshatra,
@@ -118,6 +120,7 @@ const ReligiousDetails = () => {
       religion,
       community,
       caste,
+      subCaste,
       manglikStatus,
       gothra,
       nakshatra,
@@ -146,6 +149,7 @@ const ReligiousDetails = () => {
       religion: formData.religion,
       community: formData.community,
       caste: formData.caste,
+      subCaste: formData.subCaste,
       manglikStatus: formData.manglikStatus,
       gothra: formData.gothra,
       nakshatra: formData.nakshatra,
@@ -201,6 +205,16 @@ const ReligiousDetails = () => {
           if (errors.caste) setErrors({ ...errors, caste: "" });
         }}
         error={errors.caste}
+      />
+
+      <CustomModalDropdown
+        label="Sub Caste"
+        value={formData.subCaste}
+        placeholder="Select or Enter Sub Caste"
+        options={["Not Specified", "Other"]}
+        onSelect={(val: string) => {
+          setFormData({ ...formData, subCaste: val });
+        }}
       />
 
       <RadioGroup

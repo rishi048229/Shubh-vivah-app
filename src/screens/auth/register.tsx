@@ -20,6 +20,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import CustomAlert from "@/components/common/CustomAlert";
 
 const { width } = Dimensions.get("window");
 
@@ -40,6 +41,18 @@ const RegisterPage = () => {
 
   const [errors, setErrors] = useState<Record<string, string | undefined>>({});
   const [isLoading, setIsLoading] = useState(false);
+
+  // Alert State
+  const [alertConfig, setAlertConfig] = useState<{
+    visible: boolean;
+    title: string;
+    message: string;
+    type: "success" | "error" | "info";
+  }>({ visible: false, title: "", message: "", type: "info" });
+
+  const showAlert = (title: string, message: string, type: "success" | "error" | "info" = "info") => {
+    setAlertConfig({ visible: true, title, message, type });
+  };
 
   const otpInputs = useRef<(TextInput | null)[]>([]);
 
@@ -79,7 +92,7 @@ const RegisterPage = () => {
         setStep("register_success");
       } else {
         // OTP sent, go to verification step
-        Alert.alert("OTP Sent", "Please check your email for the verification code.");
+        showAlert("OTP Sent", "Please check your email for the verification code.", "success");
         setStep("verify_otp");
       }
     } catch (error: any) {
@@ -88,7 +101,7 @@ const RegisterPage = () => {
         error.response?.data ||
         error.message ||
         "Registration failed";
-      Alert.alert("Error", String(msg));
+      showAlert("Error", String(msg), "error");
     } finally {
       setIsLoading(false);
     }
@@ -101,11 +114,11 @@ const RegisterPage = () => {
   const handleVerifyOtp = async () => {
     const otpCode = otp.join("");
     if (otpCode.length !== 6) {
-      Alert.alert("Error", "Please enter the complete 6-digit OTP.");
+      showAlert("Error", "Please enter the complete 6-digit OTP.", "error");
       return;
     }
     if (!userId) {
-      Alert.alert("Error", "User ID not found. Please register again.");
+      showAlert("Error", "User ID not found. Please register again.", "error");
       return;
     }
 
@@ -119,7 +132,7 @@ const RegisterPage = () => {
         error.response?.data ||
         error.message ||
         "OTP verification failed";
-      Alert.alert("Error", String(msg));
+      showAlert("Error", String(msg), "error");
     } finally {
       setIsLoading(false);
     }
@@ -132,14 +145,14 @@ const RegisterPage = () => {
     setIsLoading(true);
     try {
       await authService.resendOtp(email.trim());
-      Alert.alert("OTP Resent", "Please check your email for the new code.");
+      showAlert("OTP Resent", "Please check your email for the new code.", "success");
     } catch (error: any) {
       const msg =
         error.response?.data?.message ||
         error.response?.data ||
         error.message ||
         "Failed to resend OTP";
-      Alert.alert("Error", String(msg));
+      showAlert("Error", String(msg), "error");
     } finally {
       setIsLoading(false);
     }
@@ -353,6 +366,13 @@ const RegisterPage = () => {
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
+      <CustomAlert
+        visible={alertConfig.visible}
+        title={alertConfig.title}
+        message={alertConfig.message}
+        type={alertConfig.type}
+        onClose={() => setAlertConfig({ ...alertConfig, visible: false })}
+      />
     </SafeAreaView>
   );
 };

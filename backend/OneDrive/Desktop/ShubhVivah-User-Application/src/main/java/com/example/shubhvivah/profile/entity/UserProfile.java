@@ -39,21 +39,10 @@ public class UserProfile {
 
     /* -------- Religious Details -------- */
 
-    @ManyToOne
-    @JoinColumn(name = "religion_id")
-    private Religion religion;
-
-    @ManyToOne
-    @JoinColumn(name = "community_id")
-    private Community community;
-
-    @ManyToOne
-    @JoinColumn(name = "caste_id")
-    private Caste caste;
-
-    @ManyToOne
-    @JoinColumn(name = "gotra_id")
-    private Gotra gotra;
+    private String religion;
+    private String community;
+    private String caste;
+    private String gotra;
 
     @Enumerated(EnumType.STRING)
     private ManglikStatus manglikStatus;

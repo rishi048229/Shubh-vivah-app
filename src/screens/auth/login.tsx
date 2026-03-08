@@ -21,6 +21,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import CustomAlert from "@/components/common/CustomAlert";
 
 const { width } = Dimensions.get("window");
 
@@ -41,6 +42,18 @@ const LoginPage = () => {
   const [userId, setUserId] = useState<number | null>(null);
   const [otp, setOtp] = useState(["", "", "", "", "", ""]);
   const otpInputs = useRef<(TextInput | null)[]>([]);
+
+  // Alert State
+  const [alertConfig, setAlertConfig] = useState<{
+    visible: boolean;
+    title: string;
+    message: string;
+    type: "success" | "error" | "info";
+  }>({ visible: false, title: "", message: "", type: "info" });
+
+  const showAlert = (title: string, message: string, type: "success" | "error" | "info" = "info") => {
+    setAlertConfig({ visible: true, title, message, type });
+  };
 
   /**
    * POST /auth/login — Authenticate with email + password.
@@ -76,9 +89,9 @@ const LoginPage = () => {
           // OTP verification needed for login
           setUserId(result.id);
           setStep("otp");
-          Alert.alert("OTP Sent", "Please check your email for the verification code.");
+          showAlert("OTP Sent", "Please check your email for the verification code.", "success");
         } else {
-          Alert.alert("Login Failed", result.message || "No token received from server.");
+          showAlert("Login Failed", result.message || "No token received from server.", "error");
         }
       } catch (error: any) {
         let message = "Login failed. Please check your credentials.";
@@ -105,7 +118,7 @@ const LoginPage = () => {
             error.message ||
             message;
         }
-        Alert.alert("Login Failed", message);
+        showAlert("Login Failed", message, "error");
       } finally {
         setIsLoading(false);
       }
@@ -119,11 +132,11 @@ const LoginPage = () => {
   const handleVerifyLoginOtp = async () => {
     const otpCode = otp.join("");
     if (otpCode.length !== 6) {
-      Alert.alert("Error", "Please enter the complete 6-digit OTP.");
+      showAlert("Error", "Please enter the complete 6-digit OTP.", "error");
       return;
     }
     if (!userId) {
-      Alert.alert("Error", "User ID not found. Please try logging in again.");
+      showAlert("Error", "User ID not found. Please try logging in again.", "error");
       return;
     }
 
@@ -134,7 +147,7 @@ const LoginPage = () => {
         await login(result.token, result.id);
         router.replace("/(tabs)");
       } else {
-        Alert.alert("Error", result.message || "OTP verification failed.");
+        showAlert("Error", result.message || "OTP verification failed.", "error");
       }
     } catch (error: any) {
       const msg =
@@ -142,7 +155,7 @@ const LoginPage = () => {
         error.response?.data ||
         error.message ||
         "OTP verification failed";
-      Alert.alert("Error", String(msg));
+      showAlert("Error", String(msg), "error");
     } finally {
       setIsLoading(false);
     }
@@ -312,6 +325,13 @@ const LoginPage = () => {
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
+      <CustomAlert
+        visible={alertConfig.visible}
+        title={alertConfig.title}
+        message={alertConfig.message}
+        type={alertConfig.type}
+        onClose={() => setAlertConfig({ ...alertConfig, visible: false })}
+      />
     </SafeAreaView>
   );
 };

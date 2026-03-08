@@ -203,38 +203,6 @@ export default function ProfileScreen() {
     );
   }
 
-  // Calculate completion percentage with a robust list of required fields
-  const calculateCompletion = () => {
-    if (!profile) return 0;
-    
-    // Core profile fields that SHOULD be filled for 100% completion
-    const requiredFields: (keyof profileService.ProfileData)[] = [
-      "fullName", "gender", "dateOfBirth", "height", "weight", "city",
-      "religion", "community", "caste", "subCaste", 
-      "education", "occupation", "employmentType", "annualIncome",
-      "fatherName", "motherName", "fatherOccupation", "motherOccupation", 
-      "brothers", "sisters", "familyType", "familyStatus", "familyValues",
-      "aboutMe", "dietPreference", "profileCreatedBy"
-    ];
-
-    // Some fields might be mapped differently between form and response
-    let filled = 0;
-    requiredFields.forEach(field => {
-      let val: any = profile[field];
-      
-      // Check both mapped and unmapped properties if needed (e.g. eatingHabit vs eatingHabits)
-      if (field === "eatingHabits") val = val || (profile as any).eatingHabit;
-      if (field === "dietPreference") val = val || (profile as any).dietPreference;
-      
-      if (val !== null && val !== undefined && val !== "" && val !== "NOT_SPECIFIED") {
-        filled++;
-      }
-    });
-
-    const percent = Math.round((filled / requiredFields.length) * 100);
-    return percent > 100 ? 100 : percent;
-  };
-
   const saveAboutMe = async () => {
     try {
       setUploading(true);
@@ -249,7 +217,7 @@ export default function ProfileScreen() {
     }
   };
 
-  const completion = calculateCompletion();
+  const completion = profile ? profileService.calculateProfileCompletion(profile).percentage : 0;
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -264,7 +232,7 @@ export default function ProfileScreen() {
           {profile.fullName || "User Profiles"},{" "}
           {profile.dateOfBirth
             ? new Date().getFullYear() -
-              new Date(profile.dateOfBirth).getFullYear()
+            new Date(profile.dateOfBirth).getFullYear()
             : ""}
         </Text>
         <View style={{ width: 24 }} />
@@ -299,7 +267,7 @@ export default function ProfileScreen() {
             {profile.fullName},{" "}
             {profile.dateOfBirth
               ? new Date().getFullYear() -
-                new Date(profile.dateOfBirth).getFullYear()
+              new Date(profile.dateOfBirth).getFullYear()
               : "N/A"}
           </Text>
           <Text style={styles.profession}>
@@ -364,6 +332,7 @@ export default function ProfileScreen() {
             />
             <InfoRow label="Mother Tongue" value="Hindi" />
             <InfoRow label="Religion" value={profile.religion || "Not set"} />
+            <InfoRow label="Community" value={profile.community || "Not set"} />
             <InfoRow label="Caste" value={profile.caste || "Not set"} />
             <InfoRow label="Sub Caste" value={profile.subCaste || "Not set"} />
             <InfoRow
@@ -416,7 +385,6 @@ export default function ProfileScreen() {
               label="Family Values"
               value={profile.familyValues || "Not set"}
             />
-            <InfoRow label="Native Place" value={profile.city || "Not set"} />
           </View>
         </View>
 
@@ -431,6 +399,8 @@ export default function ProfileScreen() {
           <View style={styles.infoGrid}>
             <InfoRow label="Rashi" value={profile.rashi || "Not set"} />
             <InfoRow label="Nakshatra" value={profile.nakshatra || "Not set"} />
+            {/* Note: backend returns 'gotra', but frontend interface had 'gothra'. We can try both just in case, but backend DTO has 'gotra' */}
+            <InfoRow label="Gotra" value={(profile as any).gotra || profile.gothra || "Not set"} />
             <InfoRow
               label="Manglik"
               value={profile.manglikStatus || "Not set"}
@@ -439,7 +409,6 @@ export default function ProfileScreen() {
               label="Date of Birth"
               value={profile.dateOfBirth || "Not set"}
             />
-            <InfoRow label="Birth Place" value={profile.city || "Not set"} />
           </View>
         </View>
 
@@ -468,7 +437,7 @@ export default function ProfileScreen() {
             <Text style={styles.sectionTitle}>Additional Photos</Text>
             <View style={styles.photoCounter}>
               <Text style={styles.photoCounterText}>
-                {profile.additionalPhotos?.length || 0}/5
+                {profile.photos?.length || 0}/5
               </Text>
             </View>
           </View>
@@ -488,8 +457,8 @@ export default function ProfileScreen() {
               <Text style={styles.addPhotoText}>Add Photo</Text>
             </TouchableOpacity>
 
-            {profile.additionalPhotos &&
-              profile.additionalPhotos.map((photoUrl, index) => (
+            {profile.photos &&
+              profile.photos.map((photoUrl, index) => (
                 <Image
                   key={index}
                   source={{ uri: photoUrl }}
@@ -499,7 +468,7 @@ export default function ProfileScreen() {
 
             {/* Empty placeholders */}
             {Array.from({
-              length: Math.max(0, 4 - (profile.additionalPhotos?.length || 0)),
+              length: Math.max(0, 4 - (profile.photos?.length || 0)),
             }).map((_, i) => (
               <View key={`empty-${i}`} style={styles.emptyPhotoBox}>
                 <Ionicons name="image-outline" size={32} color="#CCC" />
@@ -548,7 +517,7 @@ export default function ProfileScreen() {
                 <Ionicons name="close" size={24} color="#333" />
               </TouchableOpacity>
             </View>
-            
+
             <TextInput
               style={modalStyles.input}
               multiline
@@ -558,8 +527,8 @@ export default function ProfileScreen() {
               onChangeText={setEditedAboutMe}
               textAlignVertical="top"
             />
-            
-            <TouchableOpacity 
+
+            <TouchableOpacity
               style={[modalStyles.saveButton, uploading && { opacity: 0.7 }]}
               onPress={saveAboutMe}
               disabled={uploading}

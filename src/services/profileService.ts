@@ -56,7 +56,7 @@ export interface ProfileData {
 
   // Read-only (from server)
   profilePhotoUrl?: string;
-  additionalPhotos?: string[];
+  photos?: string[];
 }
 
 /**
@@ -67,8 +67,8 @@ export async function saveProfile(data: Partial<ProfileData>): Promise<ProfileDa
 
   // Fetch userId if missing, as backend DTO requires it
   if (!payload.userId) {
-    const storedUserId = Platform.OS === "web" 
-      ? localStorage.getItem("user_id") 
+    const storedUserId = Platform.OS === "web"
+      ? localStorage.getItem("user_id")
       : await SecureStore.getItemAsync("user_id");
     if (storedUserId) {
       payload.userId = parseInt(storedUserId, 10);
@@ -156,7 +156,7 @@ export async function saveProfile(data: Partial<ProfileData>): Promise<ProfileDa
 
   // Apply specific maps
   if (payload.rashi) payload.rashi = rashiMap[payload.rashi.toString()] || formatEnum(payload.rashi);
-  
+
   if (payload.annualIncome !== undefined && payload.annualIncome !== null) {
     let incomeStr = payload.annualIncome.toString();
     // Handle cases where the context is stuck with numbers (e.g., 15 for "15+ Lakhs")
@@ -315,4 +315,71 @@ export async function deleteAdditionalPhoto(photoId: number): Promise<string> {
  */
 export async function deleteProfile(): Promise<void> {
   await api.delete("/api/user-profiles");
+}
+
+/**
+ * Calculates profile completion percentage globally.
+ */
+export function calculateProfileCompletion(profile: any): {
+  percentage: number;
+  missingFields: string[];
+} {
+  const fields = [
+    { key: "fullName", label: "Full Name" },
+    { key: "gender", label: "Gender" },
+    { key: "dateOfBirth", label: "Date of Birth" },
+    { key: "height", label: "Height" },
+    { key: "weight", label: "Weight" },
+    { key: "city", label: "City" },
+    { key: "religion", label: "Religion" },
+    { key: "community", label: "Community" },
+    { key: "caste", label: "Caste" },
+    { key: "highestEducation", label: "Education" },
+    { key: "education", label: "Education" },
+    { key: "occupation", label: "Occupation" },
+    { key: "annualIncome", label: "Annual Income" },
+    { key: "familyType", label: "Family Type" },
+    { key: "aboutMe", label: "About Me" },
+    { key: "profilePhotoUrl", label: "Profile Photo" },
+    { key: "manglikStatus", label: "Manglik Status" },
+    { key: "rashi", label: "Rashi" },
+    { key: "nakshatra", label: "Nakshatra" },
+    { key: "eatingHabits", label: "Eating Habits" },
+  ];
+
+  if (!profile)
+    return {
+      percentage: 0,
+      missingFields: fields.map((f) => f.label),
+    };
+
+  let filled = 0;
+  const missing: string[] = [];
+  const seen = new Set<string>();
+
+  fields.forEach((f) => {
+    if (seen.has(f.label)) return;
+
+    // Check both potential mapped keys (e.g. eatingHabits vs eatingHabit)
+    let val = profile[f.key];
+    if (f.key === "eatingHabits") val = val || profile.eatingHabit;
+    if (f.key === "highestEducation") val = val || profile.education;
+
+    if (
+      val !== null &&
+      val !== undefined &&
+      val !== "" &&
+      val !== 0 &&
+      val !== "NOT_SPECIFIED"
+    ) {
+      filled++;
+    } else {
+      missing.push(f.label);
+    }
+    seen.add(f.label);
+  });
+
+  const uniqueFieldCount = seen.size;
+  const pct = Math.round((filled / uniqueFieldCount) * 100);
+  return { percentage: pct > 100 ? 100 : pct, missingFields: missing };
 }

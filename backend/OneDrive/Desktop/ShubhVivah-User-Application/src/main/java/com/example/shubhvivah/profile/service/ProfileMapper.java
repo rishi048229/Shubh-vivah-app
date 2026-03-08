@@ -17,10 +17,6 @@ import org.springframework.stereotype.Component;
 public class ProfileMapper {
 
         private final UserRepository userRepository;
-        private final ReligionRepository religionRepository;
-        private final CommunityRepository communityRepository;
-        private final CasteRepository casteRepository;
-        private final GotraRepository gotraRepository;
 
         public UserProfile toEntity(UserProfileRequestDto dto) {
                 UserEntity user = userRepository.findById(dto.getUserId())
@@ -32,20 +28,10 @@ public class ProfileMapper {
                                 .dateOfBirth(dto.getDateOfBirth())
                                 .height(dto.getHeight())
                                 .weight(dto.getWeight())
-                                .religion(dto.getReligionId() != null
-                                                ? religionRepository.findById(dto.getReligionId()).orElse(null)
-                                                : null)
-                                .community(
-                                                dto.getCommunityId() != null
-                                                                ? communityRepository.findById(dto.getCommunityId())
-                                                                                .orElse(null)
-                                                                : null)
-                                .caste(dto.getCasteId() != null
-                                                ? casteRepository.findById(dto.getCasteId()).orElse(null)
-                                                : null)
-                                .gotra(dto.getGotraId() != null
-                                                ? gotraRepository.findById(dto.getGotraId()).orElse(null)
-                                                : null)
+                                .religion(dto.getReligion())
+                                .community(dto.getCommunity())
+                                .caste(dto.getCaste())
+                                .gotra(dto.getGothra())
                                 .manglikStatus(dto.getManglikStatus())
                                 .nakshatra(dto.getNakshatra())
                                 .rashi(dto.getRashi())
@@ -82,15 +68,10 @@ public class ProfileMapper {
                                 .dateOfBirth(entity.getDateOfBirth())
                                 .height(entity.getHeight())
                                 .weight(entity.getWeight())
-                                .religionId(entity.getReligion() != null ? entity.getReligion().getId() : null)
-                                .religion(entity.getReligion() != null ? entity.getReligion().getReligionName() : null)
-                                .communityId(entity.getCommunity() != null ? entity.getCommunity().getId() : null)
-                                .community(entity.getCommunity() != null ? entity.getCommunity().getCommunityName()
-                                                : null)
-                                .casteId(entity.getCaste() != null ? entity.getCaste().getId() : null)
-                                .caste(entity.getCaste() != null ? entity.getCaste().getCasteName() : null)
-                                .gotraId(entity.getGotra() != null ? entity.getGotra().getId() : null)
-                                .gotra(entity.getGotra() != null ? entity.getGotra().getGotraName() : null)
+                                .religion(entity.getReligion())
+                                .community(entity.getCommunity())
+                                .caste(entity.getCaste())
+                                .gotra(entity.getGotra())
                                 .manglikStatus(entity.getManglikStatus())
                                 .nakshatra(entity.getNakshatra())
                                 .rashi(entity.getRashi())

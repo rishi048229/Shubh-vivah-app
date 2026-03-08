@@ -117,6 +117,7 @@ export default function ProfileDetailsScreen() {
     profile.height && { label: "Height", value: profile.height },
     profile.motherTongue && { label: "Mother Tongue", value: profile.motherTongue },
     profile.religion && { label: "Religion", value: profile.religion },
+    profile.community && { label: "Community", value: profile.community },
     profile.caste && { label: "Caste", value: profile.caste },
     profile.education && { label: "Education", value: profile.education },
     profile.occupation && { label: "Occupation", value: profile.occupation },
@@ -132,13 +133,11 @@ export default function ProfileDetailsScreen() {
     profile.siblings && { label: "Siblings", value: profile.siblings },
     profile.familyType && { label: "Family Type", value: profile.familyType },
     profile.familyValues && { label: "Family Values", value: profile.familyValues },
-    profile.nativePlace && { label: "Native Place", value: profile.nativePlace },
   ].filter(Boolean);
 
   const horoscopeData = [
     profile.manglik && { label: "Manglik", value: profile.manglik },
     profile.dateOfBirth && { label: "Birth Date", value: profile.dateOfBirth },
-    profile.birthPlace && { label: "Birth Place", value: profile.birthPlace },
     profile.birthTime && { label: "Birth Time", value: profile.birthTime },
     profile.rashi && { label: "Rashi", value: profile.rashi },
     profile.nakshatra && { label: "Nakshatra", value: profile.nakshatra },

@@ -28,6 +28,9 @@ import Animated, {
   FadeIn,
   FadeInDown,
 } from "react-native-reanimated";
+import { LinearGradient } from "expo-linear-gradient";
+import { BlurView } from "expo-blur";
+import { Ionicons } from "@expo/vector-icons";
 
 interface InteractionsSheetProps {
   onDismiss?: () => void;
@@ -41,13 +44,13 @@ export interface InteractionsSheetRef extends BottomSheetModal {
 
 const SCREEN_WIDTH = Dimensions.get("window").width;
 const TAB_CONTAINER_PADDING = 4;
-const TAB_WIDTH = (SCREEN_WIDTH - 40 - TAB_CONTAINER_PADDING * 2) / 2; // 40 = container paddingHorizontal
+const TAB_WIDTH = (SCREEN_WIDTH - 40 - TAB_CONTAINER_PADDING * 2) / 2;
 
 const InteractionsSheet = forwardRef<
   InteractionsSheetRef,
   InteractionsSheetProps
 >(({ onDismiss, onProfilePress, initialTab = "likes" }, ref) => {
-  const snapPoints = useMemo(() => ["60%", "85%"], []);
+  const snapPoints = useMemo(() => ["60%", "90%"], []);
   const [activeTab, setActiveTab] = useState<"likes" | "views">(initialTab);
 
   // Smooth sliding indicator animation
@@ -57,8 +60,8 @@ const InteractionsSheet = forwardRef<
     (tab: "likes" | "views") => {
       setActiveTab(tab);
       tabOffset.value = withTiming(tab === "likes" ? 0 : TAB_WIDTH, {
-        duration: 250,
-        easing: Easing.bezier(0.4, 0.0, 0.2, 1),
+        duration: 300,
+        easing: Easing.bezier(0.25, 0.1, 0.25, 1),
       });
     },
     [tabOffset],
@@ -68,7 +71,6 @@ const InteractionsSheet = forwardRef<
     transform: [{ translateX: tabOffset.value }],
   }));
 
-  // Expose method to change tab externally
   useImperativeHandle(
     ref,
     () =>
@@ -100,7 +102,8 @@ const InteractionsSheet = forwardRef<
         {...props}
         disappearsOnIndex={-1}
         appearsOnIndex={0}
-        opacity={0.4}
+        opacity={0.65}
+        pressBehavior="close"
       />
     ),
     [],
@@ -114,28 +117,31 @@ const InteractionsSheet = forwardRef<
       backdropComponent={renderBackdrop}
       enablePanDownToClose
       onDismiss={onDismiss}
-      backgroundStyle={{ backgroundColor: "#FFF", borderRadius: 24 }}
-      handleIndicatorStyle={{ backgroundColor: "#D1D5DB", width: 40 }}
+      backgroundStyle={{ backgroundColor: "#FFFdf9", borderRadius: 32 }}
+      handleIndicatorStyle={{ backgroundColor: "#D4AF37", width: 60, height: 6, borderRadius: 3 }}
     >
       <View style={styles.container}>
         {/* Header & Tabs */}
         <View style={styles.header}>
           <Text style={styles.title}>Activity Center</Text>
+          <Text style={styles.subtitle}>See who is interacting with your profile</Text>
 
           <View style={styles.tabContainer}>
             {/* Smooth Sliding Background */}
-            <Animated.View style={[styles.slidingIndicator, indicatorStyle]} />
+            <Animated.View style={[styles.slidingIndicator, indicatorStyle]}>
+              <LinearGradient
+                colors={["#800000", "#A52A2A"]}
+                style={StyleSheet.absoluteFillObject}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+              />
+            </Animated.View>
 
             <TouchableOpacity
               style={styles.tab}
               onPress={() => switchTab("likes")}
             >
-              <Text
-                style={[
-                  styles.tabText,
-                  activeTab === "likes" && styles.activeTabText,
-                ]}
-              >
+              <Text style={[styles.tabText, activeTab === "likes" && styles.activeTabText]}>
                 Likes Received
               </Text>
             </TouchableOpacity>
@@ -144,12 +150,7 @@ const InteractionsSheet = forwardRef<
               style={styles.tab}
               onPress={() => switchTab("views")}
             >
-              <Text
-                style={[
-                  styles.tabText,
-                  activeTab === "views" && styles.activeTabText,
-                ]}
-              >
+              <Text style={[styles.tabText, activeTab === "views" && styles.activeTabText]}>
                 Profile Views
               </Text>
             </TouchableOpacity>
@@ -157,51 +158,65 @@ const InteractionsSheet = forwardRef<
         </View>
 
         {/* List */}
-        <BottomSheetScrollView contentContainerStyle={styles.listContent}>
+        <BottomSheetScrollView contentContainerStyle={styles.listContent} showsVerticalScrollIndicator={false}>
           {data.map((profile, index) => (
             <Animated.View
               key={`${activeTab}-${profile.id}`}
-              entering={FadeInDown.delay(index * 80)
-                .duration(300)
-                .springify()
-                .damping(18)}
+              entering={FadeInDown.delay(index * 100)
+                .duration(400)
+                .easing(Easing.bezier(0.25, 0.1, 0.25, 1))}
             >
               <TouchableOpacity
-                style={styles.item}
+                style={styles.itemWrapper}
                 onPress={() => onProfilePress?.(profile.id)}
-                activeOpacity={0.7}
+                activeOpacity={0.8}
               >
-                <Image
-                  source={{ uri: profile.imageUri }}
-                  style={styles.avatar}
-                />
+                <BlurView intensity={80} tint="light" style={styles.item}>
+                  <View style={styles.avatarContainer}>
+                    <Image
+                      source={{ uri: profile.imageUri }}
+                      style={styles.avatar}
+                    />
+                    <View style={styles.onlineBadge}>
+                      <Ionicons name="sparkles" size={10} color="#FFF" />
+                    </View>
+                  </View>
 
-                <View style={styles.info}>
-                  <Text style={styles.name}>
-                    {profile.name}, {profile.age}
-                  </Text>
-                  <Text style={styles.time}>
-                    {activeTab === "likes"
-                      ? "Liked your profile"
-                      : "Viewed your profile"}{" "}
-                    • {index + 1}h ago
-                  </Text>
-                </View>
+                  <View style={styles.info}>
+                    <Text style={styles.name}>
+                      {profile.name}, {profile.age}
+                    </Text>
+                    <Text style={styles.time}>
+                      {activeTab === "likes"
+                        ? "Liked your profile"
+                        : "Viewed your profile"}{" "}
+                      • {index + 1}h ago
+                    </Text>
+                  </View>
 
-                <TouchableOpacity
-                  style={styles.actionBtn}
-                  onPress={() => onProfilePress?.(profile.id)}
-                >
-                  <Text style={styles.actionBtnText}>View</Text>
-                </TouchableOpacity>
+                  <LinearGradient
+                    colors={["#D4AF37", "#F3E5AB"]}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 1 }}
+                    style={styles.actionBtnGradient}
+                  >
+                    <TouchableOpacity
+                      style={styles.actionBtn}
+                      onPress={() => onProfilePress?.(profile.id)}
+                    >
+                      <Text style={styles.actionBtnText}>View</Text>
+                    </TouchableOpacity>
+                  </LinearGradient>
+                </BlurView>
               </TouchableOpacity>
             </Animated.View>
           ))}
 
           {data.length === 0 && (
-            <View style={styles.emptyState}>
-              <Text style={styles.emptyText}>No recent {activeTab}.</Text>
-            </View>
+            <Animated.View entering={FadeIn.duration(400)} style={styles.emptyState}>
+              <Ionicons name="eye-off-outline" size={64} color="#D1D5DB" />
+              <Text style={styles.emptyText}>No recent {activeTab} yet.</Text>
+            </Animated.View>
           )}
         </BottomSheetScrollView>
       </View>
@@ -213,25 +228,39 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     paddingHorizontal: 20,
-    paddingTop: 10,
+    paddingTop: 15,
   },
   header: {
-    marginBottom: 20,
+    marginBottom: 24,
+    alignItems: "center",
   },
   title: {
-    fontSize: 22,
-    fontWeight: "bold",
-    color: "#2D1406",
-    marginBottom: 16,
+    fontSize: 26,
+    fontWeight: "800",
+    color: "#800000",
+    marginBottom: 4,
+    textAlign: "center",
+    letterSpacing: 0.5,
+  },
+  subtitle: {
+    fontSize: 14,
+    color: "#78716C",
+    marginBottom: 20,
     textAlign: "center",
   },
   tabContainer: {
     flexDirection: "row",
-    backgroundColor: "#F5F5F4",
-    borderRadius: 14,
+    backgroundColor: "#FCECD4",
+    borderRadius: 16,
     padding: TAB_CONTAINER_PADDING,
     position: "relative",
-    height: 44,
+    height: 50,
+    width: "100%",
+    shadowColor: "#D4AF37",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 4,
+    elevation: 3,
   },
   slidingIndicator: {
     position: "absolute",
@@ -239,81 +268,126 @@ const styles = StyleSheet.create({
     top: TAB_CONTAINER_PADDING,
     bottom: TAB_CONTAINER_PADDING,
     width: TAB_WIDTH,
-    backgroundColor: "#FFF",
     borderRadius: 12,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.08,
-    shadowRadius: 3,
-    elevation: 2,
+    shadowColor: "#800000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 6,
+    elevation: 5,
+    overflow: "hidden",
   },
   tab: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    borderRadius: 10,
+    borderRadius: 12,
     zIndex: 1,
   },
   tabText: {
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: "600",
-    color: "#78716C",
+    color: "#9C7C38",
+    opacity: 0.8,
   },
   activeTabText: {
-    color: Colors.maroon,
+    color: "#FFFFFF",
     fontWeight: "700",
+    opacity: 1,
   },
   listContent: {
-    gap: 12,
+    gap: 16,
     paddingBottom: 40,
+  },
+  itemWrapper: {
+    borderRadius: 20,
+    overflow: "hidden",
+    backgroundColor: "transparent",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.08,
+    shadowRadius: 10,
+    elevation: 4,
+    borderWidth: 1,
+    borderColor: "rgba(212, 175, 55, 0.2)",
   },
   item: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#FFF",
-    padding: 12,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: "#E7E5E4",
+    padding: 16,
+    backgroundColor: "rgba(255, 255, 255, 0.7)",
+  },
+  avatarContainer: {
+    position: "relative",
+    marginRight: 16,
   },
   avatar: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-    marginRight: 12,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    borderWidth: 2,
+    borderColor: "#D4AF37",
+  },
+  onlineBadge: {
+    position: "absolute",
+    bottom: 0,
+    right: -4,
+    backgroundColor: "#D4AF37",
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    borderWidth: 2,
+    borderColor: "#FFF",
+    justifyContent: "center",
+    alignItems: "center",
   },
   info: {
     flex: 1,
+    justifyContent: "center",
   },
   name: {
-    fontSize: 16,
+    fontSize: 17,
     fontWeight: "700",
     color: "#2D1406",
+    marginBottom: 4,
   },
   time: {
     fontSize: 12,
-    color: "#A8A29E",
-    marginTop: 2,
+    color: "#856A5D",
+    fontWeight: "500",
+  },
+  actionBtnGradient: {
+    borderRadius: 20,
+    padding: 2,
+    overflow: "hidden",
+    shadowColor: "#D4AF37",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 3,
   },
   actionBtn: {
+    backgroundColor: "#FFF",
     paddingVertical: 8,
     paddingHorizontal: 16,
-    borderRadius: 20,
-    backgroundColor: "#FFF1F2",
-    borderWidth: 1,
-    borderColor: "#FECDD3",
-  },
-  actionBtnText: {
-    fontSize: 12,
-    fontWeight: "700",
-    color: "#BE123C",
-  },
-  emptyState: {
-    padding: 40,
+    borderRadius: 18,
+    justifyContent: "center",
     alignItems: "center",
   },
+  actionBtnText: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: "#800000",
+  },
+  emptyState: {
+    padding: 60,
+    alignItems: "center",
+    justifyContent: "center",
+  },
   emptyText: {
-    color: "#A8A29E",
+    color: "#9CA3AF",
+    fontSize: 16,
+    fontWeight: "500",
+    marginTop: 12,
   },
 });
 

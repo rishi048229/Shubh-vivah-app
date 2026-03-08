@@ -198,7 +198,11 @@ export async function searchProfiles(
   filters?: { minAge?: number; maxAge?: number; city?: string; religion?: string }
 ): Promise<UIMatchProfile[]> {
   try {
-    const params: any = { query };
+    const params: any = {};
+    // Only include query if non-empty; backend returns 400 for empty query string
+    if (query && query.trim() !== "") {
+      params.query = query.trim();
+    }
     if (filters?.minAge) params.minAge = filters.minAge;
     if (filters?.maxAge) params.maxAge = filters.maxAge;
     if (filters?.city && filters.city !== "Any" && filters.city !== "") params.city = filters.city;
@@ -226,8 +230,11 @@ export async function searchProfiles(
       onlineStatus: "recently_active",
       maritalStatus: "Never Married",
     }));
-  } catch (error) {
-    console.error("Failed to search profiles:", error);
+  } catch (error: any) {
+    // Use console.warn (NOT console.error) to avoid React Native's red LogBox overlay
+    if (error?.message !== "Network Error") {
+      console.warn("Search profiles issue:", error?.message || error);
+    }
     return [];
   }
 }

@@ -109,7 +109,7 @@ export default function MatchScreen() {
   const flatListRef = useRef<FlatList>(null);
   const preferencesRef = useRef<BottomSheetModal>(null);
 
-  const loadMatches = useCallback(async (currentFilters = filters) => {
+  const loadMatches = async (currentFilters = filters) => {
     setIsLoading(true);
     try {
       const results = await matchService.searchProfiles("", {
@@ -127,7 +127,7 @@ export default function MatchScreen() {
 
       const profiles: MatchItem[] = results.map((p, index) => ({
         id: p.id,
-        userId: parseInt(p.id) || 0, // Fallback for numeric ID if needed
+        userId: parseInt(p.id) || 0,
         name: p.name,
         age: String(p.age),
         location: p.location || "Unknown",
@@ -135,8 +135,7 @@ export default function MatchScreen() {
         education: p.education || "Not Specified",
         matchPercentage: `${p.matchPercentage}%`,
         tags: [p.religion, p.caste].filter(Boolean) as string[],
-        // Use real image mostly, fallback to random avatar
-        imageUri: p.imageUri || "https://randomuser.me/api/portraits/lego/1.jpg",
+        imageUri: p.imageUri || "https://cdn-icons-png.flaticon.com/512/847/847969.png",
       }));
 
       setMatches(profiles);
@@ -145,8 +144,9 @@ export default function MatchScreen() {
     } finally {
       setIsLoading(false);
     }
-  }, [filters]);
+  };
 
+  // Load once on mount — NO dependency on loadMatches to avoid infinite loop
   useEffect(() => {
     const init = async () => {
       try {
@@ -163,7 +163,7 @@ export default function MatchScreen() {
       }
     };
     init();
-  }, [loadMatches]);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleApplyFilters = (newFilters: any) => {
     const updatedFilters = { ...filters, ...newFilters };

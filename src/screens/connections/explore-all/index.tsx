@@ -64,32 +64,23 @@ export default function ExploreAllScreen() {
           currentFilters.religions[0] === "Any"
             ? undefined
             : currentFilters.religions[0],
-        maritalStatus:
-          currentFilters.maritalStatus[0] === "Any"
-            ? undefined
-            : currentFilters.maritalStatus[0],
-        community:
-          currentFilters.communities[0] === "Any"
-            ? undefined
-            : currentFilters.communities[0],
       });
 
-      // Map to UI
+      // searchProfiles already returns UIMatchProfile[] — map to MatchProfile for the UI
       const mapped = data.map((p) => ({
-        id: p.userId.toString(),
-        name: p.fullName,
+        id: p.id,
+        name: p.name,
         age: p.age,
-        location: p.city || "Unknown",
+        location: p.location || "Unknown",
         city: p.city || "Unknown",
-        state: "Unknown",
-        distance: p.distanceKm || 0,
-        matchPercentage: p.matchScore || 75,
-        matchReasons: p.religion ? [p.religion] : [], // Use religion as match reason
-        imageUri:
-          p.profilePhotoUrl || "https://randomuser.me/api/portraits/lego/1.jpg",
-        profession: p.occupation || "Not Specified", // Use real occupation
+        state: "",
+        distance: p.distance || 0,
+        matchPercentage: p.matchPercentage || 75,
+        matchReasons: p.matchReasons || [],
+        imageUri: p.imageUri || "https://cdn-icons-png.flaticon.com/512/847/847969.png",
+        profession: p.profession || "Not Specified",
         education: p.education || "Not Specified",
-        religion: p.religion || "Hindu",
+        religion: p.religion || "",
         caste: p.caste || "",
         verified: true,
         onlineStatus: "recently_active" as const,

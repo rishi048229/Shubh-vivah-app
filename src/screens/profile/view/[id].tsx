@@ -1,4 +1,5 @@
 import ProfileDataSection from "@/components/ProfileDataSection";
+import { useThemedAlert } from "@/components/ThemedAlert";
 import { Colors } from "@/constants/Colors";
 import {
   likeUser,
@@ -6,13 +7,13 @@ import {
   shortlistUser,
   viewFullProfile,
 } from "@/services/matchService";
+import { getAvatarUrl } from "@/utils/avatar";
 import { Ionicons } from "@expo/vector-icons";
 import Constants from "expo-constants";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
 import {
   ActivityIndicator,
-  Alert,
   Dimensions,
   Image,
   ScrollView,
@@ -33,6 +34,7 @@ export default function ProfileDetailsScreen() {
   const [profile, setProfile] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState("");
+  const { showAlert, AlertComponent } = useThemedAlert();
 
   useEffect(() => {
     loadProfile();
@@ -45,7 +47,7 @@ export default function ProfileDetailsScreen() {
       setProfile(data);
     } catch (e) {
       console.log("Failed to load profile:", e);
-      Alert.alert("Error", "Could not load profile.");
+      showAlert("Error", "Could not load profile.", "error");
     } finally {
       setLoading(false);
     }
@@ -55,9 +57,9 @@ export default function ProfileDetailsScreen() {
     try {
       setActionLoading("like");
       await likeUser(userId);
-      Alert.alert("Liked!", `You liked ${profile?.fullName || "this user"}`);
+      showAlert("Liked!", `You liked ${profile?.fullName || "this user"}`, "success");
     } catch (e: any) {
-      Alert.alert("Info", e?.response?.data || "Already liked or action failed.");
+      showAlert("Info", e?.response?.data || "Already liked or action failed.", "info");
     } finally {
       setActionLoading("");
     }
@@ -67,12 +69,9 @@ export default function ProfileDetailsScreen() {
     try {
       setActionLoading("shortlist");
       await shortlistUser(userId);
-      Alert.alert(
-        "Shortlisted!",
-        `${profile?.fullName || "User"} added to your shortlist.`,
-      );
+      showAlert("Shortlisted!", `${profile?.fullName || "User"} added to your shortlist.`, "success");
     } catch (e: any) {
-      Alert.alert("Info", e?.response?.data || "Already shortlisted.");
+      showAlert("Info", e?.response?.data || "Already shortlisted.", "info");
     } finally {
       setActionLoading("");
     }
@@ -82,12 +81,9 @@ export default function ProfileDetailsScreen() {
     try {
       setActionLoading("request");
       await sendRequest(userId);
-      Alert.alert(
-        "Request Sent! 💌",
-        `Your connection request has been sent to ${profile?.fullName || "this user"}.`,
-      );
+      showAlert("Request Sent! 💌", `Your connection request has been sent to ${profile?.fullName || "this user"}.`, "success");
     } catch (e: any) {
-      Alert.alert("Info", e?.response?.data || "Request already sent.");
+      showAlert("Info", e?.response?.data || "Request already sent.", "info");
     } finally {
       setActionLoading("");
     }
@@ -166,13 +162,15 @@ export default function ProfileDetailsScreen() {
 
   const displayName = profile.fullName || "User";
   const firstName = displayName.split(" ")[0];
-  const photoUrl =
-    profile.profilePhotoUrl ||
-    (profile.photos && profile.photos[0]) ||
-    "https://randomuser.me/api/portraits/lego/1.jpg";
+  const photoUrl = getAvatarUrl(
+    profile.profilePhotoUrl || (profile.photos && profile.photos[0]),
+    profile.gender,
+    profile.fullName
+  );
 
   return (
     <View style={styles.container}>
+      <AlertComponent />
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity

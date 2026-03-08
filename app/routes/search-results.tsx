@@ -41,7 +41,7 @@ export default function SearchResultsScreen() {
   };
 
   const handleProfilePress = (id: string) => {
-    router.push(`/profile/${id}`);
+    router.push(`/profile/${id}` as any);
   };
 
   return (

@@ -1,3 +1,4 @@
+import { getAvatarUrl } from "@/utils/avatar";
 import { Colors } from "@/constants/Colors";
 import { Ionicons, MaterialIcons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
@@ -335,7 +336,7 @@ export default function NearbyScreen() {
           distance: p.distanceKm || 0,
           matchPercentage: p.matchScore || 0,
           matchReasons: [],
-          imageUri: p.profilePhotoUrl || "https://randomuser.me/api/portraits/women/1.jpg",
+          imageUri: getAvatarUrl(p.profilePhotoUrl, p.gender, p.fullName),
           profession: p.occupation || "",
           education: p.education || "",
           religion: p.religion || "",

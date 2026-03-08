@@ -1,7 +1,9 @@
 import { Colors } from "@/constants/Colors";
+import { getAvatarUrl } from "@/utils/avatar";
+import * as profileService from "@/services/profileService";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { Image, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 
 type HomeHeaderProps = {
@@ -10,6 +12,24 @@ type HomeHeaderProps = {
 
 export default function HomeHeader({ onOpenSidebar }: HomeHeaderProps) {
   const router = useRouter();
+  const [userName, setUserName] = useState("User");
+  const [userImage, setUserImage] = useState(getAvatarUrl(null, null, "User"));
+  const [userCity, setUserCity] = useState("Loading...");
+
+  useEffect(() => {
+    const load = async () => {
+      try {
+        const profile = await profileService.getProfile();
+        if (profile) {
+          const firstName = (profile.fullName || "User").split(" ")[0];
+          setUserName(firstName);
+          setUserImage(getAvatarUrl(profile.profilePhotoUrl, profile.gender, profile.fullName));
+          if (profile.city) setUserCity(profile.city);
+        }
+      } catch {}
+    };
+    load();
+  }, []);
 
   return (
     <View style={styles.container}>
@@ -18,15 +38,15 @@ export default function HomeHeader({ onOpenSidebar }: HomeHeaderProps) {
         <View style={styles.leftSection}>
           <TouchableOpacity onPress={onOpenSidebar} activeOpacity={0.8}>
             <Image
-              source={{ uri: "https://randomuser.me/api/portraits/men/32.jpg" }}
+              source={{ uri: userImage }}
               style={styles.avatar}
             />
           </TouchableOpacity>
           <View style={styles.greetingContainer}>
-            <Text style={styles.greetingText}>Rahul, 6 new matches</Text>
+            <Text style={styles.greetingText}>Hi, {userName} 👋</Text>
             <View style={styles.locationRow}>
               <Ionicons name="location-outline" size={14} color="#666" />
-              <Text style={styles.locationText}>Viman Nagar, Pune</Text>
+              <Text style={styles.locationText}>{userCity}</Text>
             </View>
           </View>
         </View>

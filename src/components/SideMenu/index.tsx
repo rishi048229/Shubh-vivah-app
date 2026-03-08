@@ -1,6 +1,7 @@
 import { Colors } from "@/constants/Colors";
 import { useAuth } from "@/context/AuthContext";
 import * as profileService from "@/services/profileService";
+import { getAvatarUrl } from "@/utils/avatar";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
@@ -78,7 +79,7 @@ export default function SideMenu({
   const { logout, user } = useAuth();
   const [userName, setUserName] = useState("User");
   const [userImage, setUserImage] = useState(
-    "https://randomuser.me/api/portraits/men/32.jpg",
+    getAvatarUrl(null, null, "User")
   );
 
   const [userCity, setUserCity] = useState<string | null>(null);
@@ -94,9 +95,7 @@ export default function SideMenu({
       const profile = await profileService.getProfile();
       if (profile) {
         setUserName(profile.fullName || "New User");
-        if (profile.profilePhotoUrl) {
-          setUserImage(profile.profilePhotoUrl);
-        }
+        setUserImage(getAvatarUrl(profile.profilePhotoUrl, profile.gender, profile.fullName));
         if (profile.city) {
           setUserCity(profile.city);
         }

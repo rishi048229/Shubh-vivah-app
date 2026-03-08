@@ -142,13 +142,13 @@ export async function connectWebSocket(): Promise<Client> {
 
     client.onStompError = (frame) => {
       clearTimeout(timeoutId);
-      console.error("[STOMP] Error:", frame.headers["message"]);
+      console.warn("[STOMP] Error:", frame.headers["message"]);
       reject(new Error(frame.headers["message"]));
     };
 
     client.onWebSocketError = (event) => {
       clearTimeout(timeoutId);
-      console.error("[STOMP] WebSocket error:", event);
+      console.warn("[STOMP] WebSocket error:", event);
       reject(new Error("WebSocket error"));
     };
 
@@ -182,7 +182,7 @@ export function subscribeToMessages(
         const parsed = JSON.parse(message.body);
         onMessage(parsed);
       } catch (e) {
-        console.error("[STOMP] Failed to parse message:", e);
+        console.warn("[STOMP] Failed to parse message:", e);
       }
     },
   );
@@ -239,7 +239,7 @@ export function subscribeToNotifications(
       try {
         onNotification(JSON.parse(message.body));
       } catch (e) {
-        console.error("[STOMP] Failed to parse notification:", e);
+        console.warn("[STOMP] Failed to parse notification:", e);
       }
     }
   );

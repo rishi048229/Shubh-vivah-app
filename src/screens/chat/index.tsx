@@ -52,15 +52,18 @@ export default function ChatScreen() {
         }
       }
 
-      // Build chat conversations from matched users
+      // Build chat conversations from matched users — deduplicate by otherUserId
       const conversations: ChatConversation[] = [];
+      const seenUserIds = new Set<number>();
+
       for (const match of matchedUsers) {
         const otherUserId =
           match.toUserId === currentUserId
             ? match.fromUserId
             : match.toUserId || match.userId;
 
-        if (!otherUserId) continue;
+        if (!otherUserId || seenUserIds.has(otherUserId)) continue;
+        seenUserIds.add(otherUserId);
 
         // Try to get their profile info
         let userInfo: any = {};

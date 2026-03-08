@@ -1,3 +1,4 @@
+import { getAvatarUrl } from "@/utils/avatar";
 import ActionCenterSection from "@/components/Home/New/ActionCenterSection";
 import BestMatchesCarousel from "@/components/Home/New/BestMatchesCarousel";
 import CollapsibleHero from "@/components/Home/New/CollapsibleHero";
@@ -185,7 +186,7 @@ export default function HomeScreen() {
         distance: p.distanceKm || 0,
         matchPercentage: p.matchScore || 0,
         matchReasons: p.religion ? [p.religion] : [],
-        imageUri: p.profilePhotoUrl || "https://randomuser.me/api/portraits/women/1.jpg",
+        imageUri: getAvatarUrl(p.profilePhotoUrl, (p as any).gender, p.fullName),
         profession: p.occupation || "",
         education: p.education || "",
         religion: p.religion || "",

@@ -17,12 +17,25 @@ import { useEffect } from "react";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import "react-native-reanimated";
 import { SafeAreaProvider } from "react-native-safe-area-context";
+import { LogBox, View, Text } from "react-native";
+
+// Suppress red LogBox popups for network & STOMP issues
+LogBox.ignoreLogs([
+  "AxiosError",
+  "Network Error",
+  "[STOMP]",
+  "Failed to search profiles",
+  "Search profiles issue",
+  "WebSocket",
+]);
 
 import { AuthProvider } from "@/context/AuthContext";
 import { ProfileFormProvider } from "@/context/ProfileFormContext";
 import { useColorScheme } from "@/hooks/use-color-scheme";
 
 import { GlobalNotificationToast } from "@/components/GlobalNotificationToast";
+
+
 
 export const unstable_settings = {
   initialRouteName: "(auth)/landing",
@@ -44,7 +57,7 @@ export default function RootLayout() {
 
   useEffect(() => {
     if (error) {
-      console.error("Font loading error:", error);
+      console.warn("Font loading error:", error);
       // Even on error, we should hide the splash screen to show the error
       SplashScreen.hideAsync();
     }
@@ -69,7 +82,7 @@ export default function RootLayout() {
   // Still returning null is fine AFTER we called hideAsync, we will just see a blank white screen.
   // We'll temporarily return the Rest of the app to see the error.
   if (!loaded && !error) {
-    return null;
+    return <View style={{ flex: 1, backgroundColor: 'red', justifyContent: 'center', alignItems: 'center' }}><Text>Loading Fonts...</Text></View>;
   }
 
   return (
@@ -81,317 +94,23 @@ export default function RootLayout() {
               <ThemeProvider
                 value={colorScheme === "dark" ? DarkTheme : DefaultTheme}
               >
-                <Stack initialRouteName="(auth)/landing">
-                  <Stack.Screen
-                    name="(auth)/landing"
-                    options={{ headerShown: false }}
-                  />
-                  <Stack.Screen
-                    name="(auth)/language-selection"
-                    options={{ headerShown: false }}
-                  />
-                  <Stack.Screen
-                    name="(auth)/login"
-                    options={{ headerShown: false }}
-                  />
-                  <Stack.Screen
-                    name="(auth)/register"
-                    options={{ headerShown: false }}
-                  />
-                  <Stack.Screen
-                    name="(auth)/forgot-password"
-                    options={{ headerShown: false }}
-                  />
-                  <Stack.Screen
-                    name="(tabs)"
-                    options={{ headerShown: false }}
-                  />
-                  <Stack.Screen
-                    name="complete-profile"
-                    options={{
+                  <Stack
+                    initialRouteName="(auth)/landing"
+                    screenOptions={{
                       headerShown: false,
                       animation: "slide_from_right",
                     }}
-                  />
-                  <Stack.Screen
-                    name="routes/view-all"
-                    options={{ headerShown: false }}
-                  />
-                  <Stack.Screen
-                    name="routes/new-matches"
-                    options={{
-                      headerShown: false,
-                      animation: "slide_from_right",
-                    }}
-                  />
-                  <Stack.Screen
-                    name="routes/nearby"
-                    options={{
-                      headerShown: false,
-                      animation: "slide_from_right",
-                    }}
-                  />
-                  <Stack.Screen
-                    name="connections/index"
-                    options={{
-                      headerShown: false,
-                      animation: "slide_from_right",
-                    }}
-                  />
-                  <Stack.Screen
-                    name="profile/index"
-                    options={{
-                      headerShown: false,
-                      animation: "slide_from_right",
-                    }}
-                  />
-                  <Stack.Screen
-                    name="profile/[id]"
-                    options={{
-                      headerShown: false,
-                      presentation: "transparentModal",
-                      animation: "fade",
-                    }}
-                  />
-                  <Stack.Screen
-                    name="chat/[id]"
-                    options={{
-                      headerShown: false,
-                      animation: "slide_from_right",
-                    }}
-                  />
-                  <Stack.Screen
-                    name="routes/wedding-venue"
-                    options={{
-                      headerShown: false,
-                      animation: "slide_from_right",
-                    }}
-                  />
-                  <Stack.Screen
-                    name="routes/photography"
-                    options={{
-                      headerShown: false,
-                      animation: "slide_from_right",
-                    }}
-                  />
-                  <Stack.Screen
-                    name="routes/food"
-                    options={{
-                      headerShown: false,
-                      animation: "slide_from_right",
-                    }}
-                  />
-                  <Stack.Screen
-                    name="routes/FoodV"
-                    options={{
-                      headerShown: false,
-                      animation: "slide_from_right",
-                    }}
-                  />
-                  <Stack.Screen
-                    name="routes/honeymoon"
-                    options={{
-                      headerShown: false,
-                      animation: "slide_from_right",
-                    }}
-                  />
-                  <Stack.Screen
-                    name="routes/einvite"
-                    options={{
-                      headerShown: false,
-                      animation: "slide_from_right",
-                    }}
-                  />
-                  <Stack.Screen
-                    name="routes/DecorationFloral"
-                    options={{
-                      headerShown: false,
-                      animation: "slide_from_right",
-                    }}
-                  />
-                  <Stack.Screen
-                    name="routes/JewelleryScreen"
-                    options={{
-                      headerShown: false,
-                      animation: "slide_from_right",
-                    }}
-                  />
-                  <Stack.Screen
-                    name="routes/JewelleryDetails"
-                    options={{
-                      headerShown: false,
-                      animation: "slide_from_right",
-                    }}
-                  />
-                  <Stack.Screen
-                    name="routes/MehandiScreen"
-                    options={{
-                      headerShown: false,
-                      animation: "slide_from_right",
-                    }}
-                  />
-                  <Stack.Screen
-                    name="routes/MakeupScreen"
-                    options={{
-                      headerShown: false,
-                      animation: "slide_from_right",
-                    }}
-                  />
-                  <Stack.Screen
-                    name="routes/EventManagementScreen"
-                    options={{
-                      headerShown: false,
-                      animation: "slide_from_right",
-                    }}
-                  />
-                  <Stack.Screen
-                    name="routes/DAngenciesScreen"
-                    options={{
-                      headerShown: false,
-                      animation: "slide_from_right",
-                    }}
-                  />
-                  <Stack.Screen
-                    name="routes/WAgenciesScreen"
-                    options={{
-                      headerShown: false,
-                      animation: "slide_from_right",
-                    }}
-                  />
-                  <Stack.Screen
-                    name="routes/InviteStudioScreen"
-                    options={{
-                      headerShown: false,
-                      animation: "slide_from_right",
-                    }}
-                  />
-                  <Stack.Screen
-                    name="routes/HaldiInviteScreen"
-                    options={{
-                      headerShown: false,
-                      animation: "slide_from_right",
-                    }}
-                  />
-                  <Stack.Screen
-                    name="routes/MehndiInviteScreen"
-                    options={{
-                      headerShown: false,
-                      animation: "slide_from_right",
-                    }}
-                  />
-                  <Stack.Screen
-                    name="routes/SangitInviteScreen"
-                    options={{
-                      headerShown: false,
-                      animation: "slide_from_right",
-                    }}
-                  />
-                  <Stack.Screen
-                    name="routes/WeddingInviteScreen"
-                    options={{
-                      headerShown: false,
-                      animation: "slide_from_right",
-                    }}
-                  />
-                  <Stack.Screen
-                    name="routes/ReceptionInviteScreen"
-                    options={{
-                      headerShown: false,
-                      animation: "slide_from_right",
-                    }}
-                  />
-                  <Stack.Screen
-                    name="JewelleryDetails"
-                    options={{
-                      headerShown: false,
-                      animation: "slide_from_right",
-                    }}
-                  />
-                  <Stack.Screen
-                    name="MakeupArtistDetails"
-                    options={{
-                      headerShown: false,
-                      animation: "slide_from_right",
-                    }}
-                  />
-                  <Stack.Screen
-                    name="HoneymoonVendorDetails"
-                    options={{
-                      headerShown: false,
-                      animation: "slide_from_right",
-                    }}
-                  />
-                  <Stack.Screen
-                    name="routes/HoneymoonVendorDetails"
-                    options={{
-                      headerShown: false,
-                      animation: "slide_from_right",
-                    }}
-                  />
-                  <Stack.Screen
-                    name="routes/MakeupArtistDetails"
-                    options={{
-                      headerShown: false,
-                      animation: "slide_from_right",
-                    }}
-                  />
-                  <Stack.Screen
-                    name="routes/VendorDetailScreen"
-                    options={{
-                      headerShown: false,
-                      animation: "slide_from_right",
-                    }}
-                  />
-                  <Stack.Screen
-                    name="routes/VendorListScreen"
-                    options={{
-                      headerShown: false,
-                      animation: "slide_from_right",
-                    }}
-                  />
-                  <Stack.Screen
-                    name="routes/photop"
-                    options={{
-                      headerShown: false,
-                      animation: "slide_from_right",
-                    }}
-                  />
-                  <Stack.Screen
-                    name="routes/venuep"
-                    options={{
-                      headerShown: false,
-                      animation: "slide_from_right",
-                    }}
-                  />
-                  <Stack.Screen
-                    name="VendorDetailScreen"
-                    options={{
-                      headerShown: false,
-                      animation: "slide_from_right",
-                    }}
-                  />
-                  <Stack.Screen
-                    name="routes/notifications"
-                    options={{
-                      headerShown: false,
-                      animation: "slide_from_right",
-                    }}
-                  />
-                  <Stack.Screen
-                    name="routes/search"
-                    options={{
-                      headerShown: false,
-                      animation: "slide_from_right",
-                    }}
-                  />
-                  <Stack.Screen
-                    name="routes/shortlisted"
-                    options={{
-                      headerShown: false,
-                      animation: "slide_from_right",
-                    }}
-                  />
-                </Stack>
+                  >
+                    {/* Only screens that need custom overrides not met by screenOptions should be defined explicitly */}
+                    <Stack.Screen
+                      name="profile/[id]"
+                      options={{
+                        headerShown: false,
+                        presentation: "transparentModal",
+                        animation: "fade",
+                      }}
+                    />
+                  </Stack>
                 <GlobalNotificationToast />
                 <StatusBar style="auto" />
               </ThemeProvider>

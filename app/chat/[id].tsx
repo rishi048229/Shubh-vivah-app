@@ -31,6 +31,7 @@ import {
   Image,
   Keyboard,
   KeyboardAvoidingView,
+  Modal,
   Platform,
   ScrollView,
   StyleSheet,
@@ -86,6 +87,9 @@ export default function ChatDetailScreen() {
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [editingMessage, setEditingMessage] = useState<ChatMessage | null>(null);
   const [keyboardHeight, setKeyboardHeight] = useState(0);
+  const [showOptionsSheet, setShowOptionsSheet] = useState(false);
+  const [showReportSheet, setShowReportSheet] = useState(false);
+  const [reportReason, setReportReason] = useState("");
 
   const scrollViewRef = useRef<ScrollView>(null);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -187,12 +191,16 @@ export default function ChatDetailScreen() {
           });
 
           // Subscribe to typing
+          let typingHideTimeout: NodeJS.Timeout | null = null;
           subscribeToTyping(chatKey, (event: TypingEvent) => {
             if (mounted && event.senderId !== uid) {
               setIsTyping(event.typing);
+              
+              if (typingHideTimeout) clearTimeout(typingHideTimeout);
+              
               // Auto-hide after 3 seconds
               if (event.typing) {
-                setTimeout(() => {
+                typingHideTimeout = setTimeout(() => {
                   if (mounted) setIsTyping(false);
                 }, 3000);
               }
@@ -329,76 +337,32 @@ export default function ChatDetailScreen() {
   };
 
   const handleOptionsMenu = () => {
-    const options = [
-      { text: "View Profile", onPress: () => router.push(`/profile/${targetId}`) },
-      {
-        text: "Block User",
-        style: "destructive" as const,
-        onPress: () => {
-          Alert.alert(
-            "Block User",
-            `Block ${targetUser?.name || "this user"}? They won't be able to message you.`,
-            [
-              { text: "Cancel", style: "cancel" },
-              {
-                text: "Block",
-                style: "destructive",
-                onPress: async () => {
-                  try {
-                    await blockUser(targetId);
-                    Alert.alert("Blocked", "User has been blocked.");
-                    router.back();
-                  } catch (e) {
-                    Alert.alert("Error", "Failed to block user.");
-                  }
-                },
-              },
-            ],
-          );
-        },
-      },
-      {
-        text: "Report User",
-        style: "destructive" as const,
-        onPress: () => {
-          Alert.prompt
-            ? Alert.prompt(
-                "Report User",
-                "Please describe the issue:",
-                async (reason: string) => {
-                  try {
-                    await reportUser(targetId, reason);
-                    Alert.alert("Reported", "Thank you for reporting.");
-                  } catch (e) {
-                    Alert.alert("Error", "Failed to report.");
-                  }
-                },
-              )
-            : Alert.alert(
-                "Report User",
-                "Report this user for inappropriate behavior?",
-                [
-                  { text: "Cancel", style: "cancel" },
-                  {
-                    text: "Report",
-                    style: "destructive",
-                    onPress: async () => {
-                      try {
-                        await reportUser(targetId, "Inappropriate behavior");
-                        Alert.alert("Reported", "Thank you for reporting.");
-                      } catch (e) {
-                        Alert.alert("Error", "Failed to report.");
-                      }
-                    },
-                  },
-                ],
-              );
-        },
-      },
-      { text: "Cancel", style: "cancel" as const, onPress: () => {} },
-    ];
+    setShowOptionsSheet(true);
+  };
 
-    Alert.alert("Options", undefined, options);
+  const handleBlockUser = async () => {
+    try {
+      await blockUser(targetId);
+      Alert.alert("Blocked", "User has been blocked.");
+      router.back();
+    } catch (e) {
+      Alert.alert("Error", "Failed to block user.");
+    }
+  };
+
+  const handleSubmitReport = async () => {
+    if (!reportReason.trim()) {
+      Alert.alert("Error", "Please provide a reason.");
+      return;
+    }
+    try {
+      await reportUser(targetId, reportReason.trim());
+      Alert.alert("Reported", "Thank you for reporting.");
+      setShowReportSheet(false);
+      setReportReason("");
+    } catch (e) {
+      Alert.alert("Error", "Failed to report.");
+    }
   };
 
   // --- Render ---
@@ -431,7 +395,7 @@ export default function ChatDetailScreen() {
               source={{
                 uri:
                   targetUser?.avatar ||
-                  "https://randomuser.me/api/portraits/lego/1.jpg",
+                  "https://cdn-icons-png.flaticon.com/512/847/847969.png",
               }}
               style={styles.avatar}
             />
@@ -668,6 +632,80 @@ export default function ChatDetailScreen() {
           </View>
         </View>
       )}
+
+      {/* --- Advanced Options Bottom Sheet --- */}
+      <Modal visible={showOptionsSheet} transparent animationType="fade" onRequestClose={() => setShowOptionsSheet(false)}>
+        <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setShowOptionsSheet(false)}>
+          <Animated.View style={styles.bottomSheet} entering={SlideInDown.duration(300).springify()}>
+            <View style={styles.sheetHandle} />
+            <Text style={styles.sheetTitle}>Chat Options</Text>
+
+            <TouchableOpacity style={styles.sheetOption} onPress={() => { setShowOptionsSheet(false); router.push(`/profile/${targetId}`); }}>
+              <View style={[styles.sheetIconBg, { backgroundColor: '#F3F4F6' }]}>
+                <Ionicons name="person-outline" size={20} color="#374151" />
+              </View>
+              <Text style={styles.sheetOptionText}>View Profile</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity style={styles.sheetOption} onPress={() => { setShowOptionsSheet(false); setShowReportSheet(true); }}>
+              <View style={[styles.sheetIconBg, { backgroundColor: '#FEF2F2' }]}>
+                <Ionicons name="flag-outline" size={20} color="#EF4444" />
+              </View>
+              <Text style={[styles.sheetOptionText, { color: '#EF4444' }]}>Report User</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity style={styles.sheetOption} onPress={() => {
+              setShowOptionsSheet(false);
+              Alert.alert(
+                "Block User",
+                `Are you sure you want to block ${targetUser?.name || "this user"}?`,
+                [
+                  { text: "Cancel", style: "cancel" },
+                  { text: "Block", style: "destructive", onPress: handleBlockUser }
+                ]
+              );
+            }}>
+              <View style={[styles.sheetIconBg, { backgroundColor: '#FEF2F2' }]}>
+                <Ionicons name="ban-outline" size={20} color="#EF4444" />
+              </View>
+              <Text style={[styles.sheetOptionText, { color: '#EF4444' }]}>Block User</Text>
+            </TouchableOpacity>
+          </Animated.View>
+        </TouchableOpacity>
+      </Modal>
+
+      {/* --- Report Modal --- */}
+      <Modal visible={showReportSheet} transparent animationType="fade" onRequestClose={() => setShowReportSheet(false)}>
+        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
+          <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setShowReportSheet(false)}>
+            <Animated.View style={styles.reportModal} entering={FadeInUp.duration(300).springify()}>
+              <Ionicons name="shield-checkmark" size={40} color={Colors.maroon} style={{ alignSelf: 'center', marginBottom: 12 }} />
+              <Text style={styles.reportModalTitle}>Report User</Text>
+              <Text style={styles.reportModalDesc}>Please let us know why you are reporting this user. Your report is kept strictly confidential.</Text>
+              
+              <TextInput
+                style={styles.reportInput}
+                placeholder="Type your reason here..."
+                placeholderTextColor="#9CA3AF"
+                multiline
+                numberOfLines={4}
+                value={reportReason}
+                onChangeText={setReportReason}
+              />
+
+              <View style={styles.reportActions}>
+                <TouchableOpacity style={styles.reportCancelBtn} onPress={() => setShowReportSheet(false)}>
+                  <Text style={styles.reportCancelText}>Cancel</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.reportSubmitBtn} onPress={handleSubmitReport}>
+                  <Text style={styles.reportSubmitText}>Submit Report</Text>
+                </TouchableOpacity>
+              </View>
+            </Animated.View>
+          </TouchableOpacity>
+        </KeyboardAvoidingView>
+      </Modal>
+
     </View>
   );
 }
@@ -926,5 +964,124 @@ const styles = StyleSheet.create({
     borderRadius: 21,
     justifyContent: "center",
     alignItems: "center",
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.4)",
+    justifyContent: "flex-end",
+  },
+  bottomSheet: {
+    backgroundColor: "#FFF",
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    padding: 24,
+    paddingBottom: Platform.OS === "ios" ? 40 : 24,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: -2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 5,
+  },
+  sheetHandle: {
+    width: 40,
+    height: 4,
+    backgroundColor: "#E5E7EB",
+    borderRadius: 2,
+    alignSelf: "center",
+    marginBottom: 20,
+  },
+  sheetTitle: {
+    fontSize: 18,
+    fontWeight: "700",
+    color: "#1F2937",
+    marginBottom: 16,
+    textAlign: "center",
+  },
+  sheetOption: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: "#F3F4F6",
+  },
+  sheetIconBg: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: 16,
+  },
+  sheetOptionText: {
+    fontSize: 16,
+    fontWeight: "500",
+    color: "#374151",
+  },
+  reportModal: {
+    backgroundColor: "#FFF",
+    borderRadius: 24,
+    padding: 24,
+    margin: 24,
+    marginBottom: "auto",
+    marginTop: "auto",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
+    elevation: 8,
+  },
+  reportModalTitle: {
+    fontSize: 20,
+    fontWeight: "700",
+    color: "#1F2937",
+    textAlign: "center",
+    marginBottom: 8,
+  },
+  reportModalDesc: {
+    fontSize: 14,
+    color: "#6B7280",
+    textAlign: "center",
+    marginBottom: 20,
+    lineHeight: 20,
+  },
+  reportInput: {
+    backgroundColor: "#F9FAFB",
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
+    borderRadius: 12,
+    padding: 16,
+    height: 100,
+    textAlignVertical: "top",
+    fontSize: 15,
+    color: "#1F2937",
+    marginBottom: 24,
+  },
+  reportActions: {
+    flexDirection: "row",
+    gap: 12,
+  },
+  reportCancelBtn: {
+    flex: 1,
+    paddingVertical: 14,
+    borderRadius: 12,
+    backgroundColor: "#F3F4F6",
+    alignItems: "center",
+  },
+  reportCancelText: {
+    fontSize: 15,
+    fontWeight: "600",
+    color: "#4B5563",
+  },
+  reportSubmitBtn: {
+    flex: 1,
+    paddingVertical: 14,
+    borderRadius: 12,
+    backgroundColor: Colors.maroon,
+    alignItems: "center",
+  },
+  reportSubmitText: {
+    fontSize: 15,
+    fontWeight: "600",
+    color: "#FFF",
   },
 });

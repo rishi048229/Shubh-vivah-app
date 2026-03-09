@@ -98,7 +98,7 @@ export default function ChatScreen() {
             userInfo.fullName || `User ${otherUserId}`
           ),
           isVerified: true,
-          isOnline: Math.random() > 0.5,
+          isOnline: userInfo.isOnline || false,
           matchPercentage: userInfo.matchScore || 80,
         };
 

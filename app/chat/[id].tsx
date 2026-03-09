@@ -73,7 +73,7 @@ function formatTime(isoStr: string): string {
 }
 
 export default function ChatDetailScreen() {
-  const { id, name: paramName, avatar: paramAvatar } = useLocalSearchParams();
+  const { id, name: paramName, avatar: paramAvatar, isOnline: paramIsOnline } = useLocalSearchParams();
   const router = useRouter();
 
   // State
@@ -136,6 +136,7 @@ export default function ChatDetailScreen() {
               age: profile.age,
               city: profile.city,
               matchScore: profile.matchScore,
+              isOnline: paramIsOnline === "true",
             });
           }
         } catch (e) {
@@ -147,6 +148,7 @@ export default function ChatDetailScreen() {
                 null,
                 paramName as string | undefined
               ),
+              isOnline: paramIsOnline === "true",
             });
           }
         }
@@ -399,18 +401,16 @@ export default function ChatDetailScreen() {
               }}
               style={styles.avatar}
             />
-            {connected && <View style={styles.onlineBadge} />}
+            {targetUser?.isOnline && <View style={styles.onlineBadge} />}
           </View>
           <View style={styles.headerInfo}>
             <Text style={styles.name} numberOfLines={1}>
               {targetUser?.name || `User ${id}`}
             </Text>
-            <Text style={styles.status}>
+            <Text style={[styles.status, targetUser?.isOnline ? { color: "#10B981" } : { color: "#9CA3AF" }]}>
               {isTyping
                 ? "typing..."
-                : connected
-                  ? "Online"
-                  : "Connecting..."}
+                : (targetUser?.isOnline ? "Online" : "Offline")}
               {targetUser?.matchScore
                 ? ` • ${targetUser.matchScore}% Match`
                 : ""}
@@ -511,14 +511,13 @@ export default function ChatDetailScreen() {
             exiting={FadeOut.duration(200)}
             style={styles.typingContainer}
           >
-            <View style={styles.typingDots}>
-              <View style={[styles.typingDot, { opacity: 0.4 }]} />
-              <View style={[styles.typingDot, { opacity: 0.7 }]} />
-              <View style={[styles.typingDot, { opacity: 1 }]} />
+            <View style={styles.typingBubble}>
+              <View style={styles.typingDots}>
+                <View style={[styles.typingDot, { opacity: 0.4 }]} />
+                <View style={[styles.typingDot, { opacity: 0.7 }]} />
+                <View style={[styles.typingDot, { opacity: 1 }]} />
+              </View>
             </View>
-            <Text style={styles.typingText}>
-              {targetUser?.name?.split(" ")[0] || "User"} is typing...
-            </Text>
           </Animated.View>
         )}
       </ScrollView>
@@ -845,8 +844,9 @@ const styles = StyleSheet.create({
   // Messages
   messageBubble: {
     maxWidth: "80%",
-    padding: 12,
-    borderRadius: 18,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 20,
     marginBottom: 8,
   },
   theirMessage: {
@@ -892,25 +892,33 @@ const styles = StyleSheet.create({
   },
   // Typing
   typingContainer: {
-    flexDirection: "row",
-    alignItems: "center",
     paddingVertical: 8,
-    gap: 8,
+    marginBottom: 8,
+    paddingHorizontal: 4,
+  },
+  typingBubble: {
+    backgroundColor: "#FFF",
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    borderRadius: 20,
+    borderTopLeftRadius: 4,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.04,
+    shadowRadius: 3,
+    elevation: 1,
+    alignSelf: "flex-start",
   },
   typingDots: {
     flexDirection: "row",
-    gap: 3,
+    alignItems: "center",
+    gap: 4,
   },
   typingDot: {
     width: 6,
     height: 6,
     borderRadius: 3,
     backgroundColor: "#9CA3AF",
-  },
-  typingText: {
-    fontSize: 12,
-    color: "#9CA3AF",
-    fontStyle: "italic",
   },
   // Edit banner
   editBanner: {

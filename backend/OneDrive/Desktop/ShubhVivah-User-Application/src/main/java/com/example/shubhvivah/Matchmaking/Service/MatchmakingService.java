@@ -203,7 +203,11 @@ public class MatchmakingService {
                 .filter(p -> p.getUser() != null)
                 .filter(p -> !p.getUser().getUserId().equals(currentUserId))
                 .filter(p -> !isBlocked(currentUserId, p.getUser().getUserId()))
-                .filter(p -> p.getGender() != null && me.getGender() != null && p.getGender() != me.getGender())
+                .filter(p -> {
+                    if (me.getGender() == null || p.getGender() == null)
+                        return true;
+                    return p.getGender() != me.getGender();
+                })
                 .filter(p -> me.getCity().equalsIgnoreCase(p.getCity()))
                 .limit(10)
                 .map(p -> buildDto(p, p.getDateOfBirth() != null ? calculateAge(p.getDateOfBirth()) : 0))
@@ -212,14 +216,16 @@ public class MatchmakingService {
 
     public List<MatchmakingDto> getBestMatches(Long currentUserId) {
         UserProfile me = profileRepo.findByUser_UserId(currentUserId).orElse(null);
-        if (me == null)
-            return List.of();
 
         return profileRepo.findAll().stream()
                 .filter(p -> p.getUser() != null)
                 .filter(p -> !p.getUser().getUserId().equals(currentUserId))
                 .filter(p -> !isBlocked(currentUserId, p.getUser().getUserId()))
-                .filter(p -> p.getGender() != null && me.getGender() != null && p.getGender() != me.getGender())
+                .filter(p -> {
+                    if (me == null || me.getGender() == null || p.getGender() == null)
+                        return true;
+                    return p.getGender() != me.getGender();
+                })
                 .limit(10)
                 .map(p -> buildDto(p, p.getDateOfBirth() != null ? calculateAge(p.getDateOfBirth()) : 0))
                 .toList();
@@ -227,14 +233,16 @@ public class MatchmakingService {
 
     public List<MatchmakingDto> getNewMatches(Long currentUserId) {
         UserProfile me = profileRepo.findByUser_UserId(currentUserId).orElse(null);
-        if (me == null)
-            return List.of();
 
         return profileRepo.findAll().stream()
                 .filter(p -> p.getUser() != null)
                 .filter(p -> !p.getUser().getUserId().equals(currentUserId))
                 .filter(p -> !isBlocked(currentUserId, p.getUser().getUserId()))
-                .filter(p -> p.getGender() != null && me.getGender() != null && p.getGender() != me.getGender())
+                .filter(p -> {
+                    if (me == null || me.getGender() == null || p.getGender() == null)
+                        return true;
+                    return p.getGender() != me.getGender();
+                })
                 .sorted((p1, p2) -> p2.getUser().getUserId().compareTo(p1.getUser().getUserId()))
                 .limit(10)
                 .map(p -> buildDto(p, p.getDateOfBirth() != null ? calculateAge(p.getDateOfBirth()) : 0))

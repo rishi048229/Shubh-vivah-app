@@ -16,7 +16,7 @@ export default function ChatItem({ chat }: ChatItemProps) {
     <TouchableOpacity
       style={styles.container}
       onPress={() =>
-        router.push({ pathname: "/chat/[id]", params: { id: chat.id } })
+        router.push({ pathname: "/chat/[id]", params: { id: chat.id, isOnline: chat.user.isOnline ? "true" : "false" } })
       }
       activeOpacity={0.7}
     >

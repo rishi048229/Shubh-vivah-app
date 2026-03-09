@@ -54,17 +54,18 @@ export default function SearchScreen() {
   }, [searchText]);
 
   const handleSearch = async (text: string) => {
-    // If text is empty and no filters, clear results
-    if (!text && isDefaultFilters(currentFilters)) {
-      setResults([]);
-      return;
-    }
+    // If empty text, we still want to show matches based on filters (or all if no filters).
+    // So we don't prematurely clear results here.
 
     try {
-      // Pass filters to searchProfiles
+      // Pass filters to searchProfiles conditionally
+      // Do not send default age filters (21-35) to prevent excluding users with age=0
+      const isAgeDefault = currentFilters.ageRange[0] === DEFAULT_FILTERS.ageRange[0] &&
+                           currentFilters.ageRange[1] === DEFAULT_FILTERS.ageRange[1];
+
       const data = await searchProfiles(text, {
-        minAge: currentFilters.ageRange[0],
-        maxAge: currentFilters.ageRange[1],
+        minAge: isAgeDefault ? undefined : currentFilters.ageRange[0],
+        maxAge: isAgeDefault ? undefined : currentFilters.ageRange[1],
         city:
           currentFilters.cities.length > 0
             ? currentFilters.cities[0]
@@ -126,20 +127,23 @@ export default function SearchScreen() {
           </TouchableOpacity>
 
           <View style={styles.searchBar}>
-            <Ionicons
-              name="search-outline"
-              size={20}
-              color="#666"
-              style={{ marginRight: 8 }}
-            />
             <TextInput
-              placeholder="Search by name or location..."
+              placeholder="Search by Name, Age, City..."
               placeholderTextColor="#888"
               style={styles.searchInput}
               value={searchText}
               onChangeText={setSearchText}
+              onSubmitEditing={() => handleSearch(searchText)}
+              returnKeyType="search"
               autoFocus
             />
+            <TouchableOpacity onPress={() => handleSearch(searchText)}>
+              <Ionicons
+                name="search-circle"
+                size={34}
+                color="#C21807"
+              />
+            </TouchableOpacity>
           </View>
 
           <TouchableOpacity
@@ -221,7 +225,8 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#FF6B6B",
     borderRadius: 25,
-    paddingHorizontal: 15,
+    paddingLeft: 16,
+    paddingRight: 6,
     height: 48,
   },
   searchInput: {

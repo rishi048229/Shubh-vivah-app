@@ -47,10 +47,14 @@ export default function ConnectionsScreen() {
   const fetchMatches = async () => {
     setLoading(true);
     try {
+      const isAgeDefault =
+        filters?.ageRange?.[0] === DEFAULT_FILTERS.ageRange[0] &&
+        filters?.ageRange?.[1] === DEFAULT_FILTERS.ageRange[1];
+
       // Use searchProfiles to fetch all connections directly without altering explore queue
       const results = await searchProfiles(searchQuery || "", {
-        minAge: filters?.ageRange?.[0],
-        maxAge: filters?.ageRange?.[1],
+        minAge: isAgeDefault ? undefined : filters?.ageRange?.[0],
+        maxAge: isAgeDefault ? undefined : filters?.ageRange?.[1],
         city: filters?.cities?.[0],
         religion: filters?.religions?.[0]
       });

@@ -1,0 +1,24 @@
+id,religion_id,community_name,active
+1,1,Maratha,TRUE
+2,1,Brahmin,TRUE
+3,1,Rajput,TRUE
+4,1,Yadav,TRUE
+5,1,Kayastha,TRUE
+6,1,Kunbi,TRUE
+7,1,SC,TRUE
+8,1,ST,TRUE
+9,1,OBC,TRUE
+10,1,Lingayat,TRUE
+11,1,Kshatriya,TRUE
+12,2,Sunni,TRUE
+13,2,Shia,TRUE
+14,2,Bohra,TRUE
+15,2,Syed,TRUE
+16,3,Catholic,TRUE
+17,3,Protestant,TRUE
+18,3,Orthodox,TRUE
+19,4,Sikh Community,TRUE
+20,5,Digambar Jain,TRUE
+21,5,Shwetambar Jain,TRUE
+22,6,Buddhist Community,TRUE
+23,7,Parsi Zoroastrian,TRUE

@@ -117,7 +117,7 @@ export async function connectWebSocket(): Promise<Client> {
         Authorization: `Bearer ${token || ""}`,
       },
       debug: (str) => {
-        if (__DEV__) console.log("[STOMP]", str);
+        // if (__DEV__) console.log("[STOMP]", str);
       },
       reconnectDelay: 5000,
       heartbeatIncoming: 4000,

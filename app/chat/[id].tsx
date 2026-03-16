@@ -292,14 +292,21 @@ export default function ChatDetailScreen() {
 
     // Typing indicator
     if (text.length > 0) {
-      sendTyping(currentUserId, targetId, true);
+      if (!typingTimeoutRef.current) {
+        sendTyping(currentUserId, targetId, true);
+      }
 
       if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
       typingTimeoutRef.current = setTimeout(() => {
         sendTyping(currentUserId, targetId, false);
+        typingTimeoutRef.current = null;
       }, 2000);
     } else {
       sendTyping(currentUserId, targetId, false);
+      if (typingTimeoutRef.current) {
+        clearTimeout(typingTimeoutRef.current);
+        typingTimeoutRef.current = null;
+      }
     }
   };
 

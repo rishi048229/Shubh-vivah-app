@@ -149,12 +149,16 @@ export default function SideMenu({
             >
               {/* Profile Header */}
               <View style={styles.profileSection}>
-                <View style={styles.imageWrapper}>
+                <TouchableOpacity 
+                  style={styles.imageWrapper}
+                  onPress={() => handleNavigation("/profile")}
+                  activeOpacity={0.8}
+                >
                   <Image
                     source={{ uri: userImage }}
                     style={styles.profileImage}
                   />
-                </View>
+                </TouchableOpacity>
                 <Text style={styles.profileName}>{userName}</Text>
                 {userCity && (
                   <View

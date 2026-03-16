@@ -33,14 +33,16 @@ public class ProfilePhotoServiceImpl implements ProfilePhotoService {
             MultipartFile mainPhoto,
             List<MultipartFile> extraPhotos) {
 
-        UserProfile profile = profileRepo.findById(userId)
+        UserProfile profile = profileRepo.findByUser_UserId(userId)
                 .orElseThrow(() -> new RuntimeException("Profile not found"));
+
+        Long profileId = profile.getId();
 
         /* ---------------- MAIN PHOTO ---------------- */
 
         if (mainPhoto != null && !mainPhoto.isEmpty()) {
 
-            photoRepo.findByUserProfileIdAndType(userId, PhotoType.MAIN)
+            photoRepo.findByUserProfileIdAndType(profileId, PhotoType.MAIN)
                     .ifPresent(photo -> {
                         cloudinaryService.deleteFile(photo.getPhotoUrl());
                         photoRepo.delete(photo);
@@ -61,7 +63,7 @@ public class ProfilePhotoServiceImpl implements ProfilePhotoService {
 
         if (extraPhotos != null && !extraPhotos.isEmpty()) {
 
-            long existingCount = photoRepo.countByUserProfileIdAndType(userId, PhotoType.EXTRA);
+            long existingCount = photoRepo.countByUserProfileIdAndType(profileId, PhotoType.EXTRA);
 
             if (existingCount + extraPhotos.size() > MAX_EXTRA_PHOTOS) {
                 throw new RuntimeException(
@@ -97,10 +99,10 @@ public class ProfilePhotoServiceImpl implements ProfilePhotoService {
             throw new RuntimeException("File is required");
         }
 
-        profileRepo.findById(userId)
+        UserProfile profile = profileRepo.findByUser_UserId(userId)
                 .orElseThrow(() -> new RuntimeException("Profile not found"));
 
-        ProfilePhotoEntity existing = photoRepo.findByUserProfileIdAndType(userId, PhotoType.MAIN)
+        ProfilePhotoEntity existing = photoRepo.findByUserProfileIdAndType(profile.getId(), PhotoType.MAIN)
                 .orElseThrow(() -> new RuntimeException("Main photo not found"));
 
         cloudinaryService.deleteFile(existing.getPhotoUrl());
@@ -118,8 +120,10 @@ public class ProfilePhotoServiceImpl implements ProfilePhotoService {
 
     @Override
     public void deleteMainPhoto(Long userId) {
+        UserProfile profile = profileRepo.findByUser_UserId(userId)
+                .orElseThrow(() -> new RuntimeException("Profile not found"));
 
-        ProfilePhotoEntity photo = photoRepo.findByUserProfileIdAndType(userId, PhotoType.MAIN)
+        ProfilePhotoEntity photo = photoRepo.findByUserProfileIdAndType(profile.getId(), PhotoType.MAIN)
                 .orElseThrow(() -> new RuntimeException("Main photo not found"));
 
         cloudinaryService.deleteFile(photo.getPhotoUrl());
@@ -133,11 +137,13 @@ public class ProfilePhotoServiceImpl implements ProfilePhotoService {
 
     @Override
     public void deleteExtraPhoto(Long userId, Long photoId) {
+        UserProfile profile = profileRepo.findByUser_UserId(userId)
+                .orElseThrow(() -> new RuntimeException("Profile not found"));
 
         ProfilePhotoEntity photo = photoRepo.findById(photoId)
                 .orElseThrow(() -> new RuntimeException("Photo not found"));
 
-        if (!photo.getUserProfile().getId().equals(userId)) {
+        if (!photo.getUserProfile().getId().equals(profile.getId())) {
             throw new RuntimeException("Unauthorized action");
         }
 
@@ -163,10 +169,13 @@ public class ProfilePhotoServiceImpl implements ProfilePhotoService {
             throw new RuntimeException("File is required");
         }
 
+        UserProfile profile = profileRepo.findByUser_UserId(userId)
+                .orElseThrow(() -> new RuntimeException("Profile not found"));
+
         ProfilePhotoEntity photo = photoRepo.findById(photoId)
                 .orElseThrow(() -> new RuntimeException("Photo not found"));
 
-        if (!photo.getUserProfile().getId().equals(userId)) {
+        if (!photo.getUserProfile().getId().equals(profile.getId())) {
             throw new RuntimeException("Unauthorized action");
         }
 

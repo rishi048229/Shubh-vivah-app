@@ -200,6 +200,13 @@ export async function saveProfile(data: Partial<ProfileData>): Promise<ProfileDa
     }
   }
 
+  // Remove empty strings so the backend doesn't try to coerce them to Enums
+  Object.keys(payload).forEach(key => {
+    if (payload[key] === "") {
+      delete payload[key];
+    }
+  });
+
   const res = await api.post("/api/user-profiles", payload);
   return res.data;
 }
@@ -334,17 +341,36 @@ export function calculateProfileCompletion(profile: any): {
     { key: "religion", label: "Religion" },
     { key: "community", label: "Community" },
     { key: "caste", label: "Caste" },
+    { key: "subCaste", label: "Sub Caste" },
     { key: "highestEducation", label: "Education" },
     { key: "education", label: "Education" },
+    { key: "employmentType", label: "Employment Type" },
     { key: "occupation", label: "Occupation" },
     { key: "annualIncome", label: "Annual Income" },
+    { key: "fatherName", label: "Father Name" },
+    { key: "fatherOccupation", label: "Father Occupation" },
+    { key: "motherName", label: "Mother Name" },
+    { key: "motherOccupation", label: "Mother Occupation" },
+    { key: "brothers", label: "Brothers" },
+    { key: "sisters", label: "Sisters" },
     { key: "familyType", label: "Family Type" },
+    { key: "familyStatus", label: "Family Status" },
+    { key: "familyValues", label: "Family Values" },
     { key: "aboutMe", label: "About Me" },
     { key: "profilePhotoUrl", label: "Profile Photo" },
+    { key: "photos", label: "Additional Photos" },
     { key: "manglikStatus", label: "Manglik Status" },
+    { key: "gothra", label: "Gothra" },
     { key: "rashi", label: "Rashi" },
     { key: "nakshatra", label: "Nakshatra" },
     { key: "eatingHabits", label: "Eating Habits" },
+    { key: "eatingHabit", label: "Eating Habits" },
+    { key: "dietPreference", label: "Diet Preference" },
+    { key: "drinking", label: "Drinking" },
+    { key: "drinkingHabit", label: "Drinking" },
+    { key: "smoking", label: "Smoking" },
+    { key: "smokingHabit", label: "Smoking" },
+    { key: "profileCreatedBy", label: "Profile Created By" },
   ];
 
   if (!profile)
@@ -365,13 +391,19 @@ export function calculateProfileCompletion(profile: any): {
     if (f.key === "eatingHabits") val = val || profile.eatingHabit;
     if (f.key === "highestEducation") val = val || profile.education;
 
-    if (
-      val !== null &&
-      val !== undefined &&
-      val !== "" &&
-      val !== 0 &&
-      val !== "NOT_SPECIFIED"
-    ) {
+    let isFilled = false;
+    if (Array.isArray(val)) {
+      isFilled = val.length > 0;
+    } else {
+      isFilled =
+        val !== null &&
+        val !== undefined &&
+        val !== "" &&
+        val !== 0 &&
+        val !== "NOT_SPECIFIED";
+    }
+
+    if (isFilled) {
       filled++;
     } else {
       missing.push(f.label);

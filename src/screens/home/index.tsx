@@ -207,7 +207,8 @@ export default function HomeScreen() {
       {/* Overlays */}
       {/* 1. Collapsible Hero (NEW) */}
       <View
-        style={{ position: "absolute", top: 0, left: 0, right: 0, zIndex: 10 }}
+        pointerEvents="box-none"
+        style={{ position: "absolute", top: 0, left: 0, right: 0, zIndex: 10, elevation: 10 }}
       >
         <CollapsibleHero
           userName={userName}

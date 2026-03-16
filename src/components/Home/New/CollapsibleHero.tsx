@@ -147,6 +147,7 @@ export default function CollapsibleHero({
 
         {/* Collapsed Title (Visible only when scrolled up) */}
         <Animated.View
+          pointerEvents="none"
           style={[styles.collapsedTitleContainer, collapsedContentStyle]}
         >
           <Text style={styles.collapsedTitle}>Hello, {userName}</Text>

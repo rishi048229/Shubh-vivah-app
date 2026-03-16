@@ -206,7 +206,12 @@ export default function ProfileScreen() {
   const saveAboutMe = async () => {
     try {
       setUploading(true);
-      await profileService.saveProfile({ aboutMe: editedAboutMe });
+      await profileService.saveProfile({ 
+        aboutMe: editedAboutMe,
+        // Backend requires these fields for every profile update
+        gender: profile?.gender,
+        dateOfBirth: profile?.dateOfBirth 
+      });
       setProfile((prev) => (prev ? { ...prev, aboutMe: editedAboutMe } : null));
       setActiveModal(null);
       Alert.alert("Success", "About Me section updated!");

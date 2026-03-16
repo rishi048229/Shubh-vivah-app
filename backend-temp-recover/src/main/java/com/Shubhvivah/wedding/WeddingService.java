@@ -1,0 +1,5 @@
+package com.Shubhvivah.wedding;
+
+public class WeddingService {
+
+}

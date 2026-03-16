@@ -1,0 +1,189 @@
+{
+  "title": "Authentication API Testing Guide",
+  "description": "JSON payloads for testing all authentication endpoints",
+  "baseUrl": "http://localhost:8080",
+  "endpoints": {
+    "userRegistration": {
+      "method": "POST",
+      "path": "/auth/register",
+      "description": "Register a new user",
+      "requestBody": {
+        "fullName": "John Doe",
+        "email": "john.doe@example.com",
+        "phoneNumber": "+1234567890",
+        "password": "SecurePass123!"
+      },
+      "expectedResponse": {
+        "userId": 1,
+        "message": "OTP sent to email for verification",
+        "isVerified": false
+      }
+    },
+    "userLogin": {
+      "method": "POST",
+      "path": "/auth/login",
+      "description": "Login with email and password",
+      "requestBody": {
+        "email": "john.doe@example.com",
+        "password": "SecurePass123!"
+      },
+      "expectedResponse": {
+        "userId": 1,
+        "token": null,
+        "message": "otp sent successfully"
+      }
+    },
+    "sendOtp": {
+      "method": "POST",
+      "path": "/otp/send/{userId}",
+      "description": "Send OTP to user by userId",
+      "exampleUrl": "/otp/send/1",
+      "expectedResponse": "OTP sent successfully"
+    },
+    "verifyOtp": {
+      "method": "POST",
+      "path": "/otp/verify",
+      "description": "Verify OTP using request object",
+      "requestBody": {
+        "userId": 1,
+        "otp": "123456"
+      },
+      "expectedResponse": "OTP verified successfully"
+    },
+    "verifyRegistrationOtp": {
+      "method": "POST",
+      "path": "/auth/verify-registration-otp",
+      "description": "Verify registration OTP using JSON body",
+      "requestBody": {
+        "userId": 1,
+        "otp": "123456"
+      },
+      "expectedResponse": {
+        "userId": 1,
+        "message": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+        "isVerified": true
+      }
+    },
+    "verifyLoginOtp": {
+      "method": "POST",
+      "path": "/auth/verify-login-otp",
+      "description": "Verify login OTP using JSON body",
+      "requestBody": {
+        "userId": 1,
+        "otp": "123456"
+      },
+      "expectedResponse": {
+        "userId": 1,
+        "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+        "message": "Login successful"
+      }
+    },
+    "resendOtp": {
+      "method": "POST",
+      "path": "/otp/resend",
+      "description": "Resend OTP using JSON body",
+      "requestBody": {
+        "email": "john.doe@example.com"
+      },
+      "expectedResponse": {
+        "message": "OTP resent successfully",
+        "success": true,
+        "remainingAttempts": 2,
+        "cooldownSeconds": 0
+      }
+    },
+    "forgotPassword": {
+      "method": "POST",
+      "path": "/auth/forgot-password",
+      "description": "Request password reset",
+      "requestBody": {
+        "email": "john.doe@example.com"
+      },
+      "expectedResponse": {
+        "message": "Password reset link sent to your email",
+        "success": true
+      }
+    },
+    "resetPassword": {
+      "method": "POST",
+      "path": "/auth/reset-password",
+      "description": "Reset password with token",
+      "requestBody": {
+        "token": "uuid-token-here",
+        "newPassword": "NewSecurePass123!"
+      },
+      "expectedResponse": {
+        "message": "Password reset successful",
+        "success": true
+      }
+    }
+  },
+  "testingNotes": {
+    "registrationFlow": [
+      "1. POST /auth/register - Create user account",
+      "2. POST /auth/verify-registration-otp?userId=X&otp=Y - Verify registration OTP",
+      "3. User is now verified and can login"
+    ],
+    "loginFlow": [
+      "1. POST /auth/login - Get OTP sent",
+      "2. POST /auth/verify-login-otp?userId=X&otp=Y - Verify login OTP",
+      "3. Receive JWT token for authenticated requests"
+    ],
+    "otpManagement": [
+      "1. POST /otp/send/{userId} - Send new OTP",
+      "2. POST /otp/verify - Verify OTP with object payload",
+      "3. POST /otp/resend - Resend OTP (rate limited)"
+    ],
+    "errorScenarios": {
+      "invalidOtp": {
+        "request": {
+          "userId": 1,
+          "otp": "999999"
+        },
+        "expectedError": {
+          "status": 400/500",
+          "message": "Invalid OTP or Maximum verification attempts exceeded"
+        }
+      },
+      "expiredOtp": {
+        "request": {
+          "userId": 1,
+          "otp": "123456"
+        },
+        "expectedError": {
+          "status": 400/500",
+          "message": "OTP has expired"
+        }
+      },
+      "rateLimitExceeded": {
+        "request": {
+          "email": "john.doe@example.com"
+        },
+        "expectedError": {
+          "status": 400/500",
+          "message": "Maximum resend attempts exceeded"
+        }
+      },
+      "userNotFound": {
+        "request": {
+          "email": "nonexistent@example.com"
+        },
+        "expectedError": {
+          "status": 400/500",
+          "message": "User not found"
+        }
+      }
+    }
+  },
+  "cUrlCommands": {
+    "registration": "curl -X POST http://localhost:8080/auth/register -H \"Content-Type: application/json\" -d '{\"fullName\":\"John Doe\",\"email\":\"john.doe@example.com\",\"phoneNumber\":\"+1234567890\",\"password\":\"SecurePass123!\"}'",
+    "login": "curl -X POST http://localhost:8080/auth/login -H \"Content-Type: application/json\" -d '{\"email\":\"john.doe@example.com\",\"password\":\"SecurePass123!\"}'",
+    "sendOtp": "curl -X POST http://localhost:8080/otp/send/1",
+    "verifyOtp": "curl -X POST http://localhost:8080/otp/verify -H \"Content-Type: application/json\" -d '{\"userId\":1,\"otp\":\"123456\"}'",
+    "verifyRegistrationOtp": "curl -X POST http://localhost:8080/auth/verify-registration-otp -H \"Content-Type: application/json\" -d '{\"userId\":1,\"otp\":\"123456\"}'",
+    "verifyLoginOtp": "curl -X POST http://localhost:8080/auth/verify-login-otp -H \"Content-Type: application/json\" -d '{\"userId\":1,\"otp\":\"123456\"}'",
+    "resendOtp": "curl -X POST http://localhost:8080/otp/resend -H \"Content-Type: application/json\" -d '{\"email\":\"john.doe@example.com\"}'",
+    "forgotPassword": "curl -X POST http://localhost:8080/auth/forgot-password -H \"Content-Type: application/json\" -d '{\"email\":\"john.doe@example.com\"}'",
+    "resetPassword": "curl -X POST http://localhost:8080/auth/reset-password -H \"Content-Type: application/json\" -d '{\"token\":\"uuid-token-here\",\"newPassword\":\"NewSecurePass123!\"}'"
+  }
+}

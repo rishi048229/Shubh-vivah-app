@@ -1,13 +1,20 @@
 package com.example.shubhvivah.Chat.Presence;
 
 import org.springframework.context.event.EventListener;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.messaging.simp.stomp.StompHeaderAccessor;
 import org.springframework.stereotype.Component;
 import org.springframework.web.socket.messaging.SessionConnectedEvent;
 import org.springframework.web.socket.messaging.SessionDisconnectEvent;
 
+import lombok.RequiredArgsConstructor;
+import java.util.Map;
+
 @Component
+@RequiredArgsConstructor
 public class PresenceListener {
+
+    private final SimpMessagingTemplate messagingTemplate;
 
     @EventListener
     public void handleConnect(SessionConnectedEvent event) {
@@ -15,6 +22,12 @@ public class PresenceListener {
         if (userId != null) {
             OnlineUsers.userOnline(userId);
             System.out.println("User ONLINE: " + userId);
+            
+            // Broadcast real-time presence
+            messagingTemplate.convertAndSend("/topic/presence", Map.of(
+                "userId", userId,
+                "status", "ONLINE"
+            ));
         }
     }
 
@@ -24,6 +37,12 @@ public class PresenceListener {
         if (userId != null) {
             OnlineUsers.userOffline(userId);
             System.out.println("User OFFLINE: " + userId);
+
+            // Broadcast real-time presence
+            messagingTemplate.convertAndSend("/topic/presence", Map.of(
+                "userId", userId,
+                "status", "OFFLINE"
+            ));
         }
     }
 

@@ -36,9 +36,11 @@ export default function ChatItem({ chat }: ChatItemProps) {
             <Text style={styles.time}>{chat.timestamp}</Text>
           </View>
 
-          <Text style={styles.matchTag}>
-            {chat.user.matchPercentage}% Match
-          </Text>
+          <View style={styles.matchTagContainer}>
+            <Text style={styles.matchTag}>
+              {chat.user.matchPercentage}% Match
+            </Text>
+          </View>
 
           <View style={styles.messageRow}>
             <Text
@@ -117,11 +119,20 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: "#999",
   },
+  matchTagContainer: {
+    backgroundColor: "#FDF2F2",
+    alignSelf: "flex-start",
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 12,
+    marginBottom: 4,
+    borderWidth: 1,
+    borderColor: "#FCE7E7",
+  },
   matchTag: {
-    fontSize: 12,
+    fontSize: 10,
     color: Colors.maroon,
-    fontWeight: "600",
-    marginBottom: 2,
+    fontWeight: "700",
   },
   messageRow: {
     flexDirection: "row",

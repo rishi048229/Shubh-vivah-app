@@ -21,17 +21,17 @@ public class MasterDataController {
     }
 
     @GetMapping("/communities")
-    public ResponseEntity<List<MasterOptionResponseDto>> getCommunities(@RequestParam Long religionId) {
+    public ResponseEntity<List<MasterOptionResponseDto>> getCommunities(@RequestParam(name = "religionId") Long religionId) {
         return ResponseEntity.ok(service.getCommunities(religionId));
     }
 
     @GetMapping("/castes")
-    public ResponseEntity<List<MasterOptionResponseDto>> getCastes(@RequestParam Long communityId) {
+    public ResponseEntity<List<MasterOptionResponseDto>> getCastes(@RequestParam(name = "communityId") Long communityId) {
         return ResponseEntity.ok(service.getCastes(communityId));
     }
 
     @GetMapping("/gotras")
-    public ResponseEntity<List<MasterOptionResponseDto>> getGotras(@RequestParam Long casteId) {
+    public ResponseEntity<List<MasterOptionResponseDto>> getGotras(@RequestParam(name = "casteId") Long casteId) {
         return ResponseEntity.ok(service.getGotras(casteId));
     }
 }

@@ -1,5 +1,6 @@
 package com.example.shubhvivah.config;
 
+import com.example.shubhvivah.Chat.Presence.OnlineUsers;
 import org.springframework.messaging.Message;
 import org.springframework.messaging.MessageChannel;
 import org.springframework.messaging.simp.stomp.StompCommand;
@@ -22,7 +23,9 @@ public class JwtChannelInterceptor implements ChannelInterceptor {
     public Message<?> preSend(Message<?> message, MessageChannel channel) {
         StompHeaderAccessor accessor = MessageHeaderAccessor.getAccessor(message, StompHeaderAccessor.class);
 
-        if (accessor != null && StompCommand.CONNECT.equals(accessor.getCommand())) {
+        if (accessor == null) return message;
+
+        if (StompCommand.CONNECT.equals(accessor.getCommand())) {
             // First try to extract token from STOMP headers
             String authHeader = accessor.getFirstNativeHeader("Authorization");
             String token = null;
@@ -32,7 +35,8 @@ public class JwtChannelInterceptor implements ChannelInterceptor {
             } else {
                 // If not in headers, check session attributes populated by
                 // JwtHandshakeInterceptor
-                Object tokenObj = accessor.getSessionAttributes().get("token");
+                Object tokenObj = accessor.getSessionAttributes() != null
+                    ? accessor.getSessionAttributes().get("token") : null;
                 if (tokenObj != null) {
                     token = tokenObj.toString();
                 }
@@ -44,8 +48,26 @@ public class JwtChannelInterceptor implements ChannelInterceptor {
                 UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(
                         userId, null, Collections.emptyList());
                 accessor.setUser(authentication);
+
+                // Mark user as ONLINE
+                OnlineUsers.userOnline(userId);
+                System.out.println("[WS] User " + userId + " connected - marked ONLINE");
             }
         }
+
+        if (StompCommand.DISCONNECT.equals(accessor.getCommand())) {
+            // Mark user as OFFLINE on disconnect
+            if (accessor.getUser() != null) {
+                try {
+                    Long userId = Long.valueOf(accessor.getUser().getName());
+                    OnlineUsers.userOffline(userId);
+                    System.out.println("[WS] User " + userId + " disconnected - marked OFFLINE");
+                } catch (Exception e) {
+                    // Ignore parsing errors
+                }
+            }
+        }
+
         return message;
     }
 }

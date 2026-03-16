@@ -1,12 +1,14 @@
 package com.example.shubhvivah.Chat.Controller;
 
 import com.example.shubhvivah.Chat.Entity.ChatMessage;
+import com.example.shubhvivah.Chat.Presence.OnlineUsers;
 import com.example.shubhvivah.Chat.Service.ChatService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
 import java.security.Principal;
 import java.util.List;
+import java.util.Map;
 
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -21,10 +23,19 @@ public class ChatController {
     /* ================= CHAT HISTORY ================= */
     @GetMapping("/history")
     public List<ChatMessage> history(
-            @RequestParam Long otherUserId) {
+            @RequestParam(name = "otherUserId") Long otherUserId) {
 
         Long currentUserId = getCurrentUserId();
         return chatService.getChat(currentUserId, otherUserId);
+    }
+
+    /* ================= ONLINE STATUS ================= */
+    @GetMapping("/online/{userId}")
+    public Map<String, Object> isUserOnline(@PathVariable Long userId) {
+        return Map.of(
+            "userId", userId,
+            "online", OnlineUsers.isOnline(userId)
+        );
     }
 
     private Long getCurrentUserId() {

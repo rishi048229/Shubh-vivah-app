@@ -14,6 +14,8 @@ import {
   deleteMessage,
   editMessage,
   TypingEvent,
+  checkUserOnline,
+  subscribeToPresence,
 } from "@/services/chatService";
 import {
   blockUser,
@@ -115,6 +117,9 @@ export default function ChatDetailScreen() {
   // --- Initialize: get user id, load profile, load history, connect WS ---
   useEffect(() => {
     let mounted = true;
+    let unsubscribeMessages: (() => void) | null = null;
+    let unsubscribeTyping: (() => void) | null = null;
+    let unsubscribePresence: (() => void) | null = null;
 
     const init = async () => {
       try {
@@ -125,6 +130,8 @@ export default function ChatDetailScreen() {
         // 2. Get target user profile
         try {
           const profile = await viewFullProfile(targetId);
+          // Check real online status from backend
+          const onlineStatus = await checkUserOnline(targetId);
           if (mounted && profile) {
             setTargetUser({
               name: profile.fullName || paramName || `User ${id}`,
@@ -136,7 +143,7 @@ export default function ChatDetailScreen() {
               age: profile.age,
               city: profile.city,
               matchScore: profile.matchScore,
-              isOnline: paramIsOnline === "true",
+              isOnline: onlineStatus,
             });
           }
         } catch (e) {
@@ -173,7 +180,7 @@ export default function ChatDetailScreen() {
           // 5. Subscribe to messages (Step 3)
           const chatKey = getChatKey(uid, targetId);
 
-          subscribeToMessages(chatKey, (msg: ChatMessage) => {
+          unsubscribeMessages = subscribeToMessages(chatKey, (msg: ChatMessage) => {
             if (mounted) {
               setMessages((prev) => {
                 // Check if message already exists (by id)
@@ -187,15 +194,15 @@ export default function ChatDetailScreen() {
               setShowSuggestions(false);
               // Mark as seen
               if (msg.senderId !== uid) {
-                markSeen(uid, targetId);
+                markSeen(msg.id, uid);
               }
             }
           });
 
           // Subscribe to typing
           let typingHideTimeout: NodeJS.Timeout | null = null;
-          subscribeToTyping(chatKey, (event: TypingEvent) => {
-            if (mounted && event.senderId !== uid) {
+          unsubscribeTyping = subscribeToTyping(chatKey, (event: TypingEvent) => {
+            if (mounted && String(event.from) !== String(uid)) {
               setIsTyping(event.typing);
               
               if (typingHideTimeout) clearTimeout(typingHideTimeout);
@@ -206,6 +213,19 @@ export default function ChatDetailScreen() {
                   if (mounted) setIsTyping(false);
                 }, 3000);
               }
+            }
+          });
+
+          // Subscribe to presence updates
+          unsubscribePresence = subscribeToPresence((event: { userId: number; status: string }) => {
+            if (mounted && event.userId === targetId) {
+              setTargetUser((prev: any) => {
+                if (!prev) return prev;
+                return {
+                  ...prev,
+                  isOnline: event.status === "ONLINE",
+                };
+              });
             }
           });
         } catch (e) {
@@ -220,7 +240,10 @@ export default function ChatDetailScreen() {
 
     return () => {
       mounted = false;
-      disconnectWebSocket();
+      // Do not disconnect WebSocket globally so back toast notifications keep working
+      if (unsubscribeMessages) unsubscribeMessages();
+      if (unsubscribeTyping) unsubscribeTyping();
+      if (unsubscribePresence) unsubscribePresence();
     };
   }, [id]);
 
@@ -850,19 +873,26 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   theirMessage: {
-    backgroundColor: "#FFF",
+    backgroundColor: "#FFFFFF",
     borderTopLeftRadius: 4,
     alignSelf: "flex-start",
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.04,
-    shadowRadius: 3,
-    elevation: 1,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 4,
+    elevation: 2,
+    borderWidth: 1,
+    borderColor: "#F3F4F6",
   },
   myMessage: {
     backgroundColor: Colors.maroon,
     borderBottomRightRadius: 4,
     alignSelf: "flex-end",
+    shadowColor: Colors.maroon,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.25,
+    shadowRadius: 5,
+    elevation: 3,
   },
   deletedMessage: {
     opacity: 0.6,
@@ -944,11 +974,16 @@ const styles = StyleSheet.create({
   inputContainer: {
     flexDirection: "row",
     alignItems: "flex-end",
-    paddingHorizontal: 10,
-    paddingVertical: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 12,
     backgroundColor: "#FFF",
     borderTopWidth: 1,
     borderTopColor: "#F0F0F0",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: -3 },
+    shadowOpacity: 0.03,
+    shadowRadius: 8,
+    elevation: 10,
   },
   attachButton: {
     paddingHorizontal: 6,

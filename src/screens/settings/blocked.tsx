@@ -1,7 +1,7 @@
 import { Colors } from "@/constants/Colors";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   SafeAreaView,
   ScrollView,
@@ -12,20 +12,31 @@ import {
   View,
   Image,
   Alert,
+  ActivityIndicator,
 } from "react-native";
-
-// Mock data for blocked users. In a real application, this would be fetched from an API.
-const INITIAL_BLOCKED_USERS = [
-  { id: "1", name: "Ravi Kumar", age: 28, imageUri: "https://randomuser.me/api/portraits/men/32.jpg" },
-  { id: "2", name: "Anjali Gupta", age: 26, imageUri: "https://randomuser.me/api/portraits/women/44.jpg" },
-  { id: "3", name: "Vikram Singh", age: 31, imageUri: "https://randomuser.me/api/portraits/men/46.jpg" },
-];
+import { getBlockedUsers, unblockUser, MatchProfile } from "@/services/matchService";
+import { getAvatarUrl } from "@/utils/avatar";
 
 export default function BlockedSettingsScreen() {
   const router = useRouter();
-  const [blockedUsers, setBlockedUsers] = useState(INITIAL_BLOCKED_USERS);
+  const [blockedUsers, setBlockedUsers] = useState<MatchProfile[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const handleUnblock = (id: string, name: string) => {
+  useEffect(() => {
+    const load = async () => {
+      try {
+        const users = await getBlockedUsers();
+        setBlockedUsers(users);
+      } catch (e) {
+        console.warn("Failed to load blocked users:", e);
+      } finally {
+        setLoading(false);
+      }
+    };
+    load();
+  }, []);
+
+  const handleUnblock = (id: number, name: string) => {
     Alert.alert(
       "Unblock User",
       `Are you sure you want to unblock ${name}? They will be able to see your profile and interact with you again.`,
@@ -34,10 +45,13 @@ export default function BlockedSettingsScreen() {
         { 
           text: "Unblock", 
           style: "destructive",
-          onPress: () => {
-            // Remove user from the list
-            setBlockedUsers(prev => prev.filter(user => user.id !== id));
-            // TODO: API call to unblock user
+          onPress: async () => {
+            try {
+              await unblockUser(id);
+              setBlockedUsers(prev => prev.filter(user => user.userId !== id));
+            } catch (e) {
+              Alert.alert("Error", "Failed to unblock user. Please try again.");
+            }
           }
         }
       ]
@@ -68,18 +82,25 @@ export default function BlockedSettingsScreen() {
           </Text>
         </View>
 
-        {blockedUsers.length > 0 ? (
+        {loading ? (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color={Colors.gold} />
+          </View>
+        ) : blockedUsers.length > 0 ? (
           <View style={styles.listContainer}>
             {blockedUsers.map((user) => (
-              <View key={user.id} style={styles.userCard}>
-                <Image source={{ uri: user.imageUri }} style={styles.avatar} />
+              <View key={user.userId} style={styles.userCard}>
+                <Image 
+                  source={{ uri: user.profilePhotoUrl || 'https://www.gravatar.com/avatar/?d=mp' }} 
+                  style={styles.avatar} 
+                />
                 <View style={styles.userInfo}>
-                  <Text style={styles.userName}>{user.name}</Text>
-                  <Text style={styles.userMeta}>{user.age} yrs</Text>
+                  <Text style={styles.userName}>{user.fullName}</Text>
+                  <Text style={styles.userMeta}>{user.age} yrs • {user.city}</Text>
                 </View>
                 <TouchableOpacity 
                   style={styles.unblockButton} 
-                  onPress={() => handleUnblock(user.id, user.name)}
+                  onPress={() => handleUnblock(user.userId, user.fullName)}
                 >
                   <Text style={styles.unblockText}>Unblock</Text>
                 </TouchableOpacity>
@@ -128,6 +149,11 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     paddingHorizontal: 20,
+  },
+  loadingContainer: {
+    paddingVertical: 50,
+    alignItems: "center",
+    justifyContent: "center",
   },
   infoBox: {
     flexDirection: "row",

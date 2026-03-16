@@ -89,12 +89,17 @@ export default function ModernSearchBar({
 
   const handleTextChange = (text: string) => {
     setSearchQuery(text);
-    onSearch(text); // Trigger search immediately or you can debounce this too if you want 'real-time' search results not just suggestions
-
+    // Removed onSearch(text) here to prevent searching on every keystroke
+    
     if (debounceRef.current) clearTimeout(debounceRef.current);
     debounceRef.current = setTimeout(() => {
       fetchSuggestions(text);
     }, 300);
+  };
+  
+  const handleSearchSubmit = () => {
+    onSearch(searchQuery);
+    handleDismiss();
   };
 
   const handleSuggestionPress = (chip: string) => {
@@ -135,6 +140,8 @@ export default function ModernSearchBar({
             value={searchQuery}
             onChangeText={handleTextChange}
             onFocus={handleFocus}
+            onSubmitEditing={handleSearchSubmit}
+            returnKeyType="search"
             // onBlur handled manually via handleDismiss or timeout in parent if needed
           />
 
@@ -155,6 +162,12 @@ export default function ModernSearchBar({
             </TouchableOpacity>
           )}
         </View>
+
+        {searchQuery.length > 0 && (
+          <TouchableOpacity style={styles.searchSubmitButton} onPress={handleSearchSubmit}>
+            <Ionicons name="search" size={22} color="#FFF" />
+          </TouchableOpacity>
+        )}
 
         <TouchableOpacity style={styles.filterButton} onPress={onFilterPress}>
           <Ionicons name="options-outline" size={24} color={Colors.maroon} />
@@ -293,6 +306,19 @@ const styles = StyleSheet.create({
     shadowColor: Colors.maroon,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  searchSubmitButton: {
+    width: 54,
+    height: 54,
+    backgroundColor: Colors.maroon,
+    borderRadius: 27,
+    justifyContent: "center",
+    alignItems: "center",
+    shadowColor: Colors.maroon,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
     shadowRadius: 8,
     elevation: 4,
   },

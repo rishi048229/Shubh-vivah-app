@@ -28,4 +28,16 @@ public interface UserProfileRepository extends JpaRepository<UserProfile, Long> 
 
     @Query("SELECT p FROM UserProfile p WHERE LOWER(p.user.fullName) LIKE LOWER(CONCAT('%', :query, '%')) OR LOWER(p.city) LIKE LOWER(CONCAT('%', :query, '%')) OR LOWER(p.aboutMe) LIKE LOWER(CONCAT('%', :query, '%'))")
     List<UserProfile> searchGlobal(@Param("query") String query);
+
+    // Safe search that only uses UserProfile fields (no JOIN to users table)
+    @Query("SELECT p FROM UserProfile p WHERE LOWER(p.city) LIKE LOWER(CONCAT('%', :query, '%')) OR LOWER(p.aboutMe) LIKE LOWER(CONCAT('%', :query, '%'))")
+    List<UserProfile> searchByProfileFields(@Param("query") String query);
+
+    // Find all with user eagerly loaded
+    @Query("SELECT p FROM UserProfile p JOIN FETCH p.user")
+    List<UserProfile> findAllWithUser();
+
+    // Search with user eagerly loaded
+    @Query("SELECT p FROM UserProfile p JOIN FETCH p.user WHERE LOWER(p.user.fullName) LIKE LOWER(CONCAT('%', :query, '%')) OR LOWER(p.city) LIKE LOWER(CONCAT('%', :query, '%')) OR LOWER(p.aboutMe) LIKE LOWER(CONCAT('%', :query, '%'))")
+    List<UserProfile> searchGlobalWithUser(@Param("query") String query);
 }

@@ -5,7 +5,7 @@ import IcebreakerSection from "@/components/Chat/Icebreaker";
 import { Colors } from "@/constants/Colors";
 import { ChatConversation, ChatUser } from "@/data/mockChatData";
 import api from "@/services/api";
-import { getCurrentUserId } from "@/services/chatService";
+import { getCurrentUserId, subscribeToPresence } from "@/services/chatService";
 import { getAvatarUrl } from "@/utils/avatar";
 import { StatusBar } from "expo-status-bar";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
@@ -30,6 +30,20 @@ export default function ChatScreen() {
 
   useEffect(() => {
     loadChatList();
+
+    const unsubscribe = subscribeToPresence((event: { userId: number; status: string }) => {
+      setChats((prev) =>
+        prev.map((chat) =>
+          chat.id === event.userId.toString()
+            ? { ...chat, user: { ...chat.user, isOnline: event.status === "ONLINE" } }
+            : chat
+        )
+      );
+    });
+
+    return () => {
+      if (unsubscribe) unsubscribe();
+    };
   }, []);
 
   const loadChatList = async () => {

@@ -31,6 +31,7 @@ public class SecurityConfig {
                                                                 "/otp/**",
                                                                 "/api/master/**",
                                                                 "/ws-chat/**",
+                                                "/matches/explore/test-search",
                                                                 "/error")
                                                 .permitAll()
                                                 .anyRequest().authenticated())

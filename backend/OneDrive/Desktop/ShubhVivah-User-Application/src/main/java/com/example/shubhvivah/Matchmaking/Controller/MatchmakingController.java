@@ -7,6 +7,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.*;
 import com.example.shubhvivah.profile.entity.UserProfile;
 import com.example.shubhvivah.Matchmaking.Service.MatchmakingService;
+import com.example.shubhvivah.Matchmaking.Service.SearchService;
 import com.example.shubhvivah.Matchmaking.Repository.UserRelationRepository;
 import com.example.shubhvivah.Matchmaking.Entity.UserRelation;
 import com.example.shubhvivah.Matchmaking.enums.RelationType;
@@ -20,6 +21,7 @@ import lombok.RequiredArgsConstructor;
 public class MatchmakingController {
 
     private final MatchmakingService service;
+    private final SearchService searchService;
     private final UserRelationRepository relationRepository;
 
     /* ================= FULL PROFILE ================= */
@@ -42,25 +44,60 @@ public class MatchmakingController {
     }
 
     @GetMapping("/explore/search")
-    public List<MatchmakingDto> searchProfiles(
-            @RequestParam(required = false, defaultValue = "") String query,
-            @RequestParam(required = false) Integer minAge,
-            @RequestParam(required = false) Integer maxAge,
-            @RequestParam(required = false) String religion,
-            @RequestParam(required = false) String city) {
-        return service.searchUsers(query, minAge, maxAge, religion, city);
+    public org.springframework.http.ResponseEntity<List<MatchmakingDto>> searchProfiles(
+            @RequestParam(name = "query", required = false, defaultValue = "") String query,
+            @RequestParam(name = "minAge", required = false) Integer minAge,
+            @RequestParam(name = "maxAge", required = false) Integer maxAge,
+            @RequestParam(name = "religion", required = false) String religion,
+            @RequestParam(name = "city", required = false) String city) {
+        try {
+            Long currentUserId = service.getCurrentUserId();
+            List<MatchmakingDto> results = searchService.searchProfiles(currentUserId, query, minAge, maxAge, religion, city);
+            return org.springframework.http.ResponseEntity.ok(results);
+        } catch (Exception e) {
+            System.err.println("=== CONTROLLER SEARCH ERROR ===");
+            e.printStackTrace();
+            System.err.println("=== END CONTROLLER SEARCH ERROR ===");
+            return org.springframework.http.ResponseEntity.ok(java.util.List.of());
+        }
     }
 
     @GetMapping("/explore/suggestions")
-    public List<String> getSearchSuggestions(@RequestParam(required = false, defaultValue = "") String query) {
-        return service.getSearchSuggestions(query);
+    public List<String> getSearchSuggestions(@RequestParam(name = "query", required = false, defaultValue = "") String query) {
+        try {
+            return searchService.getSuggestions(service.getCurrentUserId(), query);
+        } catch (Exception e) {
+            return java.util.List.of();
+        }
+    }
+
+    // Temporary debug endpoint - remove after testing
+    @GetMapping("/explore/test-search")
+    public java.util.Map<String, Object> testSearch() {
+        try {
+            // Direct DB query without auth - just to verify data access works
+            long totalProfiles = service.getProfileCount();
+            java.util.Map<String, Object> response = new java.util.LinkedHashMap<>();
+            response.put("status", "OK");
+            response.put("totalProfilesInDB", totalProfiles);
+            return response;
+        } catch (Exception e) {
+            java.util.Map<String, Object> response = new java.util.LinkedHashMap<>();
+            response.put("status", "ERROR");
+            response.put("error", e.getClass().getName() + ": " + e.getMessage());
+            return response;
+        }
     }
 
     /* ================= HOME SCREEN WIDGETS ================= */
 
     @GetMapping("/home/nearby")
     public List<MatchmakingDto> getNearbyMatches() {
-        return service.getNearbyMatches(service.getCurrentUserId());
+        try {
+            return searchService.getNearbyProfiles(service.getCurrentUserId());
+        } catch (Exception e) {
+            return java.util.List.of();
+        }
     }
 
     @GetMapping("/home/best")
@@ -129,7 +166,7 @@ public class MatchmakingController {
     /* ================= GET BLOCKED USERS ================= */
 
     @GetMapping("/blocked")
-    public List<UserRelation> blockedUsers() {
+    public List<MatchmakingDto> blockedUsers() {
         return service.getBlockedUsers(service.getCurrentUserId());
     }
 
@@ -160,7 +197,7 @@ public class MatchmakingController {
     @PostMapping("/report/{userId}")
     public String report(
             @PathVariable Long userId,
-            @RequestParam String reason) {
+            @RequestParam(name = "reason") String reason) {
 
         service.reportUser(service.getCurrentUserId(), userId, reason);
         return "User reported successfully";

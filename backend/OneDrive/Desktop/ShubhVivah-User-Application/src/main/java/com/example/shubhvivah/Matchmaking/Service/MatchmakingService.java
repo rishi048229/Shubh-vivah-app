@@ -122,45 +122,58 @@ public class MatchmakingService {
         return dto;
     }
 
+    /* ================= DEBUG ================= */
+
+    public long getProfileCount() {
+        return profileRepo.count();
+    }
+
     /* ================= SEARCH ================= */
 
     public List<MatchmakingDto> searchUsers(String query, Integer minAge, Integer maxAge, String religion,
             String city) {
-        Long currentUserId = getCurrentUserId();
-        List<UserProfile> matches = (query == null || query.trim().isEmpty())
-                ? profileRepo.findAll()
-                : profileRepo.searchGlobal(query);
+        try {
+            Long currentUserId = getCurrentUserId();
+            List<UserProfile> matches = (query == null || query.trim().isEmpty())
+                    ? profileRepo.findAllWithUser()
+                    : profileRepo.searchGlobalWithUser(query);
 
-        return matches.stream()
-                .filter(p -> p.getUser() != null)
-                .filter(p -> !p.getUser().getUserId().equals(currentUserId))
-                .filter(p -> !isBlocked(currentUserId, p.getUser().getUserId()))
-                .filter(p -> {
-                    if (city != null && !city.isEmpty()) {
-                        return p.getCity() != null && p.getCity().equalsIgnoreCase(city);
-                    }
-                    return true;
-                })
-                .filter(p -> {
-                    if (religion != null && !religion.isEmpty()) {
-                        return p.getReligion() != null && p.getReligion().toString().equalsIgnoreCase(religion);
-                    }
-                    return true;
-                })
-                .map(p -> {
-                    int age = p.getDateOfBirth() != null ? calculateAge(p.getDateOfBirth()) : 0;
-                    return new Object[] { p, age };
-                })
-                .filter(arr -> {
-                    int age = (int) arr[1];
-                    if (minAge != null && age < minAge)
-                        return false;
-                    if (maxAge != null && age > maxAge)
-                        return false;
-                    return true;
-                })
-                .map(arr -> buildDto((UserProfile) arr[0], (int) arr[1]))
-                .toList();
+            return matches.stream()
+                    .filter(p -> p.getUser() != null)
+                    .filter(p -> !p.getUser().getUserId().equals(currentUserId))
+                    .filter(p -> !isBlocked(currentUserId, p.getUser().getUserId()))
+                    .filter(p -> {
+                        if (city != null && !city.trim().isEmpty()) {
+                            return p.getCity() != null && p.getCity().toLowerCase().contains(city.trim().toLowerCase());
+                        }
+                        return true;
+                    })
+                    .filter(p -> {
+                        if (religion != null && !religion.isEmpty()) {
+                            return p.getReligion() != null && p.getReligion().toString().equalsIgnoreCase(religion);
+                        }
+                        return true;
+                    })
+                    .map(p -> {
+                        int age = p.getDateOfBirth() != null ? calculateAge(p.getDateOfBirth()) : 0;
+                        return new Object[] { p, age };
+                    })
+                    .filter(arr -> {
+                        int age = (int) arr[1];
+                        if (minAge != null && age != 0 && age < minAge)
+                            return false;
+                        if (maxAge != null && age != 0 && age > maxAge)
+                            return false;
+                        return true;
+                    })
+                    .map(arr -> buildDto((UserProfile) arr[0], (int) arr[1]))
+                    .toList();
+        } catch (Exception e) {
+            System.err.println("=== SEARCH ERROR ===");
+            e.printStackTrace();
+            System.err.println("=== END SEARCH ERROR ===");
+            return java.util.List.of();
+        }
     }
 
     public List<String> getSearchSuggestions(String query) {
@@ -195,23 +208,30 @@ public class MatchmakingService {
     /* ================= HOME SCREEN WIDGETS ================= */
 
     public List<MatchmakingDto> getNearbyMatches(Long currentUserId) {
-        UserProfile me = profileRepo.findByUser_UserId(currentUserId).orElse(null);
-        if (me == null || me.getCity() == null)
-            return List.of();
+        try {
+            UserProfile me = profileRepo.findByUser_UserId(currentUserId).orElse(null);
+            if (me == null || me.getCity() == null)
+                return List.of();
 
-        return profileRepo.findAll().stream()
-                .filter(p -> p.getUser() != null)
-                .filter(p -> !p.getUser().getUserId().equals(currentUserId))
-                .filter(p -> !isBlocked(currentUserId, p.getUser().getUserId()))
-                .filter(p -> {
-                    if (me.getGender() == null || p.getGender() == null)
-                        return true;
-                    return p.getGender() != me.getGender();
-                })
-                .filter(p -> me.getCity().equalsIgnoreCase(p.getCity()))
-                .limit(10)
-                .map(p -> buildDto(p, p.getDateOfBirth() != null ? calculateAge(p.getDateOfBirth()) : 0))
-                .toList();
+            return profileRepo.findAll().stream()
+                    .filter(p -> p.getUser() != null)
+                    .filter(p -> !p.getUser().getUserId().equals(currentUserId))
+                    .filter(p -> !isBlocked(currentUserId, p.getUser().getUserId()))
+                    .filter(p -> {
+                        if (me.getGender() == null || p.getGender() == null)
+                            return true;
+                        return p.getGender() != me.getGender();
+                    })
+                    .filter(p -> p.getCity() != null && me.getCity().equalsIgnoreCase(p.getCity()))
+                    .limit(10)
+                    .map(p -> buildDto(p, p.getDateOfBirth() != null ? calculateAge(p.getDateOfBirth()) : 0))
+                    .toList();
+        } catch (Exception e) {
+            System.err.println("=== NEARBY ERROR ===");
+            e.printStackTrace();
+            System.err.println("=== END NEARBY ERROR ===");
+            return java.util.List.of();
+        }
     }
 
     public List<MatchmakingDto> getBestMatches(Long currentUserId) {
@@ -374,15 +394,8 @@ public class MatchmakingService {
         if (relationRepository.existsByFromUserIdAndToUserIdAndType(from, to, RelationType.BLOCK))
             return;
 
-        // remove positive relations
-        relationRepository.deleteBetweenUsers(from, to, RelationType.LIKE);
-        relationRepository.deleteBetweenUsers(from, to, RelationType.MATCH);
-        relationRepository.deleteBetweenUsers(from, to, RelationType.SHORTLIST);
-
-        relationRepository.deleteBetweenUsers(to, from, RelationType.LIKE);
-        relationRepository.deleteBetweenUsers(to, from, RelationType.MATCH);
-        relationRepository.deleteBetweenUsers(to, from, RelationType.SHORTLIST);
-
+        // Keep positive relations, filter on query/endpoints
+        
         relationRepository.save(UserRelation.of(from, to, RelationType.BLOCK));
     }
 
@@ -390,6 +403,7 @@ public class MatchmakingService {
 
     public void unblockUser(Long from, Long to) {
         relationRepository.deleteBetweenUsers(from, to, RelationType.BLOCK);
+        relationRepository.deleteBetweenUsers(to, from, RelationType.BLOCK);
     }
 
     /* ================= REPORT ================= */
@@ -425,17 +439,28 @@ public class MatchmakingService {
 
     /* ================= GET BLOCKED USERS ================= */
 
-    public List<UserRelation> getBlockedUsers(Long userId) {
-        return relationRepository.findByFromUserIdAndType(userId, RelationType.BLOCK);
+    public List<MatchmakingDto> getBlockedUsers(Long userId) {
+        List<UserRelation> relations = relationRepository.findByFromUserIdAndType(userId, RelationType.BLOCK);
+        return relations.stream()
+                .map(r -> {
+                    UserProfile profile = profileRepo.findByUser_UserId(r.getToUserId()).orElse(null);
+                    if (profile == null) return null;
+                    int age = profile.getDateOfBirth() != null ? calculateAge(profile.getDateOfBirth()) : 0;
+                    return buildDto(profile, age);
+                })
+                .filter(java.util.Objects::nonNull)
+                .toList();
     }
 
     /* ================= GET MATCHED USERS ================= */
 
     public List<UserRelation> getMatchedUsers(Long userId) {
-        // Find relations where this user is the "toUser" or "fromUser" and type is
+        // Find relations where this user is the "toUser" or "fromUser" and type is Total
         // MATCH
         List<UserRelation> matches = relationRepository.findByFromUserIdAndType(userId, RelationType.MATCH);
-        return matches;
+        return matches.stream()
+                .filter(m -> !isBlocked(userId, m.getToUserId()))
+                .toList();
     }
 
     /* ================= GET RECEIVED REQUESTS ================= */

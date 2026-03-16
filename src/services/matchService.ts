@@ -175,7 +175,7 @@ export async function getShortlistedUsers(): Promise<UserRelation[]> {
 /**
  * GET /matches/blocked — Get blocked users list
  */
-export async function getBlockedUsers(): Promise<UserRelation[]> {
+export async function getBlockedUsers(): Promise<MatchProfile[]> {
   const res = await api.get("/matches/blocked");
   return res.data;
 }
@@ -231,30 +231,23 @@ export async function searchProfiles(
       maritalStatus: "Never Married",
     }));
   } catch (error: any) {
-    // Use console.warn (NOT console.error) to avoid React Native's red LogBox overlay
-    if (error?.message !== "Network Error") {
-      console.warn("Search profiles issue:", error?.message || error);
-    }
+    // Log full details including backend response body
+    const status = error?.response?.status;
+    const responseData = error?.response?.data;
+    console.warn("Search profiles issue:", status, responseData || error?.message);
     return [];
   }
 }
 
 export async function getSearchSuggestions(query: string): Promise<string[]> {
   try {
-    const profiles = await searchProfiles(query);
-    const suggestions = new Set<string>();
-    profiles.forEach((p) => {
-      // Suggest the name if it matches
-      if (p.name && p.name.toLowerCase().includes(query.toLowerCase())) {
-        suggestions.add(p.name);
-      }
-      // Suggest the city if it matches
-      if (p.city && p.city.toLowerCase().includes(query.toLowerCase())) {
-        suggestions.add(p.city);
-      }
+    if (!query || query.trim() === "") return [];
+    const res = await api.get(`/matches/explore/suggestions`, {
+      params: { query: query.trim() }
     });
-    return Array.from(suggestions).slice(0, 5); // Return top 5 unique suggestions
+    return res.data || [];
   } catch (error) {
+    console.warn("Error fetching search suggestions:", error);
     return [];
   }
 }

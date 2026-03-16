@@ -37,8 +37,8 @@ public class SupportController {
     @PostMapping("/ticket/{ticketId}/reply")
     public ResponseEntity<String> reply(
             @PathVariable Long ticketId,
-            @RequestParam String message,
-            @RequestParam(required = false) List<MultipartFile> files,
+            @RequestParam(name = "message") String message,
+            @RequestParam(name = "files", required = false) List<MultipartFile> files,
             Principal principal) throws Exception {
         Long userId = Long.valueOf(principal.getName());
         ticketService.replyWithAttachments(ticketId, userId, false, message, files);

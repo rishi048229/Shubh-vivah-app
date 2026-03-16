@@ -28,9 +28,8 @@ export interface ChatMessage {
 }
 
 export interface TypingEvent {
-  senderId: number;
-  receiverId: number;
-  chatKey: string;
+  from: number;
+  to: number;
   typing: boolean;
 }
 
@@ -163,14 +162,13 @@ export async function connectWebSocket(): Promise<Client> {
 export function subscribeToMessages(
   chatKey: string,
   onMessage: (msg: ChatMessage) => void,
-): void {
+): () => void {
   if (!stompClient || !stompClient.connected) {
     console.warn("[STOMP] Not connected, cannot subscribe");
-    return;
+    return () => {};
   }
 
   const subKey = `chat_${chatKey}`;
-  // Unsubscribe if already subscribed
   if (activeSubscriptions.has(subKey)) {
     activeSubscriptions.get(subKey).unsubscribe();
   }
@@ -188,6 +186,11 @@ export function subscribeToMessages(
   );
 
   activeSubscriptions.set(subKey, subscription);
+
+  return () => {
+    subscription.unsubscribe();
+    activeSubscriptions.delete(subKey);
+  };
 }
 
 /**
@@ -197,8 +200,8 @@ export function subscribeToMessages(
 export function subscribeToTyping(
   chatKey: string,
   onTyping: (event: TypingEvent) => void,
-): void {
-  if (!stompClient || !stompClient.connected) return;
+): () => void {
+  if (!stompClient || !stompClient.connected) return () => {};
 
   const subKey = `typing_${chatKey}`;
   if (activeSubscriptions.has(subKey)) {
@@ -215,6 +218,11 @@ export function subscribeToTyping(
   );
 
   activeSubscriptions.set(subKey, subscription);
+
+  return () => {
+    subscription.unsubscribe();
+    activeSubscriptions.delete(subKey);
+  };
 }
 
 /**
@@ -245,6 +253,52 @@ export function subscribeToNotifications(
   );
 
   activeSubscriptions.set(subKey, subscription);
+}
+
+let presenceCallbacks: ((event: { userId: number; status: string }) => void)[] = [];
+
+/**
+ * Subscribe to presence updates (Online/Offline)
+ * /topic/presence
+ */
+export function subscribeToPresence(
+  onPresence: (event: { userId: number; status: string }) => void
+): () => void {
+  presenceCallbacks.push(onPresence);
+
+  const subKey = "presence";
+  if (!activeSubscriptions.has(subKey)) {
+    if (!stompClient || !stompClient.connected) {
+      return () => {
+        presenceCallbacks = presenceCallbacks.filter((cb) => cb !== onPresence);
+      };
+    }
+
+    const subscription = stompClient.subscribe(
+      `/topic/presence`,
+      (message: IMessage) => {
+        try {
+          const parsed = JSON.parse(message.body);
+          presenceCallbacks.forEach((cb) => cb(parsed));
+        } catch (e) {
+          console.warn("[STOMP] Failed to parse presence update:", e);
+        }
+      }
+    );
+
+    activeSubscriptions.set(subKey, subscription);
+  }
+
+  // Return unsubscribe function
+  return () => {
+    presenceCallbacks = presenceCallbacks.filter((cb) => cb !== onPresence);
+    if (presenceCallbacks.length === 0) {
+      if (activeSubscriptions.has(subKey)) {
+        activeSubscriptions.get(subKey).unsubscribe();
+        activeSubscriptions.delete(subKey);
+      }
+    }
+  };
 }
 
 // --- STOMP Send Endpoints ---
@@ -282,13 +336,11 @@ export function sendTyping(
 ): void {
   if (!stompClient || !stompClient.connected) return;
 
-  const chatKey = getChatKey(senderId, receiverId);
   stompClient.publish({
     destination: "/app/chat.typing",
     body: JSON.stringify({
-      senderId,
-      receiverId,
-      chatKey,
+      from: senderId,
+      to: receiverId,
       typing,
     }),
   });
@@ -297,14 +349,14 @@ export function sendTyping(
 /**
  * Mark messages as seen → /app/chat.seen
  */
-export function markSeen(senderId: number, receiverId: number): void {
+export function markSeen(messageId: number, userId: number): void {
   if (!stompClient || !stompClient.connected) return;
 
   stompClient.publish({
     destination: "/app/chat.seen",
     body: JSON.stringify({
-      senderId,
-      receiverId,
+      messageId,
+      userId,
     }),
   });
 }
@@ -354,4 +406,16 @@ export function disconnectWebSocket(): void {
  */
 export function isConnected(): boolean {
   return stompClient?.connected ?? false;
+}
+
+/**
+ * Check if a user is online via REST API
+ */
+export async function checkUserOnline(userId: number): Promise<boolean> {
+  try {
+    const res = await api.get(`/chat/online/${userId}`);
+    return res.data?.online === true;
+  } catch (e) {
+    return false;
+  }
 }

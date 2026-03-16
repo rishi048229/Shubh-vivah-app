@@ -22,7 +22,7 @@ public class UserProfile {
     private Long id;
 
     /* -------- Relation -------- */
-    @OneToOne(fetch = FetchType.LAZY)
+    @OneToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "user_id", nullable = false, unique = true)
     private UserEntity user;
 

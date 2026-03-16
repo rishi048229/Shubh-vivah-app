@@ -69,4 +69,13 @@ public class ChatSocketController {
         service.editMessage(req.getId(), req.getText());
     }
 
+    @org.springframework.messaging.handler.annotation.MessageExceptionHandler
+    public void handleException(Exception e, Principal principal) {
+        System.err.println("🔥 SOCKET ERROR: " + e.getMessage());
+        if (principal != null) {
+            messagingTemplate.convertAndSendToUser(
+                    principal.getName(), "/queue/errors", e.getMessage());
+        }
+    }
+
 }

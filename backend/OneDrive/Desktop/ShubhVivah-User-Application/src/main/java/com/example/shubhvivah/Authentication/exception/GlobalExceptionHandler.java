@@ -22,9 +22,18 @@ import com.example.shubhvivah.Authentication.Dto.ResponseDto.ResendOtpResponse;
             return ResponseEntity.badRequest().body(response);
         }
 
-        @ExceptionHandler(RuntimeException.class)
-        public ResponseEntity<String> handleRuntimeException(RuntimeException ex) {
-            return ResponseEntity.badRequest().body(ex.getMessage());
-        }
+    @ExceptionHandler(IllegalArgumentException.class)
+    public ResponseEntity<String> handleIllegalArgument(IllegalArgumentException ex) {
+        return ResponseEntity.badRequest().body(ex.getMessage());
+    }
+
+    @ExceptionHandler(RuntimeException.class)
+    public ResponseEntity<String> handleRuntimeException(RuntimeException ex) {
+        // Log the actual error for debugging
+        System.err.println("=== RUNTIME ERROR ===");
+        ex.printStackTrace();
+        System.err.println("=== END ERROR ===");
+        return ResponseEntity.internalServerError().body("Internal server error: " + ex.getMessage());
+    }
 
 }

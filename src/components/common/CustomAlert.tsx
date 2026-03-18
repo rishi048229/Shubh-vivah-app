@@ -20,6 +20,8 @@ export default function CustomAlert({
     onClose,
     confirmText = "Okay",
 }: CustomAlertProps) {
+    if (!visible) return null;
+
     const getIcon = () => {
         switch (type) {
             case "success":

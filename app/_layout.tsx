@@ -31,6 +31,7 @@ LogBox.ignoreLogs([
 
 import { AuthProvider } from "@/context/AuthContext";
 import { ProfileFormProvider } from "@/context/ProfileFormContext";
+import { AlertProvider } from "@/components/ThemedAlert";
 import { useColorScheme } from "@/hooks/use-color-scheme";
 
 import { GlobalNotificationToast } from "@/components/GlobalNotificationToast";
@@ -91,9 +92,10 @@ export default function RootLayout() {
         <BottomSheetModalProvider>
           <AuthProvider>
             <ProfileFormProvider>
-              <ThemeProvider
-                value={colorScheme === "dark" ? DarkTheme : DefaultTheme}
-              >
+              <AlertProvider>
+                <ThemeProvider
+                  value={colorScheme === "dark" ? DarkTheme : DefaultTheme}
+                >
                   <Stack
                     initialRouteName="(auth)/landing"
                     screenOptions={{
@@ -113,7 +115,8 @@ export default function RootLayout() {
                   </Stack>
                 <GlobalNotificationToast />
                 <StatusBar style="auto" />
-              </ThemeProvider>
+                </ThemeProvider>
+              </AlertProvider>
             </ProfileFormProvider>
           </AuthProvider>
         </BottomSheetModalProvider>

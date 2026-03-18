@@ -41,4 +41,10 @@ public class UserEntity {
     private String resetToken;
 
     private LocalDateTime resetTokenExpiry;
+
+    @Column(name = "auth_provider")
+    private String authProvider = "local";
+
+    @Column(name = "profile_image_url")
+    private String profileImageUrl;
 }

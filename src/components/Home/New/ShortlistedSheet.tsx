@@ -53,46 +53,30 @@ const ShortlistedSheet = forwardRef<BottomSheetModal, ShortlistedSheetProps>(
           </View>
 
           <BottomSheetScrollView contentContainerStyle={styles.listContent}>
-            {shortlisted.map((profile, index) => (
-              <MotiView
-                key={profile.id}
-                from={{ opacity: 0, translateX: -20 }}
-                animate={{ opacity: 1, translateX: 0 }}
-                transition={{ delay: index * 100, type: "timing" }}
-              >
-                <TouchableOpacity
-                  style={styles.item}
-                  onPress={() => onProfilePress?.(profile.id)}
-                >
-                  <Image
-                    source={{ uri: profile.imageUri }}
-                    style={styles.avatar}
-                  />
-
-                  <View style={styles.info}>
-                    <Text style={styles.name}>
-                      {profile.name}, {profile.age}
-                    </Text>
-                    <Text style={styles.details} numberOfLines={1}>
-                      {profile.location}
-                    </Text>
-                  </View>
-
-                  <TouchableOpacity style={styles.bookmarkBtn}>
-                    <Ionicons name="bookmark" size={20} color={Colors.maroon} />
-                  </TouchableOpacity>
-                </TouchableOpacity>
-              </MotiView>
-            ))}
-
-            {shortlisted.length === 0 && (
-              <View style={styles.emptyState}>
-                <Ionicons name="bookmark-outline" size={48} color="#D6D3D1" />
-                <Text style={styles.emptyText}>
-                  No profiles shortlisted yet.
-                </Text>
+            <View style={styles.comingSoonContainer}>
+              <View style={styles.comingSoonIconBg}>
+                <Ionicons name="bookmark" size={36} color={Colors.maroon} />
               </View>
-            )}
+              <Text style={styles.comingSoonTitle}>Shortlist Coming Soon! 💝</Text>
+              <Text style={styles.comingSoonSubtitle}>
+                Save your favorite profiles and revisit them anytime. We're crafting the perfect experience for you to manage your top picks effortlessly.
+              </Text>
+              <View style={styles.featureBox}>
+                <View style={styles.featureRow}>
+                  <Ionicons name="heart-outline" size={16} color={Colors.maroon} />
+                  <Text style={styles.featureText}>Save profiles you love</Text>
+                </View>
+                <View style={styles.featureRow}>
+                  <Ionicons name="list-outline" size={16} color={Colors.maroon} />
+                  <Text style={styles.featureText}>Organize and compare matches</Text>
+                </View>
+                <View style={styles.featureRow}>
+                  <Ionicons name="notifications-outline" size={16} color={Colors.maroon} />
+                  <Text style={styles.featureText}>Get notified on profile updates</Text>
+                </View>
+              </View>
+              <Text style={styles.comingSoonFooter}>We're working hard on this — stay tuned! ✨</Text>
+            </View>
           </BottomSheetScrollView>
         </View>
       </BottomSheetModal>
@@ -121,55 +105,65 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   listContent: {
-    gap: 12,
     paddingBottom: 40,
   },
-  item: {
+  comingSoonContainer: {
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 30,
+    paddingHorizontal: 20,
+  },
+  comingSoonIconBg: {
+    width: 76,
+    height: 76,
+    borderRadius: 38,
+    backgroundColor: "#FFF1F2",
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: 20,
+    borderWidth: 2,
+    borderColor: "rgba(128, 0, 0, 0.15)",
+  },
+  comingSoonTitle: {
+    fontSize: 22,
+    fontWeight: "800",
+    color: "#800000",
+    textAlign: "center",
+    marginBottom: 10,
+  },
+  comingSoonSubtitle: {
+    fontSize: 14,
+    color: "#78716C",
+    textAlign: "center",
+    lineHeight: 22,
+    marginBottom: 24,
+    paddingHorizontal: 10,
+  },
+  featureBox: {
+    width: "100%",
+    backgroundColor: "#FFF8F0",
+    borderRadius: 16,
+    padding: 16,
+    gap: 14,
+    marginBottom: 20,
+    borderWidth: 1,
+    borderColor: "rgba(128, 0, 0, 0.08)",
+  },
+  featureRow: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#FFF",
-    padding: 12,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: "#E7E5E4",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 2,
+    gap: 12,
   },
-  avatar: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    marginRight: 12,
-  },
-  info: {
-    flex: 1,
-  },
-  name: {
-    fontSize: 16,
-    fontWeight: "700",
-    color: "#2D1406",
-  },
-  details: {
-    fontSize: 13,
-    color: "#A8A29E",
-    marginTop: 2,
-  },
-  bookmarkBtn: {
-    padding: 8,
-    backgroundColor: "#FFF1F2",
-    borderRadius: 20,
-  },
-  emptyState: {
-    alignItems: "center",
-    marginTop: 40,
-    gap: 10,
-  },
-  emptyText: {
-    color: "#A8A29E",
+  featureText: {
     fontSize: 14,
+    color: "#5D4037",
+    fontWeight: "500",
+  },
+  comingSoonFooter: {
+    fontSize: 13,
+    color: Colors.maroon,
+    fontWeight: "600",
+    textAlign: "center",
   },
   deleteAction: {
     backgroundColor: "#EF4444",

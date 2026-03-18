@@ -26,6 +26,6 @@ public class ProfilePhotoEntity {
     private Integer photoOrder; // optional (for arranging photos)
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "user_profile_id")
+    @JoinColumn(name = "profile_id")
     private UserProfile userProfile;
 }

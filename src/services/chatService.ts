@@ -62,15 +62,8 @@ export function getChatKey(u1: number, u2: number): string {
  * Build WebSocket URL dynamically using same IP as REST API
  */
 function getWsBaseUrl(): string {
-  const debuggerHost = Constants.expoConfig?.hostUri;
-  if (debuggerHost) {
-    const ip = debuggerHost.split(":")[0];
-    return `ws://${ip}:8085`;
-  }
-  if (Platform.OS === "android") {
-    return "ws://10.0.2.2:8085";
-  }
-  return "ws://localhost:8085";
+  // Use computer's IP directly, mirroring api.ts
+  return "ws://192.168.1.4:8085";
 }
 
 // --- REST Endpoints ---

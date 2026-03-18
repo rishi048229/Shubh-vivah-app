@@ -30,20 +30,18 @@ const Button: React.FC<ButtonProps> = ({
   const scaleAnim = useRef(new Animated.Value(1)).current;
 
   const handlePressIn = () => {
-    Animated.spring(scaleAnim, {
-      toValue: 0.96, // Subtle scale down
+    Animated.timing(scaleAnim, {
+      toValue: 0.96,
       useNativeDriver: true,
-      speed: 50,
-      bounciness: 10,
+      duration: 120,
     }).start();
   };
 
   const handlePressOut = () => {
-    Animated.spring(scaleAnim, {
-      toValue: 1, // Back to normal
+    Animated.timing(scaleAnim, {
+      toValue: 1,
       useNativeDriver: true,
-      speed: 50,
-      bounciness: 10,
+      duration: 120,
     }).start();
   };
 

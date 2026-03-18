@@ -5,25 +5,11 @@ import Constants from "expo-constants";
 
 /**
  * Determine the correct base URL for the backend server.
- * - Extracts Expo Go host IP dynamically for physical devices.
- * - Falls back to Android emulator (10.0.2.2) or iOS/Web (localhost).
  */
 const getBaseUrl = (): string => {
-  const debuggerHost = Constants.expoConfig?.hostUri;
-  
-  // If running in Expo Go (physical or emulator), dynamically get the host IP
-  if (debuggerHost) {
-    const ip = debuggerHost.split(':')[0];
-    return `http://${ip}:8085`; // Backend runs on 8085
-  }
-
-  // If emulator or web, fallback to standard local proxies
-  if (Platform.OS === "android") {
-    // Android emulator -> host machine
-    return "http://10.0.2.2:8085";
-  }
-  // iOS simulator / web
-  return "http://localhost:8085";
+  // Use computer's IP directly. 
+  // (Using debuggerHost when connected via USB returns localhost, which breaks physical Android phones!)
+  return "http://192.168.1.4:8085";
 };
 
 const api = axios.create({

@@ -1,4 +1,4 @@
-import React from "react";
+import React, { createContext, useContext, useState } from "react";
 import {
   Modal,
   View,
@@ -50,6 +50,8 @@ export function ThemedAlert({
   confirmText = "OK",
   cancelText = "Cancel",
 }: ThemedAlertProps) {
+  if (!visible) return null;
+
   const icon = iconMap[type];
 
   return (
@@ -61,7 +63,7 @@ export function ThemedAlert({
       onRequestClose={onClose}
     >
       <Animated.View entering={FadeIn.duration(200)} exiting={FadeOut.duration(150)} style={styles.overlay}>
-        <Animated.View entering={ZoomIn.duration(300).springify().damping(14)} style={styles.card}>
+        <Animated.View entering={ZoomIn.duration(300)} style={styles.card}>
           {/* Colored header strip */}
           <View style={[styles.headerStrip, { backgroundColor: icon.color }]} />
 
@@ -104,55 +106,93 @@ export function ThemedAlert({
   );
 }
 
-/** Convenience hook to manage alert state */
-export function useThemedAlert() {
-  const [alertState, setAlertState] = React.useState<{
+/** Global Alert Context & Provider */
+interface AlertOptions {
+  onConfirm?: () => void;
+  confirmText?: string;
+  cancelText?: string;
+}
+
+interface AlertContextProps {
+  showAlert: (
+    title: string,
+    message: string,
+    type?: AlertType,
+    options?: AlertOptions
+  ) => void;
+  hideAlert: () => void;
+}
+
+const AlertContext = createContext<AlertContextProps | undefined>(undefined);
+
+export function AlertProvider({ children }: { children: React.ReactNode }) {
+  const [state, setState] = useState<{
     visible: boolean;
     title: string;
     message: string;
     type: AlertType;
     onConfirm?: () => void;
-    confirmText?: string;
+    confirmText: string;
+    cancelText: string;
   }>({
     visible: false,
     title: "",
     message: "",
     type: "info",
+    confirmText: "OK",
+    cancelText: "Cancel",
   });
 
   const showAlert = (
     title: string,
     message: string,
     type: AlertType = "info",
-    options?: { onConfirm?: () => void; confirmText?: string }
+    options?: AlertOptions
   ) => {
-    setAlertState({
+    setState({
       visible: true,
       title,
       message,
       type,
       onConfirm: options?.onConfirm,
-      confirmText: options?.confirmText,
+      confirmText: options?.confirmText || "OK",
+      cancelText: options?.cancelText || "Cancel",
     });
   };
 
-  const hideAlert = () => {
-    setAlertState((prev) => ({ ...prev, visible: false }));
-  };
+  const hideAlert = () => setState((p) => ({ ...p, visible: false }));
 
-  const AlertComponent = () => (
-    <ThemedAlert
-      visible={alertState.visible}
-      title={alertState.title}
-      message={alertState.message}
-      type={alertState.type}
-      onClose={hideAlert}
-      onConfirm={alertState.onConfirm}
-      confirmText={alertState.confirmText || "OK"}
-    />
+  return (
+    <AlertContext.Provider value={{ showAlert, hideAlert }}>
+      {children}
+      <ThemedAlert
+        visible={state.visible}
+        title={state.title}
+        message={state.message}
+        type={state.type}
+        onClose={hideAlert}
+        onConfirm={state.onConfirm}
+        confirmText={state.confirmText}
+        cancelText={state.cancelText}
+      />
+    </AlertContext.Provider>
   );
+}
 
-  return { showAlert, hideAlert, AlertComponent };
+export function useGlobalAlert() {
+  const context = useContext(AlertContext);
+  if (!context) {
+    throw new Error("useGlobalAlert must be used within an AlertProvider");
+  }
+  return context;
+}
+
+/** Convenience hook to manage alert state - Legacy backward support */
+export function useThemedAlert() {
+  const { showAlert } = useGlobalAlert();
+  // Return dummy AlertComponent which is now globally rendered by AlertProvider
+  const AlertComponent = () => null;
+  return { showAlert, AlertComponent };
 }
 
 const styles = StyleSheet.create({

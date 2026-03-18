@@ -22,7 +22,7 @@ public class ProfilePhotoServiceImpl implements ProfilePhotoService {
     private final UserProfileRepository profileRepo;
     private final CloudinaryService cloudinaryService;
 
-    private static final int MAX_EXTRA_PHOTOS = 6;
+    private static final int MAX_EXTRA_PHOTOS = 10;
 
     // =====================================================
     // UPLOAD PHOTOS
@@ -57,6 +57,10 @@ public class ProfilePhotoServiceImpl implements ProfilePhotoService {
                     .build();
 
             photoRepo.save(main);
+            
+            // Duplicate main photo link to UserProfile container for direct lookups
+            profile.setProfilePhotoUrl(url);
+            profileRepo.save(profile);
         }
 
         /* ---------------- EXTRA PHOTOS ---------------- */
@@ -112,6 +116,10 @@ public class ProfilePhotoServiceImpl implements ProfilePhotoService {
         existing.setPhotoUrl(newUrl);
 
         photoRepo.save(existing);
+        
+        // Duplicate main photo link to UserProfile container for direct lookups
+        profile.setProfilePhotoUrl(newUrl);
+        profileRepo.save(profile);
     }
 
     // =====================================================
@@ -129,6 +137,9 @@ public class ProfilePhotoServiceImpl implements ProfilePhotoService {
         cloudinaryService.deleteFile(photo.getPhotoUrl());
 
         photoRepo.delete(photo);
+        
+        profile.setProfilePhotoUrl(null);
+        profileRepo.save(profile);
     }
 
     // =====================================================

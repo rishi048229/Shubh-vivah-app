@@ -2,22 +2,24 @@ package com.example.shubhvivah.Authentication.Controller;
 
 import com.example.shubhvivah.Authentication.Dto.RequestDto.*;
 import com.example.shubhvivah.Authentication.Dto.RequestDto.VerifyOtpRequest;
+import com.example.shubhvivah.Authentication.Dto.RequestDto.GoogleLoginRequestDto;
+import com.example.shubhvivah.Authentication.Dto.RequestDto.AddPhoneRequestDto;
 import com.example.shubhvivah.Authentication.Dto.ResponseDto.LoginResponseDto;
 import com.example.shubhvivah.Authentication.Dto.ResponseDto.PasswordResponseDto;
 import com.example.shubhvivah.Authentication.Dto.ResponseDto.RegisterResponseDto;
+import com.example.shubhvivah.Authentication.Dto.ResponseDto.GoogleLoginResponseDto;
 import com.example.shubhvivah.Authentication.Service.UserService;
-import lombok.AllArgsConstructor;
-import org.springframework.beans.factory.annotation.Autowired;
+import com.example.shubhvivah.Authentication.Service.Impl.UserServiceImpl;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
-@AllArgsConstructor
+@RequiredArgsConstructor
 @RequestMapping("/auth")
 public class UserController {
 
-    @Autowired
-    private UserService userService;
+    private final UserService userService;
 
     @PostMapping("/register")
     public ResponseEntity<RegisterResponseDto> register(
@@ -60,4 +62,19 @@ public class UserController {
         return ResponseEntity.ok(userService.verifyLoginOtp(request.getUserId(), request.getOtp()));
     }
 
+    // ================= GOOGLE LOGIN =================
+    @PostMapping("/google-login")
+    public ResponseEntity<GoogleLoginResponseDto> googleLogin(
+            @RequestBody GoogleLoginRequestDto dto) {
+        return ResponseEntity.ok(userService.googleLogin(dto));
+    }
+
+    // ================= ADD PHONE =================
+    @PostMapping("/add-phone")
+    public ResponseEntity<GoogleLoginResponseDto> addPhone(
+            @RequestBody AddPhoneRequestDto dto) {
+        return ResponseEntity.ok(userService.addPhoneNumber(dto));
+    }
+
 }
+

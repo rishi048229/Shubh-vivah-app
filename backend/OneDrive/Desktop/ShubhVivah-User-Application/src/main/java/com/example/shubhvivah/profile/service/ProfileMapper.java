@@ -3,6 +3,8 @@ package com.example.shubhvivah.profile.service;
 import com.example.shubhvivah.Authentication.Entity.UserEntity;
 import com.example.shubhvivah.profile.dto.RequestDto.UserProfileRequestDto;
 import com.example.shubhvivah.profile.dto.ResponseDto.UserProfileResponseDto;
+import com.example.shubhvivah.profile.dto.ResponseDto.PhotoDto;
+
 import com.example.shubhvivah.profile.entity.UserProfile;
 import com.example.shubhvivah.Authentication.Repository.UserRepository;
 import com.example.shubhvivah.profile.repository.ReligionRepository;
@@ -105,8 +107,13 @@ public class ProfileMapper {
                                                 .findFirst()
                                                 .orElse(entity.getProfilePhotoUrl()) : entity.getProfilePhotoUrl())
                                 .photos(entity.getPhotos() != null ? entity.getPhotos().stream()
-                                                .map(com.example.shubhvivah.profile.entity.ProfilePhotoEntity::getPhotoUrl)
+                                                .filter(p -> p.getType() == com.example.shubhvivah.profile.enums.PhotoType.EXTRA)
+                                                .map(p -> PhotoDto.builder()
+                                                        .id(p.getId())
+                                                        .photoUrl(p.getPhotoUrl())
+                                                        .build())
                                                 .collect(java.util.stream.Collectors.toList()) : null)
+
                                 .build();
         }
 }

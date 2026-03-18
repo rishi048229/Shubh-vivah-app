@@ -13,6 +13,7 @@ import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
+@org.springframework.transaction.annotation.Transactional
 public class UserProfileServiceImpl implements UserProfileService {
 
     private final UserProfileRepository userProfileRepository;
@@ -75,7 +76,14 @@ public class UserProfileServiceImpl implements UserProfileService {
     @Override
     public Optional<UserProfileResponseDto> getProfileByUserId(Long userId) {
         return userProfileRepository.findByUser_UserId(userId)
-                .map(profileMapper::toResponseDto);
+                .map(profile -> {
+                    UserProfileResponseDto dto = profileMapper.toResponseDto(profile);
+                    System.out.println("====== PROFILE DIAGNOSTICS FOR USER " + userId + " ======");
+                    System.out.println("Main Photo URL: " + dto.getProfilePhotoUrl());
+                    System.out.println("Additional Photos Count: " + (dto.getPhotos() != null ? dto.getPhotos().size() : 0));
+                    System.out.println("=================================================");
+                    return dto;
+                });
     }
 
     @Override

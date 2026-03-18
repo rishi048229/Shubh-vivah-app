@@ -8,7 +8,7 @@ import {
 import { useProfileForm } from "@/context/ProfileFormContext";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useState } from "react";
-import { Alert } from "react-native";
+import { useGlobalAlert } from "@/components/ThemedAlert";
 
 const HEIGHT_OPTIONS = [
   "4'5\"",
@@ -49,6 +49,7 @@ const PROFILE_CREATED_BY_OPTIONS = [
 
 const BasicDetails = () => {
   const router = useRouter();
+  const { showAlert } = useGlobalAlert();
   const params = useLocalSearchParams();
   const {
     formData: contextData,
@@ -138,9 +139,10 @@ const BasicDetails = () => {
       !motherName ||
       !profileCreatedBy
     ) {
-      Alert.alert(
+      showAlert(
         "Missing Details",
         "Please fill all the details to continue.",
+        "warning"
       );
       return;
     }
@@ -160,7 +162,7 @@ const BasicDetails = () => {
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors);
       const firstError = Object.values(newErrors)[0];
-      Alert.alert("Validation Error", firstError);
+      showAlert("Validation Error", firstError, "error");
       return;
     }
 

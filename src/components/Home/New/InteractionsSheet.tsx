@@ -157,67 +157,36 @@ const InteractionsSheet = forwardRef<
           </View>
         </View>
 
-        {/* List */}
+        {/* Coming Soon Content */}
         <BottomSheetScrollView contentContainerStyle={styles.listContent} showsVerticalScrollIndicator={false}>
-          {data.map((profile, index) => (
-            <Animated.View
-              key={`${activeTab}-${profile.id}`}
-              entering={FadeInDown.delay(index * 100)
-                .duration(400)
-                .easing(Easing.bezier(0.25, 0.1, 0.25, 1))}
-            >
-              <TouchableOpacity
-                style={styles.itemWrapper}
-                onPress={() => onProfilePress?.(profile.id)}
-                activeOpacity={0.8}
-              >
-                <BlurView intensity={80} tint="light" style={styles.item}>
-                  <View style={styles.avatarContainer}>
-                    <Image
-                      source={{ uri: profile.imageUri }}
-                      style={styles.avatar}
-                    />
-                    <View style={styles.onlineBadge}>
-                      <Ionicons name="sparkles" size={10} color="#FFF" />
-                    </View>
-                  </View>
-
-                  <View style={styles.info}>
-                    <Text style={styles.name}>
-                      {profile.name}, {profile.age}
-                    </Text>
-                    <Text style={styles.time}>
-                      {activeTab === "likes"
-                        ? "Liked your profile"
-                        : "Viewed your profile"}{" "}
-                      • {index + 1}h ago
-                    </Text>
-                  </View>
-
-                  <LinearGradient
-                    colors={["#D4AF37", "#F3E5AB"]}
-                    start={{ x: 0, y: 0 }}
-                    end={{ x: 1, y: 1 }}
-                    style={styles.actionBtnGradient}
-                  >
-                    <TouchableOpacity
-                      style={styles.actionBtn}
-                      onPress={() => onProfilePress?.(profile.id)}
-                    >
-                      <Text style={styles.actionBtnText}>View</Text>
-                    </TouchableOpacity>
-                  </LinearGradient>
-                </BlurView>
-              </TouchableOpacity>
-            </Animated.View>
-          ))}
-
-          {data.length === 0 && (
-            <Animated.View entering={FadeIn.duration(400)} style={styles.emptyState}>
-              <Ionicons name="eye-off-outline" size={64} color="#D1D5DB" />
-              <Text style={styles.emptyText}>No recent {activeTab} yet.</Text>
-            </Animated.View>
-          )}
+          <Animated.View entering={FadeIn.duration(400)} style={styles.comingSoonContainer}>
+            <View style={styles.comingSoonIconBg}>
+              <Ionicons name={activeTab === "likes" ? "heart" : "eye"} size={40} color="#D4AF37" />
+            </View>
+            <Text style={styles.comingSoonTitle}>
+              {activeTab === "likes" ? "Likes" : "Profile Views"} Coming Soon! 🎉
+            </Text>
+            <Text style={styles.comingSoonSubtitle}>
+              We're building something special for you! Soon you'll be able to see who {activeTab === "likes" ? "liked your profile" : "viewed your profile"} and connect with them instantly.
+            </Text>
+            <View style={styles.comingSoonFeatures}>
+              <View style={styles.featureRow}>
+                <Ionicons name="sparkles" size={16} color="#D4AF37" />
+                <Text style={styles.featureText}>
+                  {activeTab === "likes" ? "See who admires your profile" : "Track your profile visitors"}
+                </Text>
+              </View>
+              <View style={styles.featureRow}>
+                <Ionicons name="notifications-outline" size={16} color="#D4AF37" />
+                <Text style={styles.featureText}>Get real-time notifications</Text>
+              </View>
+              <View style={styles.featureRow}>
+                <Ionicons name="chatbubble-ellipses-outline" size={16} color="#D4AF37" />
+                <Text style={styles.featureText}>Connect with one tap</Text>
+              </View>
+            </View>
+            <Text style={styles.comingSoonFooter}>Stay tuned — exciting updates ahead! ✨</Text>
+          </Animated.View>
         </BottomSheetScrollView>
       </View>
     </BottomSheetModal>
@@ -295,99 +264,65 @@ const styles = StyleSheet.create({
     opacity: 1,
   },
   listContent: {
-    gap: 16,
     paddingBottom: 40,
   },
-  itemWrapper: {
-    borderRadius: 20,
-    overflow: "hidden",
-    backgroundColor: "transparent",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.08,
-    shadowRadius: 10,
-    elevation: 4,
-    borderWidth: 1,
-    borderColor: "rgba(212, 175, 55, 0.2)",
+  comingSoonContainer: {
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 30,
+    paddingHorizontal: 20,
   },
-  item: {
+  comingSoonIconBg: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: "#FFF8E7",
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: 20,
+    borderWidth: 2,
+    borderColor: "rgba(212, 175, 55, 0.3)",
+  },
+  comingSoonTitle: {
+    fontSize: 22,
+    fontWeight: "800",
+    color: "#800000",
+    textAlign: "center",
+    marginBottom: 10,
+  },
+  comingSoonSubtitle: {
+    fontSize: 14,
+    color: "#78716C",
+    textAlign: "center",
+    lineHeight: 22,
+    marginBottom: 24,
+    paddingHorizontal: 10,
+  },
+  comingSoonFeatures: {
+    width: "100%",
+    backgroundColor: "#FFF8F0",
+    borderRadius: 16,
+    padding: 16,
+    gap: 14,
+    marginBottom: 20,
+    borderWidth: 1,
+    borderColor: "rgba(212, 175, 55, 0.15)",
+  },
+  featureRow: {
     flexDirection: "row",
     alignItems: "center",
-    padding: 16,
-    backgroundColor: "rgba(255, 255, 255, 0.7)",
+    gap: 12,
   },
-  avatarContainer: {
-    position: "relative",
-    marginRight: 16,
-  },
-  avatar: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    borderWidth: 2,
-    borderColor: "#D4AF37",
-  },
-  onlineBadge: {
-    position: "absolute",
-    bottom: 0,
-    right: -4,
-    backgroundColor: "#D4AF37",
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    borderWidth: 2,
-    borderColor: "#FFF",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  info: {
-    flex: 1,
-    justifyContent: "center",
-  },
-  name: {
-    fontSize: 17,
-    fontWeight: "700",
-    color: "#2D1406",
-    marginBottom: 4,
-  },
-  time: {
-    fontSize: 12,
-    color: "#856A5D",
+  featureText: {
+    fontSize: 14,
+    color: "#5D4037",
     fontWeight: "500",
   },
-  actionBtnGradient: {
-    borderRadius: 20,
-    padding: 2,
-    overflow: "hidden",
-    shadowColor: "#D4AF37",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  actionBtn: {
-    backgroundColor: "#FFF",
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-    borderRadius: 18,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  actionBtnText: {
+  comingSoonFooter: {
     fontSize: 13,
-    fontWeight: "700",
-    color: "#800000",
-  },
-  emptyState: {
-    padding: 60,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  emptyText: {
-    color: "#9CA3AF",
-    fontSize: 16,
-    fontWeight: "500",
-    marginTop: 12,
+    color: "#D4AF37",
+    fontWeight: "600",
+    textAlign: "center",
   },
 });
 

@@ -4,6 +4,8 @@ import com.example.shubhvivah.Chat.Entity.ChatMessage;
 import com.example.shubhvivah.Chat.Repository.ChatMessageRepository;
 import com.example.shubhvivah.Chat.Presence.OnlineUsers;
 import com.example.shubhvivah.Matchmaking.Repository.UserRelationRepository;
+import com.example.shubhvivah.profile.repository.UserProfileRepository;
+import com.example.shubhvivah.profile.entity.UserProfile;
 import com.example.shubhvivah.Matchmaking.enums.RelationType;
 import com.example.shubhvivah.Vendor.Repository.ServiceRequestRepository;
 import com.example.shubhvivah.Vendor.Entity.ServiceRequest;
@@ -25,6 +27,7 @@ public class ChatService {
     private final UserRelationRepository relationRepository;
     private final SimpMessagingTemplate messagingTemplate;
     private final ServiceRequestRepository serviceRequestRepository;
+    private final UserProfileRepository profileRepo;
 
     /*
      * =====================================================
@@ -126,11 +129,15 @@ public class ChatService {
 
         /* ===== NOTIFICATION ===== */
         try {
+            UserProfile senderProfile = profileRepo.findByUser_UserId(msg.getSenderId()).orElse(null);
+            String senderName = senderProfile != null ? senderProfile.getFullName() : "Someone";
+
             messagingTemplate.convertAndSend(
                     "/topic/notifications/" + msg.getReceiverId(),
                     java.util.Map.of(
                             "type", "NEW_MESSAGE",
                             "senderId", msg.getSenderId(),
+                            "senderName", senderName,
                             "content", msg.getContent(),
                             "timestamp", java.time.LocalDateTime.now().toString()));
         } catch (Exception e) {

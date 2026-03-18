@@ -168,18 +168,13 @@ export default function NotificationsScreen() {
           subscribeToNotifications(p.userId, "notifications_screen", async (event) => {
             if (event.type === "NEW_MATCH_REQUEST") {
               console.log("Received real-time match request from:", event.fromUserId);
-              // Fetch user details for the dynamic notification
-              let reqName = "Someone";
-              let reqImage = `https://ui-avatars.com/api/?name=User&background=random`;
+              
+              let reqName = event.senderName || "Someone";
+              let reqImage = `https://ui-avatars.com/api/?name=${encodeURIComponent(reqName)}&background=random`;
               try {
                 const fromProfile = await viewFullProfile(event.fromUserId);
-                if (fromProfile) {
-                  reqName = fromProfile.fullName || "Someone";
-                  if (fromProfile.profilePhotoUrl) {
-                    reqImage = fromProfile.profilePhotoUrl;
-                  } else {
-                    reqImage = `https://ui-avatars.com/api/?name=${encodeURIComponent(reqName)}&background=random`;
-                  }
+                if (fromProfile && fromProfile.profilePhotoUrl) {
+                  reqImage = fromProfile.profilePhotoUrl;
                 }
               } catch(e) {}
               
@@ -198,17 +193,13 @@ export default function NotificationsScreen() {
               setNotifications(prev => [newNotif, ...prev.filter(n => n.id !== "system-welcome")]);
             } else if (event.type === "NEW_MESSAGE") {
               console.log("Received real-time message notification from:", event.senderId);
-              let reqName = "Someone";
-              let reqImage = `https://ui-avatars.com/api/?name=User&background=random`;
+              
+              let reqName = event.senderName || "Someone";
+              let reqImage = `https://ui-avatars.com/api/?name=${encodeURIComponent(reqName)}&background=random`;
               try {
                 const fromProfile = await viewFullProfile(event.senderId);
-                if (fromProfile) {
-                  reqName = fromProfile.fullName || "Someone";
-                  if (fromProfile.profilePhotoUrl) {
-                    reqImage = fromProfile.profilePhotoUrl;
-                  } else {
-                    reqImage = `https://ui-avatars.com/api/?name=${encodeURIComponent(reqName)}&background=random`;
-                  }
+                if (fromProfile && fromProfile.profilePhotoUrl) {
+                  reqImage = fromProfile.profilePhotoUrl;
                 }
               } catch(e) {}
               

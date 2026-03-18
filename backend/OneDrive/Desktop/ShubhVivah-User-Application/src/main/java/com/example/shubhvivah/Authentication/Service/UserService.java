@@ -8,6 +8,10 @@ import com.example.shubhvivah.Authentication.Dto.ResponseDto.LoginResponseDto;
 import com.example.shubhvivah.Authentication.Dto.ResponseDto.PasswordResponseDto;
 import com.example.shubhvivah.Authentication.Dto.ResponseDto.RegisterResponseDto;
 
+import com.example.shubhvivah.Authentication.Dto.RequestDto.GoogleLoginRequestDto;
+import com.example.shubhvivah.Authentication.Dto.RequestDto.AddPhoneRequestDto;
+import com.example.shubhvivah.Authentication.Dto.ResponseDto.GoogleLoginResponseDto;
+
 public interface UserService {
 
     RegisterResponseDto register(RegisterRequestDto dto);
@@ -21,4 +25,8 @@ public interface UserService {
     PasswordResponseDto resetPassword(ResetPasswordRequestDto dto);
 
     RegisterResponseDto verifyRegistrationOtp(Long userId, String otp);
+
+    GoogleLoginResponseDto googleLogin(GoogleLoginRequestDto dto);
+
+    GoogleLoginResponseDto addPhoneNumber(AddPhoneRequestDto dto);
 }

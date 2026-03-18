@@ -99,8 +99,8 @@ export default function NearbyRadarSection({
         {/* Empty State / Profiles "Popping" on Radar */}
         {profiles.length === 0 ? (
           <View style={styles.emptyOverlay}>
-            <Text style={styles.emptyTitle}>Searching...</Text>
-            <Text style={styles.emptyText}>As our user base grows, we will show up our users accordingly.</Text>
+            <Text style={styles.emptyTitle}>Exploring Nearby... ✨</Text>
+            <Text style={styles.emptyText}>Nearby profiles will appear here soon. We're expanding fast!</Text>
           </View>
         ) : (
           profiles.slice(0, 5).map((profile, index) => (

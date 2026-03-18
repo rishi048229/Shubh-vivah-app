@@ -194,12 +194,12 @@ export default function SideMenu({
                 <MenuItem
                   icon="heart-circle-outline"
                   label="My Matches"
-                  onPress={() => handleNavigation("/(tabs)/match")}
+                  onPress={() => handleNavigation("/routes/my-matches")}
                 />
                 <MenuItem
                   icon="star-outline"
                   label="Shortlisted"
-                  onPress={() => handleNavigation("/shortlisted")}
+                  onPress={() => handleNavigation("/routes/shortlisted")}
                 />
                 <MenuItem
                   icon="chatbubbles-outline"
@@ -214,12 +214,12 @@ export default function SideMenu({
                 <MenuItem
                   icon="help-circle-outline"
                   label="Help & Support"
-                  onPress={() => handleNavigation("/help")}
+                  onPress={() => handleNavigation("/support/help")}
                 />
                 <MenuItem
                   icon="shield-checkmark-outline"
                   label="Privacy Policy"
-                  onPress={() => handleNavigation("/privacy")}
+                  onPress={() => handleNavigation("/support/privacy")}
                 />
 
                 <View style={styles.spacer} />

@@ -27,7 +27,7 @@ public class MatchmakingController {
     /* ================= FULL PROFILE ================= */
 
     @GetMapping("/profile/{userId}")
-    public UserProfile viewFullProfile(@PathVariable Long userId) {
+    public MatchmakingDto viewFullProfile(@PathVariable Long userId) {
         return service.getFullProfile(userId);
     }
 
@@ -175,6 +175,11 @@ public class MatchmakingController {
     @GetMapping("/matched")
     public List<UserRelation> matchedUsers() {
         return service.getMatchedUsers(service.getCurrentUserId());
+    }
+
+    @GetMapping("/matched/profiles")
+    public List<MatchmakingDto> matchedProfiles() {
+        return service.getMatchedProfiles(service.getCurrentUserId());
     }
 
     /* ================= GET RECEIVED REQUESTS ================= */

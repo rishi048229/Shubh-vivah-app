@@ -193,7 +193,7 @@ export default function ChatDetailScreen() {
               });
               setShowSuggestions(false);
               // Mark as seen
-              if (msg.senderId !== uid) {
+              if (msg.senderId !== uid && !msg.seen) {
                 markSeen(msg.id, uid);
               }
             }

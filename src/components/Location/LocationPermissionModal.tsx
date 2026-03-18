@@ -114,8 +114,8 @@ export default function LocationPermissionModal({
           <BlurView intensity={20} style={StyleSheet.absoluteFill} tint="dark" />
 
           <Animated.View
-            entering={FadeInUp.springify()}
-            exiting={FadeOutDown.springify()}
+            entering={FadeInUp.duration(300)}
+            exiting={FadeOutDown.duration(250)}
             style={styles.modalContent}
           >
             {/* Close button */}

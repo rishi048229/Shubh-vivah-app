@@ -3,9 +3,9 @@ import Input from "@/components/auth/Input";
 import { Colors } from "@/constants/Colors";
 import * as authService from "@/services/authService";
 import { getPasswordError } from "@/utils/validators";
-import { useRouter } from "expo-router";
+import { useRouter, useLocalSearchParams } from "expo-router";
 import { Check, Lock, Mail, Phone, User } from "lucide-react-native";
-import React, { useRef, useState } from "react";
+import React, { useRef, useState, useEffect } from "react";
 import {
   Alert,
   Dimensions,
@@ -26,11 +26,12 @@ const { width } = Dimensions.get("window");
 
 const RegisterPage = () => {
   const router = useRouter();
+  const params = useLocalSearchParams();
   const [step, setStep] = useState("register_form");
 
   // Registration fields (matching backend RegisterRequestDto)
-  const [fullName, setFullName] = useState("");
-  const [email, setEmail] = useState("");
+  const [fullName, setFullName] = useState((params.fullName as string) || "");
+  const [email, setEmail] = useState((params.email as string) || "");
   const [phoneNumber, setPhoneNumber] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -101,7 +102,11 @@ const RegisterPage = () => {
         error.response?.data ||
         error.message ||
         "Registration failed";
-      showAlert("Error", String(msg), "error");
+        
+      const errorHint = String(msg).toLowerCase().includes("network error")
+        ? `${msg}. Make sure your phone is connected to the same Wi-Fi as your computer.`
+        : msg;
+      showAlert("Error", String(errorHint), "error");
     } finally {
       setIsLoading(false);
     }
@@ -233,6 +238,7 @@ const RegisterPage = () => {
                     }}
                     icon={<Mail size={20} color={Colors.subtext} />}
                     error={errors.email}
+                    editable={!params.email}
                   />
 
                   <Input
@@ -244,6 +250,7 @@ const RegisterPage = () => {
                     }}
                     icon={<Phone size={20} color={Colors.subtext} />}
                     error={errors.phoneNumber}
+                    keyboardType="phone-pad"
                   />
 
                   <Input
@@ -389,7 +396,7 @@ const styles = StyleSheet.create({
   mainContent: { flex: 1 },
   logoSection: { alignItems: "center", marginBottom: 5 },
   logo: { width: width * 0.85, height: 180 },
-  haldiKumkum: { width: 240, height: 100, marginTop: -50, zIndex: 10 },
+  haldiKumkum: { width: 240, height: 100, marginTop: 0, zIndex: 10 },
   formSection: { width: "100%", alignItems: "center", marginTop: 10 },
   textCenter: { alignItems: "center", marginBottom: 25 },
   boldTitle: { fontWeight: "700" },
@@ -450,7 +457,7 @@ const styles = StyleSheet.create({
     width: "100%",
     height: 180,
     alignSelf: "center",
-    marginTop: -100,
+    marginTop: 0,
     marginBottom: 10,
   },
   bottomSection: {

@@ -115,14 +115,12 @@ export default function ProfileDetailsScreen() {
   // Map profile data to sections
   const personalData = [
     profile.height && { label: "Height", value: profile.height },
-    profile.motherTongue && { label: "Mother Tongue", value: profile.motherTongue },
     profile.religion && { label: "Religion", value: profile.religion },
     profile.community && { label: "Community", value: profile.community },
     profile.caste && { label: "Caste", value: profile.caste },
     profile.education && { label: "Education", value: profile.education },
     profile.occupation && { label: "Occupation", value: profile.occupation },
     profile.income && { label: "Income", value: profile.income },
-    profile.maritalStatus && { label: "Marital Status", value: profile.maritalStatus },
   ].filter(Boolean);
 
   const familyData = [
@@ -130,25 +128,26 @@ export default function ProfileDetailsScreen() {
     profile.fatherOccupation && { label: "Father's Occupation", value: profile.fatherOccupation },
     profile.motherName && { label: "Mother", value: profile.motherName },
     profile.motherOccupation && { label: "Mother's Occupation", value: profile.motherOccupation },
-    profile.siblings && { label: "Siblings", value: profile.siblings },
+    (profile.brothers != null || profile.sisters != null) && {
+      label: "Siblings",
+      value: [profile.brothers != null ? `${profile.brothers} Brother(s)` : "", profile.sisters != null ? `${profile.sisters} Sister(s)` : ""].filter(Boolean).join(", "),
+    },
     profile.familyType && { label: "Family Type", value: profile.familyType },
     profile.familyValues && { label: "Family Values", value: profile.familyValues },
   ].filter(Boolean);
 
   const horoscopeData = [
-    profile.manglik && { label: "Manglik", value: profile.manglik },
+    profile.manglikStatus && { label: "Manglik", value: profile.manglikStatus },
     profile.dateOfBirth && { label: "Birth Date", value: profile.dateOfBirth },
-    profile.birthTime && { label: "Birth Time", value: profile.birthTime },
     profile.rashi && { label: "Rashi", value: profile.rashi },
     profile.nakshatra && { label: "Nakshatra", value: profile.nakshatra },
     profile.gotra && { label: "Gotra", value: profile.gotra },
   ].filter(Boolean);
 
   const lifestyleData = [
-    profile.diet && { label: "Diet", value: profile.diet },
-    profile.smoking && { label: "Smoking", value: profile.smoking },
-    profile.drinking && { label: "Drinking", value: profile.drinking },
-    profile.hobbies && { label: "Hobbies", value: profile.hobbies },
+    profile.dietPreference && { label: "Diet", value: profile.dietPreference },
+    profile.smokingHabit && { label: "Smoking", value: profile.smokingHabit },
+    profile.drinkingHabit && { label: "Drinking", value: profile.drinkingHabit },
   ].filter(Boolean);
 
   const partnerData = [
@@ -180,7 +179,7 @@ export default function ProfileDetailsScreen() {
         </TouchableOpacity>
         <Text style={styles.headerTitle}>
           {displayName}
-          {profile.age ? `, ${profile.age}` : ""}
+          {profile.age != null && profile.age > 0 ? `, ${profile.age}` : ""}
         </Text>
         <View style={{ width: 24 }} />
       </View>
@@ -199,7 +198,7 @@ export default function ProfileDetailsScreen() {
             style={styles.image}
             resizeMode="cover"
           />
-          {profile.matchScore && (
+          {profile.matchScore != null && profile.matchScore > 0 && (
             <View style={styles.matchBadge}>
               <Text style={styles.matchBadgeText}>
                 {profile.matchScore}% Match
@@ -215,7 +214,7 @@ export default function ProfileDetailsScreen() {
         >
           <Text style={styles.name}>
             {displayName}
-            {profile.age ? `, ${profile.age}` : ""}
+            {profile.age != null && profile.age > 0 ? `, ${profile.age}` : ""}
           </Text>
           <Text style={styles.subtext}>
             {[profile.occupation, profile.income].filter(Boolean).join(" • ") ||
@@ -276,14 +275,14 @@ export default function ProfileDetailsScreen() {
         </Animated.View>
 
         {/* About Section */}
-        {profile.about && (
+        {profile.aboutMe && (
           <Animated.View
             entering={FadeInDown.delay(200).duration(400)}
             style={styles.sectionContainer}
           >
             <Text style={styles.sectionTitle}>About {firstName}</Text>
             <View style={styles.aboutBox}>
-              <Text style={styles.aboutText}>{profile.about}</Text>
+              <Text style={styles.aboutText}>{profile.aboutMe}</Text>
             </View>
           </Animated.View>
         )}

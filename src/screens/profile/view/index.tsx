@@ -7,6 +7,7 @@ import * as ImagePicker from "expo-image-picker";
 import { useFocusEffect, useRouter } from "expo-router";
 import * as SecureStore from "expo-secure-store";
 import React, { useCallback, useState } from "react";
+import { useGlobalAlert } from "@/components/ThemedAlert";
 import {
   ActivityIndicator,
   Alert,
@@ -28,6 +29,7 @@ const { width } = Dimensions.get("window");
 
 export default function ProfileScreen() {
   const router = useRouter();
+  const { showAlert } = useGlobalAlert();
   const { updateFormData } = useProfileForm();
 
   const [profile, setProfile] = useState<profileService.ProfileData | null>(
@@ -38,6 +40,8 @@ export default function ProfileScreen() {
 
   const [activeModal, setActiveModal] = useState<string | null>(null);
   const [editedAboutMe, setEditedAboutMe] = useState("");
+  const [selectedPhoto, setSelectedPhoto] = useState<string | null>(null);
+
 
   // Fetch profile whenever screen comes into focus
   useFocusEffect(
@@ -81,15 +85,34 @@ export default function ProfileScreen() {
     }
 
     const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      mediaTypes: ["images"],
       allowsEditing: type === "main",
       aspect: type === "main" ? [1, 1] : undefined,
       quality: 0.8,
     });
 
     if (!result.canceled && result.assets && result.assets.length > 0) {
-      handleUpload(result.assets[0].uri, type);
+      const asset = result.assets[0];
+      const sizeInMB = asset.fileSize ? asset.fileSize / (1024 * 1024) : 0;
+
+      if (sizeInMB > 10) {
+        Alert.alert("Error", "File is too large. Please select a photo smaller than 10 MB.");
+        return;
+      } else if (sizeInMB > 5) {
+        Alert.alert(
+          "Warning",
+          "This photo is larger than 5 MB. It may take longer to upload.",
+          [
+            { text: "Continue", onPress: () => handleUpload(asset.uri, type) },
+            { text: "Cancel", style: "cancel" }
+          ]
+        );
+        return;
+      }
+
+      handleUpload(asset.uri, type);
     }
+
   };
 
   const handleUpload = async (uri: string, type: "main" | "additional") => {
@@ -99,20 +122,44 @@ export default function ProfileScreen() {
         const url = await profileService.uploadProfilePhoto(uri);
         // Optimistic update
         setProfile((prev) => (prev ? { ...prev, profilePhotoUrl: url } : null));
-        Alert.alert("Success", "Profile photo updated!");
+        showAlert("Success", "Profile photo updated!", "success");
       } else {
         const urls = await profileService.uploadAdditionalPhotos([uri]);
-        Alert.alert("Success", "Photo added to gallery!");
+        showAlert("Success", "Photo added to gallery!", "success");
         loadProfile(); // Reload to get new gallery
       }
     } catch (error) {
-      Alert.alert("Error", "Failed to upload photo. Please try again.");
+      showAlert("Error", "Failed to upload photo. Please try again.", "error");
     } finally {
       setUploading(false);
     }
   };
 
+  const handleDeletePhoto = async (photoId: number | undefined) => {
+    if (!photoId) return;
+    showAlert(
+      "Delete Photo",
+      "Are you sure you want to delete this photo?",
+      "warning",
+      {
+        onConfirm: async () => {
+          setUploading(true);
+          try {
+            await profileService.deleteAdditionalPhoto(photoId);
+            showAlert("Success", "Photo deleted!", "success");
+            loadProfile();
+          } catch (error) {
+            showAlert("Error", "Failed to delete photo. Please try again.", "error");
+          } finally {
+            setUploading(false);
+          }
+        }
+      }
+    );
+  };
+
   const handleEdit = (section: string) => {
+
     if (!profile) return;
 
     // Pre-fill context is handled in loadProfile
@@ -463,13 +510,28 @@ export default function ProfileScreen() {
             </TouchableOpacity>
 
             {profile.photos &&
-              profile.photos.map((photoUrl, index) => (
-                <Image
-                  key={index}
-                  source={{ uri: photoUrl }}
-                  style={styles.galleryPhoto}
-                />
-              ))}
+              profile.photos.map((photo: any, index: number) => {
+                const imageUrl = photo.photoUrl || (typeof photo === "string" ? photo : undefined);
+                const photoId = photo.id || undefined;
+                return (
+                  <View key={photoId || index} style={styles.photoWrapper}>
+                    <TouchableOpacity onPress={() => setSelectedPhoto(imageUrl)}>
+                      <Image
+                        source={{ uri: imageUrl }}
+                        style={styles.galleryPhoto}
+                      />
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={styles.deletePhotoBadge}
+                      onPress={() => handleDeletePhoto(photoId)}
+                    >
+                      <Ionicons name="close-circle" size={20} color={Colors.maroon} />
+                    </TouchableOpacity>
+                  </View>
+                );
+              })}
+
+
 
             {/* Empty placeholders */}
             {Array.from({
@@ -507,7 +569,32 @@ export default function ProfileScreen() {
         <View style={{ height: 100 }} />
       </ScrollView>
 
+      {/* Photo Viewer Modal */}
+      <Modal
+        visible={!!selectedPhoto}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setSelectedPhoto(null)}
+      >
+        <View style={styles.viewerOverlay}>
+          <TouchableOpacity
+            style={styles.viewerCloseButton}
+            onPress={() => setSelectedPhoto(null)}
+          >
+            <Ionicons name="close" size={32} color="#FFF" />
+          </TouchableOpacity>
+          {selectedPhoto && (
+            <Image
+              source={{ uri: selectedPhoto }}
+              style={styles.fullImage}
+              resizeMode="contain"
+            />
+          )}
+        </View>
+      </Modal>
+
       {/* About Me Modal */}
+
       <Modal
         visible={activeModal === "aboutMe"}
         transparent={true}
@@ -799,7 +886,42 @@ const styles = StyleSheet.create({
     color: Colors.maroon,
     fontWeight: "600",
   },
+  photoWrapper: {
+    position: "relative",
+  },
+  deletePhotoBadge: {
+    position: "absolute",
+    top: -4,
+    right: -4,
+    backgroundColor: "#FFF",
+    borderRadius: 10,
+    elevation: 3,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.2,
+    shadowRadius: 1.41,
+  },
+  viewerOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.9)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  viewerCloseButton: {
+    position: "absolute",
+    top: Platform.OS === "ios" ? 50 : 20,
+    right: 20,
+    zIndex: 10,
+    padding: 8,
+    backgroundColor: "rgba(0,0,0,0.4)",
+    borderRadius: 20,
+  },
+  fullImage: {
+    width: width,
+    height: "100%",
+  },
 });
+
 
 const modalStyles = StyleSheet.create({
   overlay: {

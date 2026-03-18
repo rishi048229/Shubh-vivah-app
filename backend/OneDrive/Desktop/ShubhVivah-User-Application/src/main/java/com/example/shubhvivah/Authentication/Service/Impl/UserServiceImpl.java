@@ -4,9 +4,12 @@ import com.example.shubhvivah.Authentication.Dto.RequestDto.ForgotPasswordReques
 import com.example.shubhvivah.Authentication.Dto.RequestDto.LoginRequestDto;
 import com.example.shubhvivah.Authentication.Dto.RequestDto.RegisterRequestDto;
 import com.example.shubhvivah.Authentication.Dto.RequestDto.ResetPasswordRequestDto;
+import com.example.shubhvivah.Authentication.Dto.RequestDto.GoogleLoginRequestDto;
+import com.example.shubhvivah.Authentication.Dto.RequestDto.AddPhoneRequestDto;
 import com.example.shubhvivah.Authentication.Dto.ResponseDto.LoginResponseDto;
 import com.example.shubhvivah.Authentication.Dto.ResponseDto.PasswordResponseDto;
 import com.example.shubhvivah.Authentication.Dto.ResponseDto.RegisterResponseDto;
+import com.example.shubhvivah.Authentication.Dto.ResponseDto.GoogleLoginResponseDto;
 import com.example.shubhvivah.Authentication.Entity.UserEntity;
 import com.example.shubhvivah.Authentication.Repository.UserRepository;
 import com.example.shubhvivah.Authentication.Service.EmailService;
@@ -54,6 +57,7 @@ public class UserServiceImpl implements UserService {
         user.setPhoneNumber(dto.getPhoneNumber());
         user.setPassword(passwordEncoder.encode(dto.getPassword()));
         user.setVerified(false); // IMPORTANT
+        user.setAuthProvider("local"); // Explicitly set for manual signup
 
         userRepository.save(user);
 
@@ -188,6 +192,75 @@ public class UserServiceImpl implements UserService {
         return new PasswordResponseDto(
                 "Password reset successful",
                 true
+        );
+    }
+
+    // ================= GOOGLE LOGIN =================
+    public GoogleLoginResponseDto googleLogin(GoogleLoginRequestDto dto) {
+
+        // Look for existing user by email
+        UserEntity user = userRepository.findByEmail(dto.getEmail()).orElse(null);
+
+        if (user == null) {
+            // NEW USER: Do not save to DB yet.
+            // Return isNewUser = true so frontend can ask for phone and password.
+            return new GoogleLoginResponseDto(
+                    null, // no userId
+                    dto.getEmail(),
+                    dto.getFullName(),
+                    null,
+                    false,
+                    null, // no token
+                    true  // isNewUser = true
+            );
+        } else {
+            // EXISTING USER: Update auth provider if needed
+            if (!"google".equals(user.getAuthProvider())) {
+                user.setAuthProvider("google");
+            }
+            if (dto.getProfileImageUrl() != null && !dto.getProfileImageUrl().isEmpty()) {
+                user.setProfileImageUrl(dto.getProfileImageUrl());
+            }
+            userRepository.save(user);
+            
+            // Generate and send OTP for login verification
+            String otp = otpService.generateOtp(user.getUserId());
+            emailService.sendOtpEmail(user.getEmail(), otp);
+
+            boolean hasPhone = user.getPhoneNumber() != null && !user.getPhoneNumber().isEmpty();
+
+            // Return isNewUser = false and NO token (they must verify OTP first)
+            return new GoogleLoginResponseDto(
+                    user.getUserId(),
+                    user.getEmail(),
+                    user.getFullName(),
+                    user.getPhoneNumber(),
+                    hasPhone,
+                    null, // no token yet
+                    false // isNewUser = false
+            );
+        }
+    }
+
+    // ================= ADD PHONE NUMBER =================
+    public GoogleLoginResponseDto addPhoneNumber(AddPhoneRequestDto dto) {
+
+        UserEntity user = userRepository.findById(dto.getUserId())
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        user.setPhoneNumber(dto.getPhoneNumber());
+        userRepository.save(user);
+
+        String token = jwtUtil.generateToken(user.getUserId());
+
+        return new GoogleLoginResponseDto(
+                user.getUserId(),
+                user.getEmail(),
+                user.getFullName(),
+                user.getPhoneNumber(),
+                true,
+                token,
+                false
         );
     }
 }

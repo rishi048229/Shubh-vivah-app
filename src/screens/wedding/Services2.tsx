@@ -3,12 +3,14 @@ import { useNavigation } from '@react-navigation/native';
 import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
 import React, { useRef, useState } from 'react';
+import { useGlobalAlert } from '@/components/ThemedAlert';
 import {
     Animated,
     Dimensions,
     Easing,
     Image,
     ImageBackground,
+    Alert,
     Modal,
     Platform,
     ScrollView,
@@ -176,7 +178,7 @@ const AnimatedToolCard = ({ tool, onPress }: { tool: any; onPress: any }) => {
                     <View style={[styles.toolIconContainer, { backgroundColor: 'rgba(255,255,255,0.6)' }]}>
                         <Ionicons name={tool.icon} size={26} color={tool.iconColor} />
                     </View>
-                    <Ionicons name="arrow-forward" size={20} color={tool.iconColor} style={{ opacity: 0.7 }} />
+                    <Ionicons name="lock-closed" size={16} color={tool.iconColor} style={{ opacity: 0.8 }} />
                 </View>
                 <View style={styles.toolTextContainer}>
                     <Text style={[styles.toolTitle, { color: tool.iconColor }]}>{tool.title}</Text>
@@ -273,6 +275,7 @@ const EventManagementUniqueCard = ({ onPress }: { onPress: any }) => {
                         style={styles.uniqueCardImage}
                     />
                     <View style={styles.uniqueCardContent}>
+                        <Ionicons name="lock-closed" size={24} color="#FFD700" style={{ marginBottom: 5 }} />
                         <Text style={styles.uniqueCardTitle}>Event Management</Text>
                         <Text style={styles.uniqueCardTag}>VIP Experience</Text>
                     </View>
@@ -284,6 +287,7 @@ const EventManagementUniqueCard = ({ onPress }: { onPress: any }) => {
 
 const Services2 = () => {
     const navigation = useNavigation<any>();
+    const { showAlert } = useGlobalAlert();
     const searchAnim = useRef(new Animated.Value(0)).current;
 
     // State
@@ -357,9 +361,10 @@ const Services2 = () => {
 
     // Modal Handler
     const handleServicePress = (item: any) => {
-        if (item.screen) {
-            navigation.navigate(item.screen, item.params);
-        }
+        showAlert(
+            "Coming Soon 🌟",
+            `${item.title} is currently under setup. We will make it available very soon for your best experience!`
+        );
     };
 
     const renderConfigModal = () => {
@@ -542,12 +547,10 @@ const Services2 = () => {
                                                     key={service.id}
                                                     style={styles.suggestionItemCircle}
                                                     onPress={() => {
-                                                        if (service.screen) {
-                                                            toggleSearch(); // Close search
-                                                            navigation.navigate(service.screen, service.params);
-                                                        } else {
-                                                            setSearchQuery(service.title);
-                                                        }
+                                                        showAlert(
+                                                            "Coming Soon 🌟",
+                                                            `${service.title} is currently under setup. We will make it available very soon for your best experience!`
+                                                        );
                                                     }}
                                                 >
                                                     <View style={styles.suggestionIconContainer}>
@@ -635,7 +638,7 @@ const Services2 = () => {
                 <TouchableOpacity
                     style={styles.agencyCard}
                     activeOpacity={0.9}
-                    onPress={() => (navigation as any).navigate('routes/DAngenciesScreen')}
+                    onPress={() => showAlert("Coming Soon 🌟", "Wedding Agencies is currently under setup. We will make it available very soon for your best experience!")}
                 >
                     <ImageBackground
                         source={require('../../../assets1/images/venue1.jpg')}
@@ -643,16 +646,15 @@ const Services2 = () => {
                         imageStyle={{ borderRadius: 24 }}
                     >
                         <BlurView intensity={40} tint="dark" style={styles.agencyCardOverlay}>
+                            <Ionicons name="lock-closed" size={24} color="#FFD700" style={{ marginBottom: 5 }} />
                             <Text style={styles.agencyCardTitle}>Wedding Agencies</Text>
-
-                            <Ionicons name="chevron-forward-circle" size={24} color="#FFD700" style={{ marginTop: 10 }} />
                         </BlurView>
                     </ImageBackground>
                 </TouchableOpacity>
 
                 {/* Unique Event Management Card */}
                 <EventManagementUniqueCard
-                    onPress={() => (navigation as any).navigate('routes/EventManagementScreen')}
+                    onPress={() => showAlert("Coming Soon 🌟", "Event Management is currently under setup. We will make it available very soon for your best experience!")}
                 />
             </View>
         </View>
@@ -685,7 +687,10 @@ const Services2 = () => {
                                     colors={['transparent', 'rgba(0,0,0,0.8)']}
                                     style={styles.recGradient}
                                 >
-                                    <Text style={styles.recTitle}>{item.title}</Text>
+                                    <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+                                        <Text style={styles.recTitle}>{item.title}</Text>
+                                        <Ionicons name="lock-closed" size={14} color="#FFF" style={{ opacity: 0.8 }} />
+                                    </View>
                                     <Text style={styles.recSubtitle}>{item.subtitle}</Text>
                                 </LinearGradient>
                             </ImageBackground>
@@ -718,6 +723,9 @@ const Services2 = () => {
                                     source={typeof item.icon === 'string' ? { uri: item.icon } : item.icon}
                                     style={styles.gridIconImage}
                                 />
+                                <View style={{ position: "absolute", top: -4, right: -4, backgroundColor: "rgba(128,0,0,0.85)", borderRadius: 12, padding: 3, borderWidth: 1, borderColor: "#FFF" }}>
+                                    <Ionicons name="lock-closed" size={10} color="#FFF" />
+                                </View>
                             </View>
                             <Text style={styles.gridLabel} numberOfLines={1}>{item.title}</Text>
                         </TouchableOpacity>
@@ -751,7 +759,7 @@ const Services2 = () => {
                         key={tool.id}
                         tool={tool}
                         onPress={() => {
-                            // Example interaction
+                            showAlert("Coming Soon 🌟", `${tool.title} tool is currently under setup. We will make it available very soon for your best experience!`);
                         }}
                     />
                 ))}

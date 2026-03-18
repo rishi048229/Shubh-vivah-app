@@ -1,14 +1,14 @@
 import Button from "@/components/auth/Button";
 import Input from "@/components/auth/Input";
-import { FacebookIcon, GoogleIcon } from "@/components/auth/SocialIcons";
 import { Colors } from "@/constants/Colors";
 import { useAuth } from "@/context/AuthContext";
 import * as authService from "@/services/authService";
 import { useRouter } from "expo-router";
 import { Lock, Mail } from "lucide-react-native";
-import React, { useRef, useState } from "react";
+import React, { useRef, useState, useEffect } from "react";
 import {
   Alert,
+  ActivityIndicator,
   Dimensions,
   Image,
   KeyboardAvoidingView,
@@ -54,6 +54,7 @@ const LoginPage = () => {
   const showAlert = (title: string, message: string, type: "success" | "error" | "info" = "info") => {
     setAlertConfig({ visible: true, title, message, type });
   };
+
 
   /**
    * POST /auth/login — Authenticate with email + password.
@@ -249,25 +250,6 @@ const LoginPage = () => {
                     style={styles.dividerImage}
                     resizeMode="contain"
                   />
-
-                  {/* Social Login Separator */}
-                  <View style={styles.socialSeparator}>
-                    <View style={styles.separatorLine} />
-                    <Text style={styles.separatorText}>Log In With</Text>
-                    <View style={styles.separatorLine} />
-                  </View>
-
-                  {/* Social Buttons */}
-                  <View style={styles.socialRow}>
-                    <TouchableOpacity style={styles.socialBtn} activeOpacity={0.7}>
-                      <GoogleIcon size={22} />
-                      <Text style={styles.socialBtnText}>Google</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity style={styles.socialBtn} activeOpacity={0.7}>
-                      <FacebookIcon size={22} />
-                      <Text style={styles.socialBtnText}>Facebook</Text>
-                    </TouchableOpacity>
-                  </View>
                 </>
               )}
 
@@ -345,11 +327,11 @@ const styles = StyleSheet.create({
     paddingTop: 10,
     paddingBottom: 20,
   },
-  mainContent: { flex: 1 },
+  mainContent: { flex: 1, justifyContent: "center" },
   logoSection: { alignItems: "center", marginBottom: 5 },
-  logo: { width: width * 0.85, height: 180 },
-  haldiKumkum: { width: 240, height: 100, marginTop: -50, zIndex: 10 },
-  formSection: { width: "100%", marginTop: 10 },
+  logo: { width: width * 0.85, height: 160 },
+  haldiKumkum: { width: 240, height: 90, marginTop: -45, zIndex: 10 },
+  formSection: { width: "100%", marginTop: 20 },
   forgotPass: { alignSelf: "flex-end", marginBottom: 10 },
   forgotPassText: { color: Colors.primary, fontSize: 13, fontWeight: "600" },
   loginBtn: {
@@ -405,6 +387,11 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
     shadowRadius: 2,
+  },
+  googleBtnFull: {
+    width: "100%",
+    height: 48,
+    borderRadius: 24,
   },
   socialBtnText: {
     marginLeft: 10,

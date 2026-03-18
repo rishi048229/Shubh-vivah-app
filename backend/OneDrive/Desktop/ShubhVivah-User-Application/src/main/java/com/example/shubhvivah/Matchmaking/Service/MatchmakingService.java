@@ -80,12 +80,15 @@ public class MatchmakingService {
 
     /* ================= FULL PROFILE ================= */
 
-    public UserProfile getFullProfile(Long userId) {
+    public MatchmakingDto getFullProfile(Long userId) {
         UserEntity user = userRepo.findById(userId)
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
-        return profileRepo.findByUser(user)
-                .orElseThrow(() -> new RuntimeException("Profile not found"));
+        UserProfile profile = profileRepo.findByUser(user)
+                .orElse(UserProfile.builder().user(user).build());
+
+        int age = profile.getDateOfBirth() != null ? calculateAge(profile.getDateOfBirth()) : 0;
+        return buildFullDto(profile, age);
     }
 
     /* ================= DTO BUILDER ================= */
@@ -118,6 +121,49 @@ public class MatchmakingService {
             dto.setDistanceKm(distance);
             dto.setDistanceText(((int) distance) + " km away");
         }
+
+        return dto;
+    }
+
+    /** Builds a MatchmakingDto with ALL detail fields for the full profile view. */
+    private MatchmakingDto buildFullDto(UserProfile p, int age) {
+        MatchmakingDto dto = buildDto(p, age);
+
+        // Basic
+        dto.setGender(p.getGender() != null ? p.getGender().name() : null);
+        dto.setOccupation(p.getOccupation() != null ? p.getOccupation().name() : null);
+        dto.setEducation(p.getEducation() != null ? p.getEducation().name() : null);
+        dto.setIncome(p.getAnnualIncome() != null ? p.getAnnualIncome().name() : null);
+        dto.setHeight(p.getHeight() != null ? p.getHeight().toString() : null);
+        dto.setCommunity(p.getCommunity());
+        dto.setCaste(p.getCaste());
+        dto.setSubCaste(p.getSubCaste());
+        dto.setGotra(p.getGotra());
+        dto.setReligion(p.getReligion());
+        dto.setAboutMe(p.getAboutMe());
+
+        // Family
+        dto.setFatherName(p.getFatherName());
+        dto.setFatherOccupation(p.getFatherOccupation() != null ? p.getFatherOccupation().name() : null);
+        dto.setMotherName(p.getMotherName());
+        dto.setMotherOccupation(p.getMotherOccupation() != null ? p.getMotherOccupation().name() : null);
+        dto.setBrothers(p.getBrothers());
+        dto.setSisters(p.getSisters());
+        dto.setFamilyType(p.getFamilyType() != null ? p.getFamilyType().name() : null);
+        dto.setFamilyStatus(p.getFamilyStatus() != null ? p.getFamilyStatus().name() : null);
+        dto.setFamilyValues(p.getFamilyValues() != null ? p.getFamilyValues().name() : null);
+
+        // Horoscope
+        dto.setManglikStatus(p.getManglikStatus() != null ? p.getManglikStatus().name() : null);
+        dto.setDateOfBirth(p.getDateOfBirth() != null ? p.getDateOfBirth().toString() : null);
+        dto.setRashi(p.getRashi() != null ? p.getRashi().name() : null);
+        dto.setNakshatra(p.getNakshatra() != null ? p.getNakshatra().name() : null);
+
+        // Lifestyle
+        dto.setDietPreference(p.getDietPreference() != null ? p.getDietPreference().name() : null);
+        dto.setEatingHabit(p.getEatingHabit() != null ? p.getEatingHabit().name() : null);
+        dto.setSmokingHabit(p.getSmokingHabit() != null ? p.getSmokingHabit().name() : null);
+        dto.setDrinkingHabit(p.getDrinkingHabit() != null ? p.getDrinkingHabit().name() : null);
 
         return dto;
     }
@@ -365,7 +411,8 @@ public class MatchmakingService {
 
         relationRepository.save(UserRelation.of(from, to, RelationType.LIKE));
 
-        boolean reverseLike = relationRepository.existsByFromUserIdAndToUserIdAndType(to, from, RelationType.LIKE);
+        boolean reverseLike = relationRepository.existsByFromUserIdAndToUserIdAndType(to, from, RelationType.LIKE)
+                || relationRepository.existsByFromUserIdAndToUserIdAndType(to, from, RelationType.REQUEST);
 
         if (reverseLike) {
             relationRepository.save(UserRelation.of(from, to, RelationType.MATCH));
@@ -463,6 +510,19 @@ public class MatchmakingService {
                 .toList();
     }
 
+    public List<MatchmakingDto> getMatchedProfiles(Long userId) {
+        List<UserRelation> relations = relationRepository.findByFromUserIdAndType(userId, RelationType.MATCH);
+        return relations.stream()
+                .map(r -> {
+                    UserProfile profile = profileRepo.findByUser_UserId(r.getToUserId()).orElse(null);
+                    if (profile == null) return null;
+                    int age = profile.getDateOfBirth() != null ? calculateAge(profile.getDateOfBirth()) : 0;
+                    return buildDto(profile, age);
+                })
+                .filter(java.util.Objects::nonNull)
+                .toList();
+    }
+
     /* ================= GET RECEIVED REQUESTS ================= */
 
     public List<UserRelation> getReceivedRequests(Long userId) {
@@ -489,6 +549,9 @@ public class MatchmakingService {
             payload.put("type", "NEW_MATCH_REQUEST");
             payload.put("fromUserId", from);
             payload.put("toUserId", to);
+            
+            UserProfile profile = profileRepo.findByUser_UserId(from).orElse(null);
+            payload.put("senderName", profile != null ? profile.getFullName() : "Someone");
 
             messagingTemplate.convertAndSend("/topic/notifications/" + to, payload);
         } catch (Exception e) {

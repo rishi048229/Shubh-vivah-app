@@ -28,7 +28,7 @@ const LanguageSelectionPage = () => {
   ];
 
   const handleContinue = () => {
-    router.replace("/login" as any);
+    router.replace("/(auth)/login" as any);
   };
 
   return (

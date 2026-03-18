@@ -157,6 +157,33 @@ export async function getMatchedUsers(): Promise<UserRelation[]> {
 }
 
 /**
+ * GET /matches/matched/profiles — Get matched full profiles list
+ */
+export async function getMatchedProfiles(): Promise<UIMatchProfile[]> {
+  const res = await api.get("/matches/matched/profiles");
+  // Map DTO to UIMatchProfile
+  return res.data.map((p: any) => ({
+    id: String(p.userId),
+    name: p.fullName,
+    age: p.age,
+    location: p.distanceText ? `${p.city}, ${p.distanceText}` : p.city,
+    city: p.city,
+    state: "",
+    distance: p.distanceKm || 0,
+    matchPercentage: p.matchScore || 0,
+    matchReasons: p.religion ? [p.religion] : [],
+    imageUri: getAvatarUrl(p.profilePhotoUrl, p.gender, p.fullName),
+    profession: p.occupation || "",
+    education: p.education || "",
+    religion: p.religion || "",
+    caste: p.caste || "",
+    verified: true,
+    onlineStatus: "recently_active",
+    maritalStatus: "Never Married",
+  }));
+}
+
+/**
  * GET /matches/liked — Get liked users list
  */
 export async function getLikedUsers(): Promise<UserRelation[]> {

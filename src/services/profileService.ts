@@ -56,7 +56,8 @@ export interface ProfileData {
 
   // Read-only (from server)
   profilePhotoUrl?: string;
-  photos?: string[];
+  photos?: { id: number; photoUrl: string }[];
+
 }
 
 /**

@@ -71,6 +71,7 @@ public class UserProfileResponseDto {
     private String profilePhotoUrl;
     private Double latitude;
     private Double longitude;
-    private java.util.List<String> photos;
+    private java.util.List<PhotoDto> photos;
+
 
 }
